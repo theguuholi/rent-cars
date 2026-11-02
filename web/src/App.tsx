@@ -3,24 +3,34 @@ import { CategoryList } from './features/categories/CategoryList'
 
 export function Layout() {
   return (
-    <main>
-      <h1>Rent Cars</h1>
-      <nav className="catalog-nav" aria-label="Vehicle catalogs">
-        <Link to="/" activeOptions={{ exact: true }}>
-          Home
-        </Link>
-        <Link to="/categories">Categories</Link>
-        <Link to="/specifications">Specifications</Link>
-      </nav>
-      <Outlet />
-    </main>
+    <>
+      <header className="border-b border-slate-200">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 px-4 sm:px-8">
+          <h1 className="py-3 text-2xl font-black tracking-tight">
+            <Link to="/" aria-label="Rent Cars home">
+              Rent<span className="text-orange-600">Cars</span>
+            </Link>
+          </h1>
+          <nav className="catalog-nav flex gap-5" aria-label="Vehicle catalogs">
+            <Link to="/categories">Categories</Link>
+            <Link to="/specifications">Specifications</Link>
+          </nav>
+        </div>
+      </header>
+      <main className="mx-auto max-w-7xl px-4 sm:px-8">
+        <Outlet />
+      </main>
+    </>
   )
 }
 
 export function CategoriesPage() {
   return (
-    <section aria-labelledby="categories-title">
-      <h2 id="categories-title">Vehicle categories</h2>
+    <section className="py-8" aria-labelledby="categories-title">
+      <p className="eyebrow">Catalog</p>
+      <h2 className="page-title mb-6" id="categories-title">
+        Vehicle categories
+      </h2>
       <CategoryList />
     </section>
   )

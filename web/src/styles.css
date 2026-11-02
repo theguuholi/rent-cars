@@ -1,0 +1,86 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand: #006b48;
+}
+
+@layer base {
+  body {
+    @apply bg-white font-sans text-slate-900 antialiased;
+  }
+  button {
+    @apply cursor-pointer font-semibold;
+  }
+  button:disabled {
+    @apply cursor-default opacity-50;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand;
+  }
+  label {
+    @apply mb-1 block font-semibold;
+  }
+  [role='alert'] {
+    @apply my-2 text-sm text-red-700;
+  }
+}
+
+@layer components {
+  .catalog-nav a {
+    @apply border-b-2 border-transparent py-4 font-semibold;
+  }
+  .catalog-nav a[aria-current='page'] {
+    @apply border-brand text-brand;
+  }
+  .page-title {
+    @apply text-3xl font-bold tracking-tight sm:text-4xl;
+  }
+  .eyebrow {
+    @apply mb-2 text-sm font-semibold text-brand;
+  }
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    @apply rounded-md border px-4 py-2;
+  }
+  .btn-primary {
+    @apply border-brand bg-brand text-white hover:bg-emerald-900;
+  }
+  .btn-secondary {
+    @apply border-slate-300 bg-white hover:bg-slate-50;
+  }
+  .btn-danger {
+    @apply border-red-700 bg-red-700 text-white hover:bg-red-800;
+  }
+  .control {
+    @apply w-full rounded-md border border-slate-400 px-3 py-2 focus:border-brand aria-invalid:border-red-700;
+  }
+  .catalog-table {
+    @apply w-full text-left;
+  }
+  .catalog-table thead {
+    @apply bg-slate-100 text-sm;
+  }
+  .catalog-table th,
+  .catalog-table td {
+    @apply px-4 py-3 wrap-anywhere;
+  }
+  .catalog-table tbody tr {
+    @apply border-b border-slate-200;
+  }
+  .catalog-table tbody tr[data-selected='true'] {
+    @apply bg-emerald-50 shadow-[inset_3px_0_0_var(--color-brand)];
+  }
+  @media (width < 40rem) {
+    .catalog-table thead {
+      @apply sr-only;
+    }
+    .catalog-table tbody tr {
+      @apply grid gap-1 px-2 py-3;
+    }
+    .catalog-table tbody th,
+    .catalog-table tbody td {
+      @apply px-2 py-1;
+    }
+  }
+}

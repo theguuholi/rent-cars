@@ -22,8 +22,10 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
         void form.handleSubmit()
       }}
     >
-      <fieldset disabled={busy}>
-        <legend>{item ? 'Edit specification' : 'New specification'}</legend>
+      <fieldset className="grid min-w-0 gap-5" disabled={busy}>
+        <legend className="mb-5 text-2xl font-bold tracking-tight">
+          {item ? 'Edit specification' : 'New specification'}
+        </legend>
         <form.Field
           name="name"
           validators={{
@@ -38,6 +40,8 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
             <div>
               <label htmlFor="spec-name">Name</label>
               <input
+                className="control"
+                autoFocus
                 id="spec-name"
                 name={field.name}
                 required
@@ -64,6 +68,8 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
             <div>
               <label htmlFor="spec-description">Description</label>
               <textarea
+                className="control"
+                rows={4}
                 id="spec-description"
                 name={field.name}
                 required
@@ -80,9 +86,11 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
             </div>
           )}
         </form.Field>
-        <div className="actions">
-          <button type="submit">{busy ? 'Saving…' : 'Save specification'}</button>
-          <button type="button" onClick={onCancel}>
+        <div className="grid gap-2">
+          <button className="btn-primary" type="submit">
+            {busy ? 'Saving…' : 'Save specification'}
+          </button>
+          <button className="btn-secondary" type="button" onClick={onCancel}>
             Cancel
           </button>
         </div>

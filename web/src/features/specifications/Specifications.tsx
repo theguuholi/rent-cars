@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { SpecificationEditor } from './SpecificationEditor'
 import { deleteSpecification, listSpecifications, saveSpecification } from './specifications-api'
 import type { Specification, SpecificationInput } from './specifications-api'
-import './specifications.css'
 
 type Action = { type: 'create' } | { type: 'edit' | 'delete'; item: Specification }
 type Change =
@@ -36,82 +35,131 @@ export function Specifications() {
   }
 
   return (
-    <section className="specifications" aria-labelledby="specs-title">
-      <h2 id="specs-title">Vehicle specifications</h2>
-      <p>Manage the features and equipment available on rental vehicles.</p>
-      {notice && <p role="status">{notice}</p>}
+    <section className="py-8" aria-labelledby="specs-title">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow">Catalog</p>
+          <h2 className="page-title" id="specs-title">
+            Vehicle specifications
+          </h2>
+          <p className="mt-1 text-slate-600">
+            Manage the features and equipment available on rental vehicles.
+          </p>
+        </div>
+        {!action && (
+          <button
+            className="btn-primary"
+            disabled={change.isPending}
+            onClick={() => open({ type: 'create' })}
+          >
+            New specification
+          </button>
+        )}
+      </div>
+      {notice && (
+        <p role="status" className="mb-4 text-brand">
+          {notice}
+        </p>
+      )}
       {change.isError && <p role="alert">{change.error.message}</p>}
-      {action?.type === 'delete' ? (
-        <div className="confirmation">
-          <h3>Delete {action.item.name}?</h3>
-          <p>This removes the specification from the catalog.</p>
-          <div className="actions">
-            <button
-              disabled={change.isPending}
-              onClick={() => change.mutate({ type: 'delete', id: action.item.id })}
-            >
-              Confirm deletion
-            </button>
-            <button disabled={change.isPending} onClick={() => open(null)}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : action ? (
-        <SpecificationEditor
-          item={action.type === 'edit' ? action.item : undefined}
-          busy={change.isPending}
-          onCancel={() => open(null)}
-          onSave={(input) =>
-            change.mutate({
-              type: 'save',
-              input,
-              id: action.type === 'edit' ? action.item.id : undefined,
-            })
-          }
-        />
-      ) : (
-        <button disabled={change.isPending} onClick={() => open({ type: 'create' })}>
-          New specification
-        </button>
-      )}
-      {catalog.isPending ? (
-        <p role="status">Loading specifications…</p>
-      ) : catalog.isError ? (
-        <div role="alert">
-          <p>Could not load specifications.</p>
-          <button onClick={() => void catalog.refetch()}>Try again</button>
-        </div>
-      ) : catalog.data.length === 0 ? (
-        <p>No specifications yet.</p>
-      ) : (
-        <ul aria-label="Specifications">
-          {catalog.data.map((item) => (
-            <li key={item.id}>
+      <div className={action ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]' : ''}>
+        {action && (
+          <aside
+            aria-label="Specification details"
+            className="rounded-lg border border-slate-200 p-5 lg:col-start-2 lg:row-start-1"
+          >
+            {action?.type === 'delete' ? (
               <div>
-                <strong>{item.name}</strong>
-                <p>{item.description}</p>
+                <h3 className="wrap-anywhere text-xl font-bold">Delete {action.item.name}?</h3>
+                <p>This removes the specification from the catalog.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    className="btn-danger"
+                    disabled={change.isPending}
+                    onClick={() => change.mutate({ type: 'delete', id: action.item.id })}
+                  >
+                    Confirm deletion
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    autoFocus
+                    disabled={change.isPending}
+                    onClick={() => open(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <div className="actions">
-                <button
-                  disabled={!!action || change.isPending}
-                  aria-label={`Edit ${item.name}`}
-                  onClick={() => open({ type: 'edit', item })}
-                >
-                  Edit
-                </button>
-                <button
-                  disabled={!!action || change.isPending}
-                  aria-label={`Delete ${item.name}`}
-                  onClick={() => open({ type: 'delete', item })}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+            ) : (
+              <SpecificationEditor
+                item={action.type === 'edit' ? action.item : undefined}
+                busy={change.isPending}
+                onCancel={() => open(null)}
+                onSave={(input) =>
+                  change.mutate({
+                    type: 'save',
+                    input,
+                    id: action.type === 'edit' ? action.item.id : undefined,
+                  })
+                }
+              />
+            )}
+          </aside>
+        )}
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+          {catalog.isPending ? (
+            <p role="status">Loading specifications…</p>
+          ) : catalog.isError ? (
+            <div role="alert">
+              <p>Could not load specifications.</p>
+              <button onClick={() => void catalog.refetch()}>Try again</button>
+            </div>
+          ) : catalog.data.length === 0 ? (
+            <p>No specifications yet.</p>
+          ) : (
+            <table className="catalog-table" aria-label="Specifications">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {catalog.data.map((item) => (
+                  <tr
+                    key={item.id}
+                    data-selected={action && 'item' in action && action.item.id === item.id}
+                  >
+                    <th scope="row">{item.name}</th>
+                    <td>{item.description}</td>
+                    <td>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          className="text-brand"
+                          disabled={!!action || change.isPending}
+                          aria-label={`Edit ${item.name}`}
+                          onClick={() => open({ type: 'edit', item })}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="text-red-700"
+                          disabled={!!action || change.isPending}
+                          aria-label={`Delete ${item.name}`}
+                          onClick={() => open({ type: 'delete', item })}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </section>
   )
 }
