@@ -1,0 +1,30 @@
+@baseUrl = http://localhost:8080
+
+### List all specifications
+GET {{baseUrl}}/specifications
+Accept: application/json
+
+### Create a specification (run first to populate the UUID below)
+# @name createSpecification
+POST {{baseUrl}}/specifications
+Content-Type: application/json
+
+{"specification":{"name":"air conditioning","description":"Cabin temperature control."}}
+
+### Fetch the created specification
+GET {{baseUrl}}/specifications/{{createSpecification.response.body.$.data.id}}
+
+### Update both fields
+PUT {{baseUrl}}/specifications/{{createSpecification.response.body.$.data.id}}
+Content-Type: application/json
+
+{"specification":{"name":"climate control","description":"Automatic cabin temperature control."}}
+
+### Change only the description
+PATCH {{baseUrl}}/specifications/{{createSpecification.response.body.$.data.id}}
+Content-Type: application/json
+
+{"specification":{"description":"Dual-zone climate control."}}
+
+### Delete the specification
+DELETE {{baseUrl}}/specifications/{{createSpecification.response.body.$.data.id}}
