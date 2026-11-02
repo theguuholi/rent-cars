@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(
+    example = "{\"name\":\"gps\",\"description\":\"Turn-by-turn satellite navigation.\"}",
     description =
         "Send both fields when creating a specification. For PUT or PATCH, omit a field to keep its current value. Explicit nulls and blank strings are invalid.")
 public class SpecificationRequest {

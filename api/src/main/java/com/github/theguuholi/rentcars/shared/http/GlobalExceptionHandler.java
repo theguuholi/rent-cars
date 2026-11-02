@@ -1,5 +1,6 @@
 package com.github.theguuholi.rentcars.shared.http;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.ConstraintViolationException;
 import java.sql.SQLException;
 import java.util.*;
@@ -16,7 +17,15 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-  public record Errors(Map<String, List<String>> errors) {}
+  @Schema(
+      description =
+          "API errors grouped by field (such as name or description) or by reason (conflict or server).")
+  public record Errors(
+      @Schema(
+              description = "Each key maps to one or more messages that explain what went wrong.",
+              requiredMode = Schema.RequiredMode.REQUIRED,
+              example = "{\"description\":[\"must not be blank\"]}")
+          Map<String, List<String>> errors) {}
 
   @ExceptionHandler(ConstraintViolationException.class)
   @ResponseStatus(HttpStatus.UNPROCESSABLE_CONTENT)

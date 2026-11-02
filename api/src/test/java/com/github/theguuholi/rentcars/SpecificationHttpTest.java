@@ -73,6 +73,29 @@ class SpecificationHttpTest {
   }
 
   @Test
+  void documentsErrorMessagesAndWriteExamples() throws Exception {
+    var docs = mvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
+    var errors = "$.components.schemas.Errors";
+    docs.andExpect(jsonPath(errors + ".properties.errors.description").isNotEmpty())
+        .andExpect(
+            jsonPath(errors + ".properties.errors.additionalProperties.items.type")
+                .value("string"));
+    for (String op : java.util.List.of("post", "put", "patch")) {
+      String route = op.equals("post") ? "/specifications" : "/specifications/{id}";
+      String path = "$.paths['" + route + "']." + op;
+      String body = path + ".requestBody.content['application/json']";
+      docs.andExpect(
+              jsonPath(body + ".schema['$ref']").value("#/components/schemas/SpecificationRequest"))
+          .andExpect(jsonPath(body + ".example.description").isString());
+      for (String status : java.util.List.of("409", "422", "500")) {
+        String content = path + ".responses['" + status + "'].content['application/json']";
+        docs.andExpect(jsonPath(content + ".schema['$ref']").value("#/components/schemas/Errors"))
+            .andExpect(jsonPath(content + ".example.errors").isMap());
+      }
+    }
+  }
+
+  @Test
   void catalogLifecycle() throws Exception {
     mvc.perform(get(PATH))
         .andExpect(status().isOk())
