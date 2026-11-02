@@ -1,6 +1,5 @@
-package com.github.theguuholi.categories;
+package com.github.theguuholi.rentcars.categories;
 
-import com.github.theguuholi.rentcars.categories.Category;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
