@@ -1,5 +1,4 @@
 import { Link, Outlet } from '@tanstack/react-router'
-import { CategoryList } from './features/categories/CategoryList'
 
 export function Layout() {
   return (
@@ -21,17 +20,5 @@ export function Layout() {
         <Outlet />
       </main>
     </>
-  )
-}
-
-export function CategoriesPage() {
-  return (
-    <section className="py-8" aria-labelledby="categories-title">
-      <p className="eyebrow">Catalog</p>
-      <h2 className="page-title mb-6" id="categories-title">
-        Vehicle categories
-      </h2>
-      <CategoryList />
-    </section>
   )
 }

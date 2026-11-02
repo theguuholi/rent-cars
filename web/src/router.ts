@@ -4,9 +4,11 @@ import {
   createRouter,
   type RouterHistory,
 } from '@tanstack/react-router'
-import { Layout, CategoriesPage } from './App'
-import { Specifications } from './features/specifications/Specifications'
-const root = createRootRoute({ component: Layout })
+import { Layout } from './App'
+import { NotFoundPage } from './NotFoundPage'
+import { CategoriesPage } from './features/categories/CategoriesPage'
+import { SpecificationsPage } from './features/specifications/SpecificationsPage'
+const root = createRootRoute({ component: Layout, notFoundComponent: NotFoundPage })
 const home = createRoute({ getParentRoute: () => root, path: '/', component: () => null })
 const categories = createRoute({
   getParentRoute: () => root,
@@ -16,7 +18,7 @@ const categories = createRoute({
 const specifications = createRoute({
   getParentRoute: () => root,
   path: '/specifications',
-  component: Specifications,
+  component: SpecificationsPage,
 })
 const tree = root.addChildren([home, categories, specifications])
 export function createAppRouter(history?: RouterHistory) {

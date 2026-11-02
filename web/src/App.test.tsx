@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
 import { afterEach, expect, it, vi } from 'vitest'
 import { createAppRouter } from './router'
@@ -47,3 +47,19 @@ it('supports navigation and browser history between catalogs', async () => {
   await act(async () => history.back())
   expect(await screen.findByText('No vehicle categories available.')).toBeVisible()
 })
+
+it.each(['/category', '/specification', '/categories/unknown', '/specifications/unknown'])(
+  'offers a way home from %s without fetching a catalog',
+  async (path) => {
+    const history = open(path)
+    const link = await screen.findByRole('link', { name: 'Back to home' })
+    expect(screen.getByRole('heading', { name: 'Page not found' })).toBeVisible()
+    fireEvent.click(link)
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'Back to home' })).not.toBeInTheDocument(),
+    )
+    expect(history.location.pathname).toBe('/')
+    expect(screen.getByRole('navigation')).toBeVisible()
+    expect(fetch).not.toHaveBeenCalled()
+  },
+)

@@ -10,7 +10,7 @@ type Change =
   | { type: 'delete'; id: string }
 const queryKey = ['specifications']
 
-export function Specifications() {
+export function SpecificationsPage() {
   const [action, setAction] = useState<Action | null>(null)
   const [notice, setNotice] = useState('')
   const client = useQueryClient()

@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { renderWithQuery } from '../../test/render-with-query'
-import { Specifications } from './Specifications'
+import { SpecificationsPage } from './SpecificationsPage'
 import { deleteSpecification, listSpecifications, saveSpecification } from './specifications-api'
 
 vi.mock('./specifications-api', () => ({
@@ -21,7 +21,7 @@ beforeEach(() => vi.resetAllMocks())
 it('creates from an empty catalog and refreshes the list with the saved data', async () => {
   list.mockResolvedValueOnce([]).mockResolvedValue([item])
   save.mockResolvedValue(item)
-  renderWithQuery(<Specifications />)
+  renderWithQuery(<SpecificationsPage />)
   expect(screen.getByRole('status')).toHaveTextContent('Loading specifications')
   expect(await screen.findByText('No specifications yet.')).toBeVisible()
   click('New specification')
@@ -38,7 +38,7 @@ it('creates from an empty catalog and refreshes the list with the saved data', a
 it('prefills an edit, preserves input after a conflict and accepts a retry', async () => {
   list.mockResolvedValueOnce([item]).mockResolvedValue([{ ...item, name: 'SAT NAV' }])
   save.mockRejectedValueOnce(new Error('Name already exists')).mockResolvedValue(item)
-  renderWithQuery(<Specifications />)
+  renderWithQuery(<SpecificationsPage />)
   await screen.findByText('GPS')
   click('Edit GPS')
   expect(screen.getByLabelText('Description')).toHaveValue('Navigation')
@@ -55,7 +55,7 @@ it('prefills an edit, preserves input after a conflict and accepts a retry', asy
 it('allows cancelling the editor or deletion and deletes only after confirmation', async () => {
   list.mockResolvedValueOnce([item]).mockResolvedValue([])
   remove.mockResolvedValue(undefined)
-  renderWithQuery(<Specifications />)
+  renderWithQuery(<SpecificationsPage />)
   await screen.findByText('GPS')
   click('Edit GPS')
   fill('Name', 'unsaved')
@@ -79,7 +79,7 @@ it('disables repeated submissions while a save is in progress', async () => {
       finish = resolve
     }),
   )
-  renderWithQuery(<Specifications />)
+  renderWithQuery(<SpecificationsPage />)
   await screen.findByText('No specifications yet.')
   click('New specification')
   fill('Name', 'gps')
@@ -95,7 +95,7 @@ it('disables repeated submissions while a save is in progress', async () => {
 
 it('recovers from a list error', async () => {
   list.mockRejectedValueOnce(new Error('Offline')).mockResolvedValue([item])
-  renderWithQuery(<Specifications />)
+  renderWithQuery(<SpecificationsPage />)
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not load specifications')
   click('Try again')
   expect(await screen.findByText('Navigation')).toBeVisible()
@@ -104,7 +104,7 @@ it('recovers from a list error', async () => {
 it('refreshes stale rows after a failed deletion is dismissed', async () => {
   list.mockResolvedValueOnce([item]).mockResolvedValue([])
   remove.mockRejectedValue(new Error('This specification no longer exists. Refresh the catalog.'))
-  renderWithQuery(<Specifications />)
+  renderWithQuery(<SpecificationsPage />)
   await screen.findByText('GPS')
   click('Delete GPS')
   click('Confirm deletion')
@@ -116,7 +116,7 @@ it('refreshes stale rows after a failed deletion is dismissed', async () => {
 
 it('validates required fields and the normalized name length before submitting', async () => {
   list.mockResolvedValue([])
-  renderWithQuery(<Specifications />)
+  renderWithQuery(<SpecificationsPage />)
   await screen.findByText('No specifications yet.')
   click('New specification')
   click('Save specification')
