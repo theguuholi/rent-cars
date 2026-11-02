@@ -11,7 +11,11 @@ beforeEach(() => load.mockReset())
 
 it('shows loading while waiting, then displays the catalog including names without descriptions', async () => {
   let finish!: (categories: Awaited<ReturnType<typeof listCategories>>) => void
-  load.mockReturnValue(new Promise(resolve => { finish = resolve }))
+  load.mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve
+    }),
+  )
   renderWithQuery(<CategoryList />)
 
   expect(screen.getByRole('status')).toHaveTextContent('Loading categories')
@@ -38,7 +42,8 @@ it('shows the empty state when there are no categories', async () => {
 })
 
 it('shows an error and recovers when the user retries', async () => {
-  load.mockRejectedValueOnce(new Error('Unavailable'))
+  load
+    .mockRejectedValueOnce(new Error('Unavailable'))
     .mockResolvedValueOnce([{ name: 'VAN', description: 'Passenger van.' }])
   renderWithQuery(<CategoryList />)
 
