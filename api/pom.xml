@@ -143,8 +143,8 @@
 						<artifactId>pitest-maven</artifactId>
 						<version>1.30.1</version>
 						<configuration>
-							<targetClasses><param>com.github.theguuholi.rentcars.categories.Category</param></targetClasses>
-							<targetTests><param>com.github.theguuholi.rentcars.categories.CategoryTest</param></targetTests>
+							<targetClasses><param>com.github.theguuholi.rentcars.*</param></targetClasses>
+							<targetTests><param>com.github.theguuholi.rentcars.*</param></targetTests>
 							<failWhenNoMutations>true</failWhenNoMutations>
 							<outputFormats><param>HTML</param><param>XML</param></outputFormats>
 						</configuration>

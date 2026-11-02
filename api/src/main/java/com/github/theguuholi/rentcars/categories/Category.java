@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.Locale;
@@ -30,9 +31,8 @@ public class Category {
   @Column(name = "name", nullable = false, length = 50)
   private String name;
 
-  @NotBlank
+  @Pattern(regexp = "(?s).*[^\\p{javaWhitespace}].*")
   @Size(max = 255)
-  @Column(nullable = false)
   private String description;
 
   @CreationTimestamp
@@ -64,7 +64,9 @@ public class Category {
   }
 
   @Schema(
-      description = "Short explanation of the body style, suitable for display alongside the name.",
+      description = "Optional explanation of the body style.",
+      types = {"string", "null"},
+      requiredMode = Schema.RequiredMode.NOT_REQUIRED,
       example = "Compact car with a rear hatch.",
       maxLength = 255)
   public String getDescription() {
