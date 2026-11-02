@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react'
 import { loadEnv } from 'vite'
 import { defineConfig } from 'vitest/config'
+import { createApiProxy } from './config/api-proxy.ts'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -14,12 +15,7 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./src/test/setup.ts'],
     },
     server: {
-      proxy: {
-        '/api': {
-          target: API_TARGET || 'http://localhost:8080',
-          rewrite: (path) => path.replace(/^\/api/, ''),
-        },
-      },
+      proxy: createApiProxy(API_TARGET),
     },
   }
 })
