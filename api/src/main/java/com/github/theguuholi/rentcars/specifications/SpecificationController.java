@@ -1,11 +1,11 @@
 package com.github.theguuholi.rentcars.specifications;
 
-import com.github.theguuholi.rentcars.shared.http.DataResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -22,23 +22,23 @@ public class SpecificationController {
 
   @GetMapping
   @Operation(summary = "List specifications alphabetically")
-  public DataResponse<List<Specification>> list() {
-    return new DataResponse<>(service.list());
+  public Map<String, List<Specification>> list() {
+    return Map.of("data", service.list());
   }
 
   @GetMapping("/{id}")
   @Operation(summary = "Look up a specification by UUID")
-  public DataResponse<Specification> get(@PathVariable UUID id) {
-    return new DataResponse<>(service.get(id));
+  public Map<String, Specification> get(@PathVariable UUID id) {
+    return Map.of("data", service.get(id));
   }
 
   @PostMapping
   @Operation(summary = "Create a specification with a unique name and a description")
-  public ResponseEntity<DataResponse<Specification>> create(
+  public ResponseEntity<Map<String, Specification>> create(
       @Valid @RequestBody SpecificationRequest request) {
     var item = service.create(request.specification());
     return ResponseEntity.created(URI.create("/specifications/" + item.getId()))
-        .body(new DataResponse<>(item));
+        .body(Map.of("data", item));
   }
 
   @RequestMapping(
@@ -47,9 +47,9 @@ public class SpecificationController {
   @Operation(
       summary = "Update a specification",
       description = "Omitted fields retain their current values.")
-  public DataResponse<Specification> update(
+  public Map<String, Specification> update(
       @PathVariable UUID id, @Valid @RequestBody SpecificationRequest request) {
-    return new DataResponse<>(service.update(id, request.specification()));
+    return Map.of("data", service.update(id, request.specification()));
   }
 
   @DeleteMapping("/{id}")
