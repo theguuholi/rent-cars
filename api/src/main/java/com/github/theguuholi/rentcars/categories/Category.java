@@ -1,6 +1,7 @@
 package com.github.theguuholi.rentcars.categories;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -25,8 +26,13 @@ public class Category {
 
     @NotBlank
     @Size(max = 50)
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, length = 50)
     private String name;
+
+    @NotBlank
+    @Size(max = 255)
+    @Column(nullable = false)
+    private String description;
 
     @CreationTimestamp
     @Column(name = "inserted_at", nullable = false, updatable = false)
@@ -36,4 +42,31 @@ public class Category {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    protected Category() {
+    }
+
+    public Category(String name, String description) {
+        this.name = normalizeName(name);
+        this.description = description;
+    }
+
+    public void rename(String name) {
+        this.name = normalizeName(name);
+    }
+
+    public void changeDescription(String description) {
+        this.description = description;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    private static String normalizeName(String name) {
+        return name == null ? null : name.toUpperCase(Locale.ROOT);
+    }
 }
