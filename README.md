@@ -83,6 +83,6 @@ Run `./mvnw -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage` to
 
 ### SonarQube Cloud
 
-Import the GitHub repository into SonarQube Cloud, choose CI-based analysis, and set the main branch to `master`. Choose a quality gate for new code (for example, 80% coverage on new code). In the GitHub repository settings, set the Actions secret `SONAR_TOKEN` and the variables `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` using the identifiers displayed by Sonar. Set the project key last to enable the scanner. Run Java quality on the default branch to establish the baseline after merging this workflow.
+Import the GitHub repository into SonarQube Cloud, choose CI-based analysis, and set the main branch to `master`. Choose a quality gate for new code (for example, 80% coverage on new code). In the GitHub repository settings, set the Actions secret `SONAR_TOKEN` and the variables `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` using the identifiers displayed by Sonar. Missing settings fail verification on trusted branches. Run Java quality on the default branch to establish the baseline after merging this workflow.
 
 For trusted branches, the Java verification job uploads the JaCoCo XML to Sonar and waits for the server's quality gate. A failed gate fails the job. Fork and Dependabot PRs run the build and tests without access to Sonar credentials.
