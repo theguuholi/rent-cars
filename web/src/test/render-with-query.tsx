@@ -9,9 +9,5 @@ export function renderWithQuery(ui: ReactElement) {
     },
   })
 
-  return render(
-    <QueryClientProvider client={client}>
-      {ui}
-    </QueryClientProvider>,
-  )
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
 }

@@ -3,17 +3,29 @@
 Rent Cars is a car rental project built with Java, Spring Boot, and PostgreSQL. The API currently exposes the vehicle category catalog. Use it to build a category picker or show drivers what each body style means.
 
 
-## Run the API locally
+## Run the full stack locally
 
-Install JDK 25, Make, and Docker with Compose v2. Start Docker, then run the following commands from the repository root:
+The Spring Boot API lives in `api/` and the React frontend in `web/`. Install JDK 25, Node.js 24.16.0 (also pinned in `web/.node-version`), npm, Make and Docker with Compose v2. Start Docker. From the repository root, run:
 
 ```sh
-make db-up
-cd api
-./mvnw spring-boot:run
+make setup   # Install the frontend dependencies from the lockfile
+make dev     # Start PostgreSQL, the Java API and Vite
 ```
 
-The first command starts PostgreSQL 17 and waits until it accepts connections. The Maven Wrapper starts the API with the default `dev` profile. Flyway applies pending migrations, and Hibernate validates the schema. When the log shows `Started RentCarsApiApplication`, the API is available at `http://localhost:8080`.
+Run `make setup` on a fresh checkout and after the npm lockfile changes. The Maven Wrapper downloads Java dependencies on the first API start. PostgreSQL listens on port 5432, the API on 8080 and the frontend on 5173. These ports must be available. If you already started the API or Vite separately, stop that instance before running the combined command.
+
+Open the [web catalog](http://localhost:5173) when the API log shows `Started RentCarsApiApplication`. Flyway applies pending migrations at startup. Vite forwards `/api/categories` to the Java endpoint `/categories`. The combined command prints labeled API and web logs in one terminal. Press Ctrl+C to stop both applications. PostgreSQL stays up with its data until you run `make db-stop`.
+
+### Run a single application
+
+| Command from the repository root | What it starts |
+| --- | --- |
+| `make api-dev` | PostgreSQL and the Java API |
+| `make web-dev` | Only Vite; run `make setup` first |
+| `API_TARGET=http://127.0.0.1:8081 make web-dev` | Vite connected to the separately running Go API |
+| `make db-up` / `make db-stop` | Start or stop the development database |
+
+For frontend-only development, you can also set `API_TARGET` in `web/.env.local` and restart Vite. The combined `make dev` command defaults to the Java API it starts. To choose a different Java port for both the API and proxy, use `SERVER_PORT=8082 make dev`.
 
 ## Try the API
 
@@ -50,14 +62,6 @@ docker compose exec postgres psql -U postgres -d rent_cars_dev
 
 In psql, use `\dt` to list tables and `\q` to quit.
 
-## Stop the API and database
-
-Press `Ctrl+C` in the API terminal. To stop PostgreSQL and keep its data, run this command from the repository root:
-
-```sh
-docker compose stop postgres
-```
-
 ## Java quality checks
 
 Run these commands from the `api` directory. Start Docker before running the full test suite so Testcontainers can launch PostgreSQL 17.
@@ -82,3 +86,9 @@ Run these commands from the `api` directory. Start Docker before running the ful
 Import the GitHub repository into SonarQube Cloud, choose CI-based analysis, and set the main branch to `master`. Configure the new-code coverage condition described above. In the GitHub repository settings, set the Actions secret `SONAR_TOKEN` and the variables `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` using the identifiers displayed by Sonar. Missing settings fail verification on trusted branches. Run Java quality on the default branch to establish the baseline after merging this workflow.
 
 For trusted branches, the Java verification job uploads the JaCoCo XML to Sonar and waits for the server's quality gate. A failed gate fails the job. Fork and Dependabot PRs run the build and tests without access to Sonar credentials.
+
+## Web quality checks
+
+From `web/`, use the Node version in `.node-version` and install dependencies with `npm ci`. Run `npm run format:check`, `npm run lint`, `npm run test:coverage` and `npm run build` to reproduce **Web verification**. Use `npm run format` to apply Oxfmt fixes or `npm run lint:fix` for automatic Oxlint fixes.
+
+Vitest requires at least **95% each** for global line, statement, function and branch coverage across application TypeScript under `src/`. Tests, test helpers and declarations are excluded. Open `web/coverage/index.html` for the HTML report; `web/coverage/lcov.info` is available for tooling. Download **web-coverage** from the Web quality workflow to inspect a PR, including one that failed its coverage threshold.
