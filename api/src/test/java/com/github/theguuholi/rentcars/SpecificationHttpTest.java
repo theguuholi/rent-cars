@@ -79,7 +79,7 @@ class SpecificationHttpTest {
   void duplicateCreateAndRenameAreRejectedWithoutLosingData() throws Exception {
     String location = createGps();
     mvc.perform(post(PATH).contentType("application/json").content(GPS.replace("gps", "GpS")))
-        .andExpect(status().is(422))
+        .andExpect(status().isConflict())
         .andExpect(jsonPath("$.errors.name").isArray());
     mvc.perform(post(PATH).contentType("application/json").content(GPS.replace("gps", "abs")))
         .andExpect(status().isCreated());
@@ -90,7 +90,7 @@ class SpecificationHttpTest {
                     """
             {"specification":{"name":"abs"}}
             """))
-        .andExpect(status().is(422));
+        .andExpect(status().isConflict());
     mvc.perform(get(location)).andExpect(jsonPath("$.data.name").value("GPS"));
   }
 
@@ -126,6 +126,16 @@ class SpecificationHttpTest {
         .andExpect(status().is(422))
         .andExpect(jsonPath("$.errors.name").isArray());
     mvc.perform(get(location)).andExpect(jsonPath("$.data.description").value("Navigation"));
+  }
+
+  @Test
+  void malformedRequestsRetainMvcClientErrorStatuses() throws Exception {
+    mvc.perform(get(PATH + "/invalid-uuid")).andExpect(status().isBadRequest());
+    mvc.perform(post(PATH).contentType("application/json").content("{"))
+        .andExpect(status().isBadRequest());
+    mvc.perform(post(PATH + "/" + UUID.randomUUID()))
+        .andExpect(status().isMethodNotAllowed())
+        .andExpect(header().exists("Allow"));
   }
 
   @Test

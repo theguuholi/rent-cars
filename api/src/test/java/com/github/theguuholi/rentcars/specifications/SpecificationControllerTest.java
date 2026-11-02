@@ -6,7 +6,6 @@ import static org.mockito.Mockito.*;
 import java.net.URI;
 import java.util.*;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 
 class SpecificationControllerTest {
@@ -45,15 +44,5 @@ class SpecificationControllerTest {
     assertThat(controller.update(id, new SpecificationRequest(attrs)).data()).isSameAs(item);
     controller.delete(id);
     verify(service).delete(id);
-  }
-
-  @Test
-  void handlesOnlyTheNamedUniqueConstraint() {
-    var violation = mock(org.hibernate.exception.ConstraintViolationException.class);
-    when(violation.getConstraintName()).thenReturn("specifications_name_index");
-    var failure = new DataIntegrityViolationException("save failed", violation);
-    assertThat(controller.duplicate(failure).errors()).containsOnlyKeys("name");
-    when(violation.getConstraintName()).thenReturn("other_constraint");
-    assertThatThrownBy(() -> controller.duplicate(failure)).isSameAs(failure);
   }
 }
