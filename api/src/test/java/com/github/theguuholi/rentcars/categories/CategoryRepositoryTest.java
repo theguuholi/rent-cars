@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -135,10 +136,17 @@ class CategoryRepositoryTest {
         .isInstanceOf(ConstraintViolationException.class);
   }
 
+  @Test
+  void storesCategoryWithoutDescription() {
+    var id = idOf(categories.saveAndFlush(new Category("van", null)));
+    entityManager.clear();
+    assertThat(categories.findById(id).orElseThrow().getDescription()).isNull();
+  }
+
   @ParameterizedTest
-  @NullAndEmptySource
+  @EmptySource
   @ValueSource(strings = {"  "})
-  @DisplayName("Rejects a missing or blank description when saving")
+  @DisplayName("Rejects a blank description when saving")
   void rejectsInvalidDescription(String description) {
     assertThatThrownBy(() -> categories.saveAndFlush(new Category("van", description)))
         .isInstanceOf(ConstraintViolationException.class);

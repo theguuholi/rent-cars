@@ -22,14 +22,19 @@ class CategoryHttpTest {
   @Autowired JdbcTemplate jdbc;
 
   @Test
-  void listsSeededCategoriesAlphabeticallyAsJson() throws Exception {
+  void listsCategoriesAlphabeticallyAsJson() throws Exception {
+    jdbc.update("delete from categories");
+    jdbc.update(
+        "insert into categories (name, description) values (?, ?), (?, ?)",
+        "VAN",
+        "Passenger van",
+        "COUPE",
+        "Two-door car");
     mvc.perform(get("/categories").accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-        .andExpect(
-            jsonPath("$[*].name")
-                .value(org.hamcrest.Matchers.contains("HATCHBACK", "PICKUP", "SEDAN", "SUV")))
-        .andExpect(jsonPath("$[0].description").value("Compact car with a rear hatch."));
+        .andExpect(jsonPath("$[*].name").value(org.hamcrest.Matchers.contains("COUPE", "VAN")))
+        .andExpect(jsonPath("$[0].description").value("Two-door car"));
   }
 
   @Test

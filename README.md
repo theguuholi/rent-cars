@@ -2,23 +2,6 @@
 
 Rent Cars is a car rental project built with Java, Spring Boot, and PostgreSQL. The API currently exposes the vehicle category catalog. Use it to build a category picker or show drivers what each body style means.
 
-## Vehicle categories
-
-Call `GET /categories` to retrieve the full catalog in alphabetical order. The request takes no parameters. Each category has two public fields:
-
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `name` | string, up to 50 characters | Unique uppercase catalog name, such as `SUV`. |
-| `description` | string, up to 255 characters | Short explanation of the body style that a client can display alongside its name. |
-
-A fresh database includes these categories:
-
-| Name | Description |
-| --- | --- |
-| HATCHBACK | Compact car with a rear hatch. |
-| PICKUP | Truck with an open cargo bed. |
-| SEDAN | Car with a trunk separate from the passenger compartment. |
-| SUV | Sport utility vehicle. |
 
 ## Run the API locally
 
@@ -40,7 +23,7 @@ With the API running, list the vehicle categories from any terminal:
 curl -i -H 'Accept: application/json' http://localhost:8080/categories
 ```
 
-Expect `200 OK` and a JSON array sorted by name in ascending order. Each entry contains a name and a description. For example, the seeded catalog includes this entry:
+Expect `200 OK` and a JSON array sorted by name in ascending order. Each entry contains a name and an optional description. For example, the seeded catalog includes this entry:
 
 ```json
 {
@@ -84,15 +67,15 @@ Run these commands from the `api` directory. Start Docker before running the ful
 | Check Java formatting | `./mvnw spotless:check` |
 | Apply formatting fixes | `./mvnw spotless:apply` |
 | Run the tests and generate fresh JaCoCo coverage reports | `./mvnw clean verify` |
-| Run mutation tests for Category | `./mvnw -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage` |
+| Run mutation tests for the Java API | `./mvnw -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage` |
 
 **Before pushing**, run `./mvnw spotless:apply`, review the formatting changes, then run `./mvnw verify`. Spotless enforces formatting. SonarQube Cloud reports reliability, maintainability and security findings on pull requests.
 
 ### Read the reports
 
 - **Test coverage:** open `target/site/jacoco/index.html` in a browser (on macOS, run `open target/site/jacoco/index.html`). Select a package or class to inspect uncovered lines and branches. Maven generates the report without enforcing a project-wide minimum. The Sonar quality gate requires **80% coverage on new code**, so a successful local build can still receive a failing PR check.
-- **Mutation testing:** open `target/pit-reports/index.html` (on macOS, run `open target/pit-reports/index.html`). Review surviving mutations to see which changes the tests missed. The current profile targets the Category entity and has no minimum mutation score.
-- **In GitHub Actions:** download `jacoco-coverage` from the Java quality workflow or `pitest-domain` from the Domain mutation tests workflow. Mutation testing runs on Mondays, on demand, and on pull requests changing its workflow or Maven configuration.
+- **Mutation testing:** open `target/pit-reports/index.html` (on macOS, run `open target/pit-reports/index.html`). Review surviving mutations to see which changes the tests missed. The current profile targets all application classes and tests under the root Java package and has no minimum mutation score.
+- **In GitHub Actions:** download `jacoco-coverage` from the Java quality workflow or `pitest-api` from the API mutation tests workflow. Mutation testing runs on Mondays, on demand, and on pull requests changing the API directory or its mutation workflow.
 
 ### SonarQube Cloud
 

@@ -34,6 +34,7 @@ jobs:
           path: api/target/site/jacoco/
           if-no-files-found: error
       - name: Analyze code and wait for the Sonar quality gate
+        id: sonar
         if: github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -48,3 +49,31 @@ jobs:
             -Dsonar.projectKey="$SONAR_PROJECT_KEY" -Dsonar.organization="$SONAR_ORGANIZATION" \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
             -Dsonar.qualitygate.wait=true
+      - name: Explain the failed Sonar analysis
+        if: failure() && steps.sonar.outcome == 'failure'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          report=target/sonar/report-task.txt
+          if [[ ! -s "$report" ]]; then
+            echo 'Sonar produced no analysis report. Check the scanner log above.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          task_id=$(sed -n 's/^ceTaskId=//p' "$report")
+          dashboard=$(sed -n 's/^dashboardUrl=//p' "$report")
+          echo "### [Sonar analysis]($dashboard)" >> "$GITHUB_STEP_SUMMARY"
+          sonar_api() {
+            curl --fail --silent --show-error --max-time 20 --retry 2 \
+              -H "Authorization: Bearer $SONAR_TOKEN" --get \
+              "https://sonarcloud.io/api/$1" --data-urlencode "$2"
+          }
+          task=$(sonar_api ce/task "id=$task_id")
+          analysis_id=$(jq -r '.task.analysisId // empty' <<< "$task")
+          if [[ -z "$analysis_id" ]]; then
+            jq -r '"Analysis task status: " + .task.status' <<< "$task" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          sonar_api qualitygates/project_status "analysisId=$analysis_id" |
+            jq -r '.projectStatus | "Gate status: " + .status,
+              (.conditions[] | select(.status == "ERROR") |
+               "- `\(.metricKey)`: measured \(.actualValue), failure threshold \(.comparator) \(.errorThreshold)")' >> "$GITHUB_STEP_SUMMARY"

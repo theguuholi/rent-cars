@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -109,17 +110,22 @@ class CategoryTest {
     assertThat(validator.validateProperty(category, "name")).hasSize(1);
   }
 
+  @Test
+  void acceptsMissingDescription() {
+    assertThat(validator.validate(new Category("van", null))).isEmpty();
+  }
+
   @ParameterizedTest
-  @NullAndEmptySource
+  @EmptySource
   @ValueSource(strings = {" ", "   ", "\t", "\n"})
-  @DisplayName("Rejects a missing, empty, or whitespace-only description")
+  @DisplayName("Rejects an empty or whitespace-only description")
   void rejectsBlankDescription(String description) {
     var violations = validator.validateValue(Category.class, "description", description);
 
     assertThat(violations)
         .singleElement()
         .extracting(v -> v.getConstraintDescriptor().getAnnotation().annotationType())
-        .isEqualTo(NotBlank.class);
+        .isEqualTo(jakarta.validation.constraints.Pattern.class);
   }
 
   @ParameterizedTest(name = "{0} characters")
