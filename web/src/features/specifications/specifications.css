@@ -1,0 +1,45 @@
+.catalog-nav,
+.specifications .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.catalog-nav button[aria-pressed='true'] {
+  font-weight: bold;
+  border-bottom: 3px solid currentColor;
+}
+.specifications {
+  max-width: 48rem;
+}
+.specifications fieldset,
+.specifications .confirmation {
+  padding: 1rem;
+  margin: 1rem 0;
+}
+.specifications label {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+.specifications input,
+.specifications textarea {
+  padding: 0.5rem;
+  font: inherit;
+}
+.specifications ul {
+  list-style: none;
+  padding: 0;
+}
+.specifications li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #aaa;
+  overflow-wrap: anywhere;
+}
+.specifications li p {
+  margin: 0.25rem 0;
+}
