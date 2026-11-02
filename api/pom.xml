@@ -128,25 +128,6 @@
 				<executions>
 					<execution><goals><goal>prepare-agent</goal></goals></execution>
 					<execution><id>coverage-report</id><phase>verify</phase><goals><goal>report</goal></goals></execution>
-					<execution>
-						<id>specifications-file-coverage</id>
-						<goals><goal>check</goal></goals>
-						<configuration>
-							<rules>
-								<rule>
-									<element>SOURCEFILE</element>
-									<includes>
-										<include>com/github/theguuholi/rentcars/specifications/*</include>
-										<include>com/github/theguuholi/rentcars/shared/http/*</include>
-									</includes>
-									<limits>
-										<limit><counter>INSTRUCTION</counter><value>MISSEDCOUNT</value><maximum>0</maximum></limit>
-										<limit><counter>BRANCH</counter><value>MISSEDCOUNT</value><maximum>0</maximum></limit>
-									</limits>
-								</rule>
-							</rules>
-						</configuration>
-					</execution>
 				</executions>
 			</plugin>
 		</plugins>

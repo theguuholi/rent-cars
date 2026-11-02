@@ -1,9 +1,13 @@
 package com.github.theguuholi.rentcars;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,6 +18,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -133,6 +138,117 @@ class SpecificationHttpTest {
     mvc.perform(post(PATH + "/" + UUID.randomUUID()))
         .andExpect(status().isMethodNotAllowed())
         .andExpect(header().exists("Allow"));
+  }
+
+  @Autowired TransactionTemplate transactions;
+
+  @Test
+  void concurrentCreatesWithEquivalentNamesCommitExactlyOneRecord() throws Exception {
+    var start = new CyclicBarrier(2);
+    try (var workers = Executors.newVirtualThreadPerTaskExecutor()) {
+      Callable<Integer> create =
+          () -> {
+            start.await(10, TimeUnit.SECONDS);
+            return mvc.perform(post(PATH).contentType("application/json").content(GPS))
+                .andReturn()
+                .getResponse()
+                .getStatus();
+          };
+      var first = workers.submit(create);
+      var second = workers.submit(create);
+      assertThat(
+              java.util.List.of(first.get(15, TimeUnit.SECONDS), second.get(15, TimeUnit.SECONDS)))
+          .containsExactlyInAnyOrder(201, 409);
+    }
+    mvc.perform(get(PATH))
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].name").value("GPS"));
+  }
+
+  @Test
+  void waitingPatchPreservesAnotherTransactionsRename() throws Exception {
+    String location = createGps();
+    try (var workers = Executors.newVirtualThreadPerTaskExecutor()) {
+      // Hold the first HTTP update open until PostgreSQL confirms that the second request is
+      // blocked.
+      var waiting =
+          transactions.execute(
+              status -> {
+                try {
+                  mvc.perform(
+                          patch(location)
+                              .contentType("application/json")
+                              .content("{\"name\":\"sat nav\"}"))
+                      .andExpect(status().isOk());
+                  int owner = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
+                  var next =
+                      workers.submit(
+                          () ->
+                              mvc.perform(
+                                      patch(location)
+                                          .contentType("application/json")
+                                          .content("{\"description\":\"Updated maps\"}"))
+                                  .andReturn()
+                                  .getResponse()
+                                  .getStatus());
+                  await()
+                      .atMost(Duration.ofSeconds(10))
+                      .until(
+                          () ->
+                              jdbc.queryForObject(
+                                  "select exists (select 1 from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
+                                  Boolean.class,
+                                  owner));
+                  return next;
+                } catch (Exception ex) {
+                  throw new AssertionError(ex);
+                }
+              });
+      assertThat(waiting.get(15, TimeUnit.SECONDS)).isEqualTo(200);
+    }
+    mvc.perform(get(location))
+        .andExpect(jsonPath("$.name").value("SAT NAV"))
+        .andExpect(jsonPath("$.description").value("Updated maps"));
+  }
+
+  @Test
+  void invalidPatchRollsBackAllFieldsAndAllowsRetry() throws Exception {
+    String location = createGps();
+    mvc.perform(
+            patch(location)
+                .contentType("application/json")
+                .content("{\"name\":\"sat nav\",\"description\":null}"))
+        .andExpect(status().is(422))
+        .andExpect(jsonPath("$.errors.description").isArray());
+    mvc.perform(get(location))
+        .andExpect(jsonPath("$.name").value("GPS"))
+        .andExpect(jsonPath("$.description").value("Navigation"));
+    mvc.perform(patch(location).contentType("application/json").content("{\"name\":\"sat nav\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("SAT NAV"));
+  }
+
+  @Test
+  void listsInNameOrderAndAllowsReusingADeletedName() throws Exception {
+    String original = createGps();
+    mvc.perform(post(PATH).contentType("application/json").content(GPS.replace("gps", "abs")))
+        .andExpect(status().isCreated());
+    mvc.perform(get(PATH))
+        .andExpect(jsonPath("$[*].name").value(org.hamcrest.Matchers.contains("ABS", "GPS")));
+    mvc.perform(delete(original)).andExpect(status().isNoContent()).andExpect(content().string(""));
+    mvc.perform(delete(original)).andExpect(status().isNotFound());
+    assertThat(createGps()).isNotEqualTo(original);
+    mvc.perform(get(original)).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void emptyPatchPreservesTheRecordAndEmptyRequestBodyIsRejected() throws Exception {
+    String location = createGps();
+    mvc.perform(patch(location).contentType("application/json").content("{}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("GPS"))
+        .andExpect(jsonPath("$.description").value("Navigation"));
+    mvc.perform(post(PATH).contentType("application/json")).andExpect(status().isBadRequest());
   }
 
   @Test
