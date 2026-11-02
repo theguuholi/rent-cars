@@ -74,3 +74,15 @@ Press `Ctrl+C` in the API terminal. To stop PostgreSQL and keep its data, run th
 ```sh
 docker compose stop postgres
 ```
+
+## Java quality checks
+
+From the API directory, run `./mvnw spotless:apply` to format Java sources and `./mvnw clean verify` to check formatting, run all tests with PostgreSQL 17 in Testcontainers, and generate coverage. Open `target/site/jacoco/index.html` locally or download the **jacoco-coverage** artifact from the Java quality workflow.
+
+Run `./mvnw -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage` to check whether the category unit tests detect changes to the entity. Open `target/pit-reports/index.html` and review surviving mutations. Extend the mutation profile's target classes and tests when adding rental rules. GitHub runs this workflow on Mondays, on demand, and on pull requests changing its configuration.
+
+### SonarQube Cloud
+
+Import the GitHub repository into SonarQube Cloud, choose CI-based analysis, and set the main branch to `master`. Choose a quality gate for new code (for example, 80% coverage on new code). In the GitHub repository settings, set the Actions secret `SONAR_TOKEN` and the variables `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` using the identifiers displayed by Sonar. Set the project key last to enable the scanner. Run Java quality on the default branch to establish the baseline after merging this workflow.
+
+For trusted branches, the Java verification job uploads the JaCoCo XML to Sonar and waits for the server's quality gate. A failed gate fails the job. Fork and Dependabot PRs run the build and tests without access to Sonar credentials.
