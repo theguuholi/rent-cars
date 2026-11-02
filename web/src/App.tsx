@@ -1,4 +1,4 @@
-import { CategoryList } from "./features/categories/CategoryList"
+import { CategoryList } from './features/categories/CategoryList'
 
 function App() {
   return (

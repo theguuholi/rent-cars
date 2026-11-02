@@ -16,8 +16,9 @@ it('requests the catalog with the caller’s signal and reads its JSON', async (
 it('reports the HTTP status when the backend responds with an error', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 503 })))
 
-  await expect(listCategories(new AbortController().signal))
-    .rejects.toThrow('Failed to fetch categories (503)')
+  await expect(listCategories(new AbortController().signal)).rejects.toThrow(
+    'Failed to fetch categories (503)',
+  )
 })
 
 it('propagates a network failure', async () => {
