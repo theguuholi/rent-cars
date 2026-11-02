@@ -32,6 +32,18 @@
   .catalog-nav a[aria-current='page'] {
     @apply border-brand text-brand;
   }
+  .page-section {
+    @apply py-8;
+  }
+  .page-header {
+    @apply mb-6 flex flex-wrap items-end justify-between gap-4;
+  }
+  .supporting-text {
+    @apply mt-1 text-slate-600;
+  }
+  .panel {
+    @apply rounded-lg border border-slate-200 p-5;
+  }
   .page-title {
     @apply text-3xl font-bold tracking-tight sm:text-4xl;
   }

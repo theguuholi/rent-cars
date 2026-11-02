@@ -55,14 +55,14 @@ export function SpecificationsPage() {
     void navigate({ to: '/specifications', replace: true })
   }
   return (
-    <section className="py-8" aria-labelledby="specs-title">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <section className="page-section" aria-labelledby="specs-title">
+      <header className="page-header">
         <div>
           <p className="eyebrow">Catalog</p>
           <h2 className="page-title" id="specs-title">
             Vehicle specifications
           </h2>
-          <p className="mt-1 text-slate-600">
+          <p className="supporting-text">
             Manage the features and equipment available on rental vehicles.
           </p>
         </div>
@@ -71,7 +71,7 @@ export function SpecificationsPage() {
             New specification
           </Link>
         )}
-      </div>
+      </header>
       {notice && (
         <p role="status" className="mb-4 text-brand">
           {notice}
@@ -80,10 +80,7 @@ export function SpecificationsPage() {
       {change.isError && <p role="alert">{change.error.message}</p>}
       <div className={panelOpen ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]' : ''}>
         {panelOpen && (
-          <aside
-            aria-label="Specification details"
-            className="rounded-lg border border-slate-200 p-5 lg:col-start-2 lg:row-start-1"
-          >
+          <aside aria-label="Specification details" className="panel lg:col-start-2 lg:row-start-1">
             {selected && !item ? (
               <div>
                 {catalog.isSuccess && <p role="alert">Specification not found.</p>}
@@ -134,7 +131,9 @@ export function SpecificationsPage() {
           ) : catalog.isError ? (
             <div role="alert">
               <p>Could not load specifications.</p>
-              <button onClick={() => void catalog.refetch()}>Try again</button>
+              <button className="btn-secondary" onClick={() => void catalog.refetch()}>
+                Try again
+              </button>
             </div>
           ) : catalog.data.length === 0 ? (
             <p>No specifications yet.</p>

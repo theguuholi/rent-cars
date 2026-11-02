@@ -29,9 +29,9 @@ export function CategoryList() {
   return (
     <ul className="grid gap-4 sm:grid-cols-2" aria-label="Vehicle categories">
       {categories.data.map(({ name, description }) => (
-        <li key={name} className="rounded-lg border border-slate-200 p-5">
+        <li key={name} className="panel">
           <strong>{name}</strong>
-          {description && <p className="mt-1 text-slate-600">{description}</p>}
+          {description && <p className="supporting-text">{description}</p>}
         </li>
       ))}
     </ul>
