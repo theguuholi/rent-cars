@@ -48,6 +48,31 @@ class SpecificationHttpTest {
   }
 
   @Test
+  void publishesSpecificationSchemasInOpenApi() throws Exception {
+    var schema = "$.components.schemas.Specification";
+    var request = "$.components.schemas.SpecificationRequest";
+    mvc.perform(get("/v3/api-docs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath(schema + ".description").isNotEmpty())
+        .andExpect(jsonPath(schema + ".properties.id.format").value("uuid"))
+        .andExpect(jsonPath(schema + ".properties.id.readOnly").value(true))
+        .andExpect(jsonPath(schema + ".properties.name.example").value("GPS"))
+        .andExpect(jsonPath(schema + ".properties.name.maxLength").value(255))
+        .andExpect(
+            jsonPath(schema + ".required")
+                .value(org.hamcrest.Matchers.containsInAnyOrder("id", "name", "description")))
+        .andExpect(
+            jsonPath(schema + ".properties.description.example")
+                .value("Turn-by-turn satellite navigation."))
+        .andExpect(jsonPath(request + ".description").isNotEmpty())
+        .andExpect(jsonPath(request + ".properties.name.example").value("gps"))
+        .andExpect(jsonPath(request + ".properties.description.example").isNotEmpty())
+        .andExpect(
+            jsonPath("$.paths['/specifications'].post.responses['201'].content.*.schema['$ref']")
+                .value(org.hamcrest.Matchers.hasItem("#/components/schemas/Specification")));
+  }
+
+  @Test
   void catalogLifecycle() throws Exception {
     mvc.perform(get(PATH))
         .andExpect(status().isOk())

@@ -1,6 +1,7 @@
 package com.github.theguuholi.rentcars.specifications;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
 import java.util.List;
@@ -32,6 +33,10 @@ public class SpecificationController {
 
   @PostMapping
   @Operation(summary = "Create a specification with a unique name and a description")
+  @ApiResponse(
+      responseCode = "201",
+      description = "Specification created. Location identifies the new resource.",
+      useReturnTypeSchema = true)
   public ResponseEntity<Specification> create(@RequestBody SpecificationRequest request) {
     var item = service.create(request);
     return ResponseEntity.created(URI.create("/specifications/" + item.getId())).body(item);
