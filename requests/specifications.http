@@ -1,0 +1,32 @@
+@baseUrl = http://localhost:8080
+
+### List specifications alphabetically and select the first result for the requests below
+# If the list is empty, create a specification, then send this request again.
+# @name listSpecifications
+GET {{baseUrl}}/specifications
+Accept: application/json
+
+### Create a specification
+# @name createSpecification
+POST {{baseUrl}}/specifications
+Content-Type: application/json
+
+{"name":"air conditioning","description":"Cabin temperature control."}
+
+### Fetch the first specification from the last list response
+GET {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
+
+### Update both fields
+PUT {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
+Content-Type: application/json
+
+{"name":"climate control","description":"Automatic cabin temperature control."}
+
+### Change only the description
+PATCH {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
+Content-Type: application/json
+
+{"description":"Dual-zone climate control."}
+
+### Delete the selected specification; refresh the list before selecting another
+DELETE {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
