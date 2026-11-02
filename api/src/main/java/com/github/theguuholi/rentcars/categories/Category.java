@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -16,6 +17,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+@Schema(description = "A vehicle body style in the rental catalog, shared by cars of the same type.")
 @Entity
 @Table(name = "categories")
 public class Category {
@@ -58,10 +60,13 @@ public class Category {
         this.description = description;
     }
 
+    @Schema(description = "Unique uppercase category name.", example = "HATCHBACK", maxLength = 50)
     public String getName() {
         return name;
     }
 
+    @Schema(description = "Short explanation of the body style, suitable for display alongside the name.",
+            example = "Compact car with a rear hatch.", maxLength = 255)
     public String getDescription() {
         return description;
     }

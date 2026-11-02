@@ -1,6 +1,24 @@
 # Rent Cars
 
-A car rental API built with Java, Spring Boot, and PostgreSQL.
+Rent Cars is a car rental project built with Java, Spring Boot, and PostgreSQL. The API currently exposes the vehicle category catalog. Use it to build a category picker or show drivers what each body style means.
+
+## Vehicle categories
+
+Call `GET /categories` to retrieve the full catalog in alphabetical order. The request takes no parameters. Each category has two public fields:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `name` | string, up to 50 characters | Unique uppercase catalog name, such as `SUV`. |
+| `description` | string, up to 255 characters | Short explanation of the body style that a client can display alongside its name. |
+
+A fresh database includes these categories:
+
+| Name | Description |
+| --- | --- |
+| HATCHBACK | Compact car with a rear hatch. |
+| PICKUP | Truck with an open cargo bed. |
+| SEDAN | Car with a trunk separate from the passenger compartment. |
+| SUV | Sport utility vehicle. |
 
 ## Run the API locally
 

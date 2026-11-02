@@ -42,6 +42,11 @@ class CategoryHttpTest {
     void publishesCategoryOperationAndServesSwaggerUi() throws Exception {
         mvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.info.title").value("Rent Cars API"))
+                .andExpect(jsonPath("$.components.schemas.Category.properties.name.example").value("HATCHBACK"))
+                .andExpect(jsonPath("$.components.schemas.Category.properties.description.maxLength").value(255))
+                .andExpect(jsonPath("$.paths['/categories'].get.responses['200'].content['application/json'].schema.items['$ref']")
+                        .value("#/components/schemas/Category"))
                 .andExpect(jsonPath("$.paths['/categories'].get.summary").value("List categories alphabetically"));
         mvc.perform(get("/swagger-ui.html"))
                 .andExpect(status().is3xxRedirection());
