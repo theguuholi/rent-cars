@@ -7,3 +7,5 @@ For frontend-only development, run `make setup` and `make web-dev` from the repo
 The home page (`/`) contains only the navigation menu. Open `/categories` to browse body styles. Select **Specifications** (`/specifications`) to list vehicle features, create a new feature, edit its name and description, or confirm deletion. This catalog uses the Java backend. The Go backend currently serves categories only.
 
 See [web quality checks](../README.md#web-quality-checks) for formatting, lint, tests, coverage and the production build.
+
+Specification actions have their own browser URLs. Open `/specifications/new` to create a record, `/specifications/:id/edit` to edit it, or `/specifications/:id/delete` to review deletion. Replace `:id` with the record's UUID. Opening or refreshing a deletion URL only shows the confirmation.

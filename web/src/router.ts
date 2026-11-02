@@ -20,7 +20,29 @@ const specifications = createRoute({
   path: '/specifications',
   component: SpecificationsPage,
 })
-const tree = root.addChildren([home, categories, specifications])
+const newSpecification = createRoute({
+  getParentRoute: () => root,
+  path: '/specifications/new',
+  component: SpecificationsPage,
+})
+const editSpecification = createRoute({
+  getParentRoute: () => root,
+  path: '/specifications/$id/edit',
+  component: SpecificationsPage,
+})
+const deleteSpecification = createRoute({
+  getParentRoute: () => root,
+  path: '/specifications/$id/delete',
+  component: SpecificationsPage,
+})
+const tree = root.addChildren([
+  home,
+  categories,
+  specifications,
+  newSpecification,
+  editSpecification,
+  deleteSpecification,
+])
 export function createAppRouter(history?: RouterHistory) {
   return createRouter({ routeTree: tree, history })
 }

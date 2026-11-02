@@ -1,39 +1,59 @@
-import { useState } from 'react'
+import { Link, useMatchRoute, useNavigate, useLocation } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { SpecificationEditor } from './SpecificationEditor'
 import { deleteSpecification, listSpecifications, saveSpecification } from './specifications-api'
-import type { Specification, SpecificationInput } from './specifications-api'
+import type { SpecificationInput } from './specifications-api'
 
-type Action = { type: 'create' } | { type: 'edit' | 'delete'; item: Specification }
+declare module '@tanstack/react-router' {
+  interface HistoryState {
+    specificationNotice?: string
+  }
+}
 type Change =
   | { type: 'save'; input: SpecificationInput; id?: string }
   | { type: 'delete'; id: string }
 const queryKey = ['specifications']
 
 export function SpecificationsPage() {
-  const [action, setAction] = useState<Action | null>(null)
-  const [notice, setNotice] = useState('')
+  const match = useMatchRoute()
+  const navigate = useNavigate()
+  const creating = !!match({ to: '/specifications/new' })
+  const edit = match({ to: '/specifications/$id/edit' })
+  const deleting = match({ to: '/specifications/$id/delete' })
+  const selected = edit || deleting
+  const id = selected ? selected.id : undefined
+  const panelOpen = creating || !!selected
+  const notice = useLocation({ select: (location) => location.state.specificationNotice })
   const client = useQueryClient()
-  const catalog = useQuery({ queryKey, queryFn: ({ signal }) => listSpecifications(signal) })
+  const catalog = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => listSpecifications(signal),
+    staleTime: 30_000,
+  })
+  const item = catalog.data?.find((entry) => entry.id === id)
   const change = useMutation({
     mutationFn: async (command: Change) => {
       if (command.type === 'delete') await deleteSpecification(command.id)
       else await saveSpecification(command.input, command.id)
     },
     onSuccess: async (_, command) => {
-      setAction(null)
-      setNotice(command.type === 'delete' ? 'Specification deleted.' : 'Specification saved.')
+      await navigate({
+        to: '/specifications',
+        replace: true,
+        state: {
+          specificationNotice:
+            command.type === 'delete' ? 'Specification deleted.' : 'Specification saved.',
+        },
+      })
       await client.invalidateQueries({ queryKey })
     },
   })
 
-  function open(next: Action | null) {
-    if (change.isError && next === null) void client.invalidateQueries({ queryKey })
+  function close() {
+    if (change.isError) void client.invalidateQueries({ queryKey })
     change.reset()
-    setNotice('')
-    setAction(next)
+    void navigate({ to: '/specifications', replace: true })
   }
-
   return (
     <section className="py-8" aria-labelledby="specs-title">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -46,14 +66,10 @@ export function SpecificationsPage() {
             Manage the features and equipment available on rental vehicles.
           </p>
         </div>
-        {!action && (
-          <button
-            className="btn-primary"
-            disabled={change.isPending}
-            onClick={() => open({ type: 'create' })}
-          >
+        {!panelOpen && (
+          <Link className="btn-primary" to="/specifications/new">
             New specification
-          </button>
+          </Link>
         )}
       </div>
       {notice && (
@@ -62,21 +78,26 @@ export function SpecificationsPage() {
         </p>
       )}
       {change.isError && <p role="alert">{change.error.message}</p>}
-      <div className={action ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]' : ''}>
-        {action && (
+      <div className={panelOpen ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]' : ''}>
+        {panelOpen && (
           <aside
             aria-label="Specification details"
             className="rounded-lg border border-slate-200 p-5 lg:col-start-2 lg:row-start-1"
           >
-            {action?.type === 'delete' ? (
+            {selected && !item ? (
               <div>
-                <h3 className="wrap-anywhere text-xl font-bold">Delete {action.item.name}?</h3>
+                {catalog.isSuccess && <p role="alert">Specification not found.</p>}
+                <Link to="/specifications">Back to specifications</Link>
+              </div>
+            ) : deleting && item ? (
+              <div>
+                <h3 className="wrap-anywhere text-xl font-bold">Delete {item.name}?</h3>
                 <p>This removes the specification from the catalog.</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     className="btn-danger"
                     disabled={change.isPending}
-                    onClick={() => change.mutate({ type: 'delete', id: action.item.id })}
+                    onClick={() => change.mutate({ type: 'delete', id: item.id })}
                   >
                     Confirm deletion
                   </button>
@@ -84,7 +105,7 @@ export function SpecificationsPage() {
                     className="btn-secondary"
                     autoFocus
                     disabled={change.isPending}
-                    onClick={() => open(null)}
+                    onClick={close}
                   >
                     Cancel
                   </button>
@@ -92,14 +113,15 @@ export function SpecificationsPage() {
               </div>
             ) : (
               <SpecificationEditor
-                item={action.type === 'edit' ? action.item : undefined}
+                item={item}
+                key={id}
                 busy={change.isPending}
-                onCancel={() => open(null)}
+                onCancel={close}
                 onSave={(input) =>
                   change.mutate({
                     type: 'save',
                     input,
-                    id: action.type === 'edit' ? action.item.id : undefined,
+                    id,
                   })
                 }
               />
@@ -127,30 +149,29 @@ export function SpecificationsPage() {
               </thead>
               <tbody>
                 {catalog.data.map((item) => (
-                  <tr
-                    key={item.id}
-                    data-selected={action && 'item' in action && action.item.id === item.id}
-                  >
+                  <tr key={item.id} data-selected={id === item.id}>
                     <th scope="row">{item.name}</th>
                     <td>{item.description}</td>
                     <td>
                       <div className="flex flex-wrap gap-3">
-                        <button
+                        <Link
                           className="text-brand"
-                          disabled={!!action || change.isPending}
+                          disabled={panelOpen || change.isPending}
                           aria-label={`Edit ${item.name}`}
-                          onClick={() => open({ type: 'edit', item })}
+                          to="/specifications/$id/edit"
+                          params={{ id: item.id }}
                         >
                           Edit
-                        </button>
-                        <button
+                        </Link>
+                        <Link
                           className="text-red-700"
-                          disabled={!!action || change.isPending}
+                          disabled={panelOpen || change.isPending}
                           aria-label={`Delete ${item.name}`}
-                          onClick={() => open({ type: 'delete', item })}
+                          to="/specifications/$id/delete"
+                          params={{ id: item.id }}
                         >
                           Delete
-                        </button>
+                        </Link>
                       </div>
                     </td>
                   </tr>
