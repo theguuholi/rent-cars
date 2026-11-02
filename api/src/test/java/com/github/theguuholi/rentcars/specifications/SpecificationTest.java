@@ -24,16 +24,16 @@ class SpecificationTest {
   @Test
   void normalizesNameAndPreservesOmittedFields() {
     var spec = new Specification();
-    var attrs = new SpecificationRequest.Attributes();
+    var attrs = new SpecificationRequest();
     attrs.name = "gps";
     attrs.description = "Navigation";
     spec.apply(attrs);
-    var rename = new SpecificationRequest.Attributes();
+    var rename = new SpecificationRequest();
     rename.name = "abs";
     spec.apply(rename);
     assertThat(spec.getName()).isEqualTo("ABS");
     assertThat(spec.getDescription()).isEqualTo("Navigation");
-    var describe = new SpecificationRequest.Attributes();
+    var describe = new SpecificationRequest();
     describe.description = "Brakes";
     spec.apply(describe);
     assertThat(spec.getName()).isEqualTo("ABS");
@@ -44,7 +44,7 @@ class SpecificationTest {
   @NullAndEmptySource
   @ValueSource(strings = {"  ", "\t"})
   void requiresBothFields(String blank) {
-    var attrs = new SpecificationRequest.Attributes();
+    var attrs = new SpecificationRequest();
     attrs.name = blank;
     attrs.description = blank;
     var spec = new Specification();
@@ -57,7 +57,7 @@ class SpecificationTest {
   @Test
   void checksNameLimitAfterCaseConversionAndAcceptsLongDescription() {
     var spec = new Specification();
-    var attrs = new SpecificationRequest.Attributes();
+    var attrs = new SpecificationRequest();
     attrs.name = "x".repeat(255);
     attrs.description = "d".repeat(1024);
     spec.apply(attrs);

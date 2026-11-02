@@ -2,7 +2,6 @@ package com.github.theguuholi.rentcars.specifications;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -33,8 +32,8 @@ public class SpecificationController {
 
   @PostMapping
   @Operation(summary = "Create a specification with a unique name and a description")
-  public ResponseEntity<Specification> create(@Valid @RequestBody SpecificationRequest request) {
-    var item = service.create(request.specification());
+  public ResponseEntity<Specification> create(@RequestBody SpecificationRequest request) {
+    var item = service.create(request);
     return ResponseEntity.created(URI.create("/specifications/" + item.getId())).body(item);
   }
 
@@ -44,9 +43,8 @@ public class SpecificationController {
   @Operation(
       summary = "Update a specification",
       description = "Omitted fields retain their current values.")
-  public Specification update(
-      @PathVariable UUID id, @Valid @RequestBody SpecificationRequest request) {
-    return service.update(id, request.specification());
+  public Specification update(@PathVariable UUID id, @RequestBody SpecificationRequest request) {
+    return service.update(id, request);
   }
 
   @DeleteMapping("/{id}")

@@ -30,12 +30,12 @@ class SpecificationService {
   }
 
   @Transactional
-  Specification create(SpecificationRequest.Attributes attributes) {
+  Specification create(SpecificationRequest attributes) {
     return save(new Specification(), attributes);
   }
 
   @Transactional
-  Specification update(UUID id, SpecificationRequest.Attributes attributes) {
+  Specification update(UUID id, SpecificationRequest attributes) {
     return save(
         repository.findForUpdate(id).orElseThrow(SpecificationService::notFound), attributes);
   }
@@ -45,8 +45,7 @@ class SpecificationService {
     repository.delete(repository.findForUpdate(id).orElseThrow(SpecificationService::notFound));
   }
 
-  private Specification save(
-      Specification specification, SpecificationRequest.Attributes attributes) {
+  private Specification save(Specification specification, SpecificationRequest attributes) {
     specification.apply(attributes);
     var errors = validator.validate(specification);
     if (!errors.isEmpty()) throw new ConstraintViolationException(errors);

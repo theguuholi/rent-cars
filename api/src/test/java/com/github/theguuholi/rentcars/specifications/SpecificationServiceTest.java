@@ -42,7 +42,7 @@ class SpecificationServiceTest {
 
   @Test
   void createsValidatedNormalizedSpecification() {
-    var attrs = new SpecificationRequest.Attributes();
+    var attrs = new SpecificationRequest();
     attrs.name = "gps";
     attrs.description = "Navigation";
     when(repository.saveAndFlush(any(Specification.class))).thenAnswer(call -> call.getArgument(0));
@@ -54,7 +54,7 @@ class SpecificationServiceTest {
 
   @Test
   void rejectsInvalidCreationBeforePersistence() {
-    assertThatThrownBy(() -> service.create(new SpecificationRequest.Attributes()))
+    assertThatThrownBy(() -> service.create(new SpecificationRequest()))
         .isInstanceOf(ConstraintViolationException.class);
     verifyNoInteractions(repository);
   }
@@ -63,13 +63,13 @@ class SpecificationServiceTest {
   void locksExistingRecordForUpdateAndDeletion() {
     var id = UUID.randomUUID();
     var item = new Specification();
-    var attrs = new SpecificationRequest.Attributes();
+    var attrs = new SpecificationRequest();
     attrs.name = "gps";
     attrs.description = "Navigation";
     item.apply(attrs);
     when(repository.findForUpdate(id)).thenReturn(Optional.of(item));
     when(repository.saveAndFlush(item)).thenReturn(item);
-    var patch = new SpecificationRequest.Attributes();
+    var patch = new SpecificationRequest();
     patch.description = "Updated";
     assertThat(service.update(id, patch)).isSameAs(item);
     assertThat(item.getName()).isEqualTo("GPS");
@@ -85,7 +85,7 @@ class SpecificationServiceTest {
     for (Runnable operation :
         List.<Runnable>of(
             () -> service.get(id),
-            () -> service.update(id, new SpecificationRequest.Attributes()),
+            () -> service.update(id, new SpecificationRequest()),
             () -> service.delete(id))) {
       assertThatExceptionOfType(ResponseStatusException.class)
           .isThrownBy(operation::run)

@@ -9,7 +9,7 @@ Accept: application/json
 POST {{baseUrl}}/specifications
 Content-Type: application/json
 
-{"specification":{"name":"air conditioning","description":"Cabin temperature control."}}
+{"name":"air conditioning","description":"Cabin temperature control."}
 
 ### Fetch the created specification
 GET {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
@@ -18,13 +18,13 @@ GET {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
 PUT {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
 Content-Type: application/json
 
-{"specification":{"name":"climate control","description":"Automatic cabin temperature control."}}
+{"name":"climate control","description":"Automatic cabin temperature control."}
 
 ### Change only the description
 PATCH {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
 Content-Type: application/json
 
-{"specification":{"description":"Dual-zone climate control."}}
+{"description":"Dual-zone climate control."}
 
 ### Delete the specification
 DELETE {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}

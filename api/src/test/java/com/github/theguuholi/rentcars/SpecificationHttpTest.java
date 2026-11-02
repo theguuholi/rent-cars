@@ -22,7 +22,7 @@ class SpecificationHttpTest {
   private static final String PATH = "/specifications";
   private static final String GPS =
       """
-        {"specification":{"name":"gps","description":"Navigation"}}
+        {"name":"gps","description":"Navigation"}
         """;
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
@@ -57,7 +57,7 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"specification":{"name":"navigation","description":"Satellite navigation"}}
+            {"name":"navigation","description":"Satellite navigation"}
             """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("NAVIGATION"));
@@ -67,7 +67,7 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"specification":{"description":"%s"}}
+            {"description":"%s"}
             """
                         .formatted(longDescription)))
         .andExpect(status().isOk())
@@ -90,19 +90,14 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"specification":{"name":"abs"}}
+            {"name":"abs"}
             """))
         .andExpect(status().isConflict());
     mvc.perform(get(location)).andExpect(jsonPath("$.name").value("GPS"));
   }
 
   @ParameterizedTest
-  @ValueSource(
-      strings = {
-        "{}",
-        "{\"specification\":{}}",
-        "{\"specification\":{\"name\":\"  \",\"description\":null}}"
-      })
+  @ValueSource(strings = {"{}", "{\"name\":\"GPS\"}", "{\"name\":\"  \",\"description\":null}"})
   void rejectsMissingRequiredData(String json) throws Exception {
     mvc.perform(post(PATH).contentType("application/json").content(json))
         .andExpect(status().is(422))
@@ -117,7 +112,7 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"specification":{"description":null}}
+            {"description":null}
             """))
         .andExpect(status().is(422))
         .andExpect(jsonPath("$.errors.description").isArray());

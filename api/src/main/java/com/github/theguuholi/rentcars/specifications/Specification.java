@@ -35,7 +35,7 @@ public class Specification {
 
   protected Specification() {}
 
-  void apply(SpecificationRequest.Attributes attrs) {
+  void apply(SpecificationRequest attrs) {
     if (attrs.name != null) name = attrs.name.toUpperCase(Locale.ROOT);
     if (attrs.description != null) description = attrs.description;
   }

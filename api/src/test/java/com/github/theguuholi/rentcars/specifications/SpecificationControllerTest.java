@@ -24,12 +24,12 @@ class SpecificationControllerTest {
 
   @Test
   void creationIdentifiesNewResourceAndReturnsIt() {
-    var attrs = new SpecificationRequest.Attributes();
+    var attrs = new SpecificationRequest();
     var item = mock(Specification.class);
     var id = UUID.randomUUID();
     when(item.getId()).thenReturn(id);
     when(service.create(attrs)).thenReturn(item);
-    var result = controller.create(new SpecificationRequest(attrs));
+    var result = controller.create(attrs);
     assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(result.getHeaders().getLocation()).isEqualTo(URI.create("/specifications/" + id));
     assertThat(result.getBody()).isSameAs(item);
@@ -37,11 +37,11 @@ class SpecificationControllerTest {
 
   @Test
   void delegatesUpdateAndDeletionUsingRequestedId() {
-    var attrs = new SpecificationRequest.Attributes();
+    var attrs = new SpecificationRequest();
     var id = UUID.randomUUID();
     var item = new Specification();
     when(service.update(id, attrs)).thenReturn(item);
-    assertThat(controller.update(id, new SpecificationRequest(attrs))).isSameAs(item);
+    assertThat(controller.update(id, attrs)).isSameAs(item);
     controller.delete(id);
     verify(service).delete(id);
   }

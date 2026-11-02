@@ -30,7 +30,7 @@ class SpecificationRepositoryTest {
 
     @Test
     void lookupLocksPersistedRecordAndReturnsEmptyForUnknownId() {
-      var attrs = new SpecificationRequest.Attributes();
+      var attrs = new SpecificationRequest();
       attrs.name = "gps";
       attrs.description = "Navigation";
       var item = new Specification();
