@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
+
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -17,6 +19,7 @@ public class CategoryController {
         this.categories = categories;
     }
 
+    @Operation(summary = "List categories alphabetically", description = "Returns an empty array when the catalog has no categories.")
     @GetMapping
     public List<Category> list() {
         return categories.findAll(Sort.by("name").ascending());

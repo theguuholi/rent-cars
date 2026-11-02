@@ -66,6 +66,10 @@ public class Category {
         return description;
     }
 
+    /**
+     * Uses a fixed locale so the same name maps to the same unique catalog key
+     * regardless of the language settings of the host.
+     */
     private static String normalizeName(String name) {
         return name == null ? null : name.toUpperCase(Locale.ROOT);
     }

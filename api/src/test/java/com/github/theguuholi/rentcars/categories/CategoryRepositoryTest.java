@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.utility.TestcontainersConfiguration;
+import com.github.theguuholi.rentcars.TestcontainersConfiguration;
 
 import java.sql.Timestamp;
 import java.time.Instant;
