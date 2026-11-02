@@ -1,27 +1,27 @@
-import { useState } from 'react'
-import { Specifications } from './features/specifications/Specifications'
+import { Link, Outlet } from '@tanstack/react-router'
 import { CategoryList } from './features/categories/CategoryList'
 
-function App() {
-  const [catalog, setCatalog] = useState<'categories' | 'specifications'>('categories')
+export function Layout() {
   return (
     <main>
       <h1>Rent Cars</h1>
       <nav className="catalog-nav" aria-label="Vehicle catalogs">
-        <button aria-pressed={catalog === 'categories'} onClick={() => setCatalog('categories')}>
-          Categories
-        </button>
-        <button
-          aria-pressed={catalog === 'specifications'}
-          onClick={() => setCatalog('specifications')}
-        >
-          Specifications
-        </button>
+        <Link to="/" activeOptions={{ exact: true }}>
+          Home
+        </Link>
+        <Link to="/categories">Categories</Link>
+        <Link to="/specifications">Specifications</Link>
       </nav>
-
-      {catalog === 'categories' ? <CategoryList /> : <Specifications />}
+      <Outlet />
     </main>
   )
 }
 
-export default App
+export function CategoriesPage() {
+  return (
+    <section aria-labelledby="categories-title">
+      <h2 id="categories-title">Vehicle categories</h2>
+      <CategoryList />
+    </section>
+  )
+}

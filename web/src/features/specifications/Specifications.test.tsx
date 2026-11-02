@@ -113,3 +113,21 @@ it('refreshes stale rows after a failed deletion is dismissed', async () => {
   expect(await screen.findByText('No specifications yet.')).toBeVisible()
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
+
+it('validates required fields and the normalized name length before submitting', async () => {
+  list.mockResolvedValue([])
+  renderWithQuery(<Specifications />)
+  await screen.findByText('No specifications yet.')
+  click('New specification')
+  click('Save specification')
+  expect(await screen.findByText('Enter a name.')).toBeVisible()
+  expect(screen.getByText('Enter a description.')).toBeVisible()
+  fill('Name', 'ß'.repeat(128))
+  fill('Description', '   ')
+  expect(
+    await screen.findByText('Use at most 255 characters after uppercase conversion.'),
+  ).toBeVisible()
+  expect(screen.getByLabelText('Description')).toHaveAttribute('aria-invalid', 'true')
+  click('Save specification')
+  expect(save).not.toHaveBeenCalled()
+})

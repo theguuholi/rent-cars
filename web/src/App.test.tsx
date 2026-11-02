@@ -1,31 +1,49 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen } from '@testing-library/react'
+import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
 import { afterEach, expect, it, vi } from 'vitest'
-import App from './App'
+import { createAppRouter } from './router'
 import { renderWithQuery } from './test/render-with-query'
 
-afterEach(() => {
-  vi.unstubAllGlobals()
-})
+afterEach(() => vi.unstubAllGlobals())
 
-it('shows the Rent Cars heading and opens the catalog', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json([])))
-
-  renderWithQuery(<App />)
-
-  expect(screen.getByRole('heading', { level: 1, name: 'Rent Cars' })).toBeInTheDocument()
-
-  expect(await screen.findByText('No vehicle categories available.')).toBeInTheDocument()
-})
-
-it('switches between specifications and categories using the catalog navigation', async () => {
+function open(path: string) {
+  const history = createMemoryHistory({ initialEntries: [path] })
+  const router = createAppRouter(history)
   vi.stubGlobal(
     'fetch',
     vi.fn().mockImplementation(async () => Response.json([])),
   )
-  renderWithQuery(<App />)
+  renderWithQuery(<RouterProvider router={router} />)
+  return history
+}
+
+it('shows only the menu on the home page', async () => {
+  open('/')
+  expect(await screen.findByRole('navigation')).toBeVisible()
+  expect(screen.getByRole('link', { name: 'Categories' })).toHaveAttribute('href', '/categories')
+  expect(screen.getByRole('link', { name: 'Specifications' })).toHaveAttribute(
+    'href',
+    '/specifications',
+  )
+  expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()
+  expect(fetch).not.toHaveBeenCalled()
+})
+
+it.each([
+  ['/categories', 'No vehicle categories available.'],
+  ['/specifications', 'No specifications yet.'],
+])('opens %s directly', async (path, emptyMessage) => {
+  open(path)
+  expect(await screen.findByText(emptyMessage)).toBeVisible()
+  expect(fetch).toHaveBeenCalledTimes(1)
+})
+
+it('supports navigation and browser history between catalogs', async () => {
+  const history = open('/categories')
   await screen.findByText('No vehicle categories available.')
-  fireEvent.click(screen.getByRole('button', { name: 'Specifications' }))
+  fireEvent.click(screen.getByRole('link', { name: 'Specifications' }))
   expect(await screen.findByText('No specifications yet.')).toBeVisible()
-  fireEvent.click(screen.getByRole('button', { name: 'Categories' }))
+  expect(history.location.pathname).toBe('/specifications')
+  await act(async () => history.back())
   expect(await screen.findByText('No vehicle categories available.')).toBeVisible()
 })
