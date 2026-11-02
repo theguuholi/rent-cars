@@ -1,6 +1,7 @@
 package com.github.theguuholi.rentcars.shared.http;
 
 import jakarta.validation.ConstraintViolationException;
+import java.sql.SQLException;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,11 +52,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(DataIntegrityViolationException.class)
   ResponseEntity<Errors> integrity(DataIntegrityViolationException exception) {
     for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
-      if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
-          && ("specifications_name_index".equals(violation.getConstraintName())
-              || "categories_name_unique".equals(violation.getConstraintName()))) {
+      // PostgreSQL reports unique violations with SQLSTATE 23505 for every unique index.
+      if (cause instanceof SQLException sql && "23505".equals(sql.getSQLState())) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-            .body(new Errors(Map.of("name", List.of("has already been taken"))));
+            .body(
+                new Errors(
+                    Map.of(
+                        "conflict",
+                        List.of("A record with the same unique value already exists"))));
       }
     }
     return unexpected(exception);

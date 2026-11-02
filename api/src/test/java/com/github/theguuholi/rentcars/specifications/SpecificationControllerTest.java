@@ -13,13 +13,13 @@ class SpecificationControllerTest {
   private final SpecificationController controller = new SpecificationController(service);
 
   @Test
-  void wrapsListAndSingleResult() {
+  void returnsListAndSingleResultDirectly() {
     var item = new Specification();
     var id = UUID.randomUUID();
     when(service.list()).thenReturn(List.of(item));
     when(service.get(id)).thenReturn(item);
-    assertThat(controller.list().get("data")).containsExactly(item);
-    assertThat(controller.get(id).get("data")).isSameAs(item);
+    assertThat(controller.list()).containsExactly(item);
+    assertThat(controller.get(id)).isSameAs(item);
   }
 
   @Test
@@ -32,7 +32,7 @@ class SpecificationControllerTest {
     var result = controller.create(new SpecificationRequest(attrs));
     assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(result.getHeaders().getLocation()).isEqualTo(URI.create("/specifications/" + id));
-    assertThat(result.getBody().get("data")).isSameAs(item);
+    assertThat(result.getBody()).isSameAs(item);
   }
 
   @Test
@@ -41,7 +41,7 @@ class SpecificationControllerTest {
     var id = UUID.randomUUID();
     var item = new Specification();
     when(service.update(id, attrs)).thenReturn(item);
-    assertThat(controller.update(id, new SpecificationRequest(attrs)).get("data")).isSameAs(item);
+    assertThat(controller.update(id, new SpecificationRequest(attrs))).isSameAs(item);
     controller.delete(id);
     verify(service).delete(id);
   }

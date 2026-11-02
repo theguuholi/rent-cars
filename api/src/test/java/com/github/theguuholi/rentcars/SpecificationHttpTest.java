@@ -35,8 +35,8 @@ class SpecificationHttpTest {
   private String createGps() throws Exception {
     return mvc.perform(post(PATH).contentType("application/json").content(GPS))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.data.id").isString())
-        .andExpect(jsonPath("$.data.name").value("GPS"))
+        .andExpect(jsonPath("$.id").isString())
+        .andExpect(jsonPath("$.name").value("GPS"))
         .andReturn()
         .getResponse()
         .getHeader("Location");
@@ -44,12 +44,14 @@ class SpecificationHttpTest {
 
   @Test
   void catalogLifecycle() throws Exception {
-    mvc.perform(get(PATH)).andExpect(status().isOk()).andExpect(jsonPath("$.data").isEmpty());
+    mvc.perform(get(PATH))
+        .andExpect(status().isOk())
+        .andExpect(content().json("[]", org.springframework.test.json.JsonCompareMode.STRICT));
     String location = createGps();
     mvc.perform(get(location))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.description").value("Navigation"));
-    mvc.perform(get(PATH)).andExpect(jsonPath("$.data[0].name").value("GPS"));
+        .andExpect(jsonPath("$.description").value("Navigation"));
+    mvc.perform(get(PATH)).andExpect(jsonPath("$[0].name").value("GPS"));
     mvc.perform(
             put(location)
                 .contentType("application/json")
@@ -58,7 +60,7 @@ class SpecificationHttpTest {
             {"specification":{"name":"navigation","description":"Satellite navigation"}}
             """))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.name").value("NAVIGATION"));
+        .andExpect(jsonPath("$.name").value("NAVIGATION"));
     String longDescription = "x".repeat(512);
     mvc.perform(
             patch(location)
@@ -69,8 +71,8 @@ class SpecificationHttpTest {
             """
                         .formatted(longDescription)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.name").value("NAVIGATION"))
-        .andExpect(jsonPath("$.data.description").value(longDescription));
+        .andExpect(jsonPath("$.name").value("NAVIGATION"))
+        .andExpect(jsonPath("$.description").value(longDescription));
     mvc.perform(delete(location)).andExpect(status().isNoContent());
     mvc.perform(get(location)).andExpect(status().isNotFound());
   }
@@ -80,7 +82,7 @@ class SpecificationHttpTest {
     String location = createGps();
     mvc.perform(post(PATH).contentType("application/json").content(GPS.replace("gps", "GpS")))
         .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.errors.name").isArray());
+        .andExpect(jsonPath("$.errors.conflict").isArray());
     mvc.perform(post(PATH).contentType("application/json").content(GPS.replace("gps", "abs")))
         .andExpect(status().isCreated());
     mvc.perform(
@@ -91,7 +93,7 @@ class SpecificationHttpTest {
             {"specification":{"name":"abs"}}
             """))
         .andExpect(status().isConflict());
-    mvc.perform(get(location)).andExpect(jsonPath("$.data.name").value("GPS"));
+    mvc.perform(get(location)).andExpect(jsonPath("$.name").value("GPS"));
   }
 
   @ParameterizedTest
@@ -125,7 +127,7 @@ class SpecificationHttpTest {
                 .content(GPS.replace("gps", "x".repeat(256))))
         .andExpect(status().is(422))
         .andExpect(jsonPath("$.errors.name").isArray());
-    mvc.perform(get(location)).andExpect(jsonPath("$.data.description").value("Navigation"));
+    mvc.perform(get(location)).andExpect(jsonPath("$.description").value("Navigation"));
   }
 
   @Test

@@ -5,11 +5,10 @@ import static org.mockito.Mockito.*;
 
 import jakarta.validation.Validation;
 import jakarta.validation.constraints.NotBlank;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
 import org.springframework.validation.FieldError;
@@ -49,21 +48,22 @@ class GlobalExceptionHandlerTest {
         .isEqualTo(Map.of("name", List.of("required", "invalid")));
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"specifications_name_index", "categories_name_unique"})
-  void recognizedUniqueConstraintsReturnConflict(String constraint) {
-    var violation = mock(org.hibernate.exception.ConstraintViolationException.class);
-    when(violation.getConstraintName()).thenReturn(constraint);
-    var result = handler.integrity(new DataIntegrityViolationException("save failed", violation));
+  @Test
+  void duplicateSqlStateReturnsConflictRegardlessOfIndexName() {
+    var violation = new SQLException("private constraint details", "23505");
+    var result =
+        handler.integrity(
+            new DataIntegrityViolationException(
+                "save failed", new IllegalStateException(violation)));
     assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     assertThat(result.getBody().errors())
-        .isEqualTo(Map.of("name", List.of("has already been taken")));
+        .isEqualTo(
+            Map.of("conflict", List.of("A record with the same unique value already exists")));
   }
 
   @Test
   void unexpectedIntegrityFailureHidesInternalDetails() {
-    var violation = mock(org.hibernate.exception.ConstraintViolationException.class);
-    when(violation.getConstraintName()).thenReturn("some_other_constraint");
+    var violation = new SQLException("private constraint details", "23503");
     var result =
         handler.integrity(new DataIntegrityViolationException("private detail", violation));
     assertThat(result.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
