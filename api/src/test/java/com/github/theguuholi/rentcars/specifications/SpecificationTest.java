@@ -66,6 +66,6 @@ class SpecificationTest {
     spec.apply(attrs);
     assertThat(factory.getValidator().validate(spec))
         .singleElement()
-        .satisfies(v -> assertThat(v.getPropertyPath().toString()).isEqualTo("name"));
+        .satisfies(v -> assertThat(v.getPropertyPath()).hasToString("name"));
   }
 }

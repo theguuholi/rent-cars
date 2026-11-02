@@ -54,7 +54,8 @@ class SpecificationServiceTest {
 
   @Test
   void rejectsInvalidCreationBeforePersistence() {
-    assertThatThrownBy(() -> service.create(new SpecificationRequest()))
+    var invalidRequest = new SpecificationRequest();
+    assertThatThrownBy(() -> service.create(invalidRequest))
         .isInstanceOf(ConstraintViolationException.class);
     verifyNoInteractions(repository);
   }
