@@ -1,10 +1,10 @@
 # Rent Cars
 
-This monorepo contains the Spring Boot API in `api/`, the React application in `web/`, and executable HTTP examples in `requests/`. The Go implementation lives in a separate repository. Work within the requested scope.
+This monorepo contains the Spring Boot API in `apps/api/`, the React application in `apps/web/`, and executable HTTP examples in `requests/`. The Go implementation lives in a separate repository. Work within the requested scope.
 
 ## Before editing
 
-- Read [the API guide](api/AGENTS.md) for backend work and [the web guide](web/AGENTS.md) for frontend work. For changes to an HTTP contract, inspect both sides and the corresponding REST Client file. Call out downstream work if the request limits changes to one side.
+- Read [the API guide](apps/api/AGENTS.md) for backend work and [the web guide](apps/web/AGENTS.md) for frontend work. For changes to an HTTP contract, inspect both sides and the corresponding REST Client file. Call out downstream work if the request limits changes to one side.
 - Use the [Java feature skill](.agents/skills/rent-cars-java-feature/SKILL.md) or [React feature skill](.agents/skills/rent-cars-react-feature/SKILL.md) when its workflow fits. Follow the nearest existing feature and its tests; verify which domain rules actually apply.
 - Keep code, test descriptions, API examples and repository documentation in English. See the [README](README.md) for prerequisites and local startup.
 
@@ -16,8 +16,8 @@ Run the relevant check from the repository root and inspect the changed files in
 
 | Scope | Command | Local report |
 | --- | --- | --- |
-| Java (Docker running) | `make check-api` | `api/target/site/jacoco/index.html` |
-| React (run `make setup` on a fresh checkout) | `make check-web` | `web/coverage/index.html` |
+| Java (Docker running) | `make check-api` | `apps/api/target/site/jacoco/index.html` |
+| React (run `make setup` on a fresh checkout) | `make check-web` | `apps/web/coverage/index.html` |
 | Both | `make check` | Both reports above |
 
 Add tests for missed executable lines and branches. Document any path that cannot be tested reliably using the exception process below. Existing aggregate CI thresholds are a separate merge safeguard. Preserve the configured checks and coverage scope.

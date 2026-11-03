@@ -5,7 +5,7 @@ Rent Cars is a car rental project built with Java, Spring Boot, and PostgreSQL. 
 
 ## Run the full stack locally
 
-The Spring Boot API lives in `api/` and the React frontend in `web/`. Install JDK 25, Node.js 24.16.0 (also pinned in `web/.node-version`), npm, Make and Docker with Compose v2. Start Docker. From the repository root, run:
+The Spring Boot API lives in `apps/api/` and the React frontend in `apps/web/`. Install JDK 25, Node.js 24.16.0 (also pinned in `apps/web/.node-version`), npm, Make and Docker with Compose v2. Start Docker. From the repository root, run:
 
 ```sh
 make setup   # Install the frontend dependencies from the lockfile
@@ -25,7 +25,7 @@ Open the [web catalog](http://localhost:5173) when the API log shows `Started Re
 | `API_TARGET=http://127.0.0.1:8081 make web-dev` | Vite connected to the separately running Go API |
 | `make db-up` / `make db-stop` | Start or stop the development database |
 
-For frontend-only development, you can also set `API_TARGET` in `web/.env.local` and restart Vite. The combined `make dev` command defaults to the Java API it starts. To choose a different Java port for both the API and proxy, use `SERVER_PORT=8082 make dev`.
+For frontend-only development, you can also set `API_TARGET` in `apps/web/.env.local` and restart Vite. The combined `make dev` command defaults to the Java API it starts. To choose a different Java port for both the API and proxy, use `SERVER_PORT=8082 make dev`.
 
 ## Try the API
 
@@ -54,7 +54,7 @@ An empty catalog returns `200 OK` with `[]`.
 
 The `dev` profile includes ten sample vehicle specifications. Start the API with `make api-dev` or `make dev`, then send `GET /specifications` from [the specifications REST Client](requests/specifications.http). Flyway runs the development seed after the schema migrations and preserves existing specifications with matching names. Other explicit profiles use only the shared migrations; set `SPRING_PROFILES_ACTIVE=prod` in production because the project's default profile is `dev`.
 
-The local connection settings are in `api/src/main/resources/application-dev.yaml`. The `rent_cars_dev` database uses port `5432`, with `postgres` as both the username and password. The port must be available for Docker to start the service.
+The local connection settings are in `apps/api/src/main/resources/application-dev.yaml`. The `rent_cars_dev` database uses port `5432`, with `postgres` as both the username and password. The port must be available for Docker to start the service.
 
 To connect to the database, open another terminal at the repository root and run:
 
@@ -66,7 +66,7 @@ In psql, use `\dt` to list tables and `\q` to quit.
 
 ## Java quality checks
 
-Run these commands from the `api` directory. Start Docker before running the full test suite so Testcontainers can launch PostgreSQL 17.
+Run these commands from the `apps/api` directory. Start Docker before running the full test suite so Testcontainers can launch PostgreSQL 17.
 
 | Task | Command |
 | --- | --- |
@@ -91,9 +91,9 @@ For trusted branches, the Java verification job uploads the JaCoCo XML to Sonar 
 
 ## Web quality checks
 
-From `web/`, use the Node version in `.node-version` and install dependencies with `npm ci`. Run `npm run format:check`, `npm run lint`, `npm run test:coverage` and `npm run build` to reproduce **Web verification**. Use `npm run format` to apply Oxfmt fixes or `npm run lint:fix` for automatic Oxlint fixes.
+From `apps/web/`, use the Node version in `.node-version` and install dependencies with `npm ci`. Run `npm run format:check`, `npm run lint`, `npm run test:coverage` and `npm run build` to reproduce **Web verification**. Use `npm run format` to apply Oxfmt fixes or `npm run lint:fix` for automatic Oxlint fixes.
 
-Vitest requires at least **95% each** for global line, statement, function and branch coverage across application TypeScript under `src/`. Tests, test helpers and declarations are excluded. Open `web/coverage/index.html` for the HTML report; `web/coverage/lcov.info` is available for tooling. Download **web-coverage** from the Web quality workflow to inspect a PR, including one that failed its coverage threshold.
+Vitest requires at least **95% each** for global line, statement, function and branch coverage across application TypeScript under `src/`. Tests, test helpers and declarations are excluded. Open `apps/web/coverage/index.html` for the HTML report; `apps/web/coverage/lcov.info` is available for tooling. Download **web-coverage** from the Web quality workflow to inspect a PR, including one that failed its coverage threshold.
 
 ## Contributor and agent workflow
 
