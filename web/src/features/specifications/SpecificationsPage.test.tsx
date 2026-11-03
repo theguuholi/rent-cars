@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, expect, describe, test as scenario, vi } from 'vitest'
 import { renderWithQuery } from '../../test/render-with-query'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
@@ -249,6 +249,137 @@ describe('SpecificationsPage', () => {
         expect(history.location.pathname).toBe('/specifications')
         expect(save).not.toHaveBeenCalled()
         expect(remove).not.toHaveBeenCalled()
+      },
+    )
+  })
+
+  describe('Catalog presentation', () => {
+    scenario(
+      'Given a pending catalog request, when SpecificationsPage opens, then the named region shows loading without a table or empty message',
+      async () => {
+        list.mockReturnValue(new Promise(() => {}))
+        await open()
+        const page = within(screen.getByRole('region', { name: 'Vehicle specifications' }))
+        expect(page.getByRole('heading', { level: 2 })).toHaveTextContent('Vehicle specifications')
+        expect(page.getByRole('status')).toHaveTextContent('Loading specifications…')
+        expect(page.queryByRole('table')).not.toBeInTheDocument()
+        expect(page.queryByText('No specifications yet.')).not.toBeInTheDocument()
+      },
+    )
+
+    scenario(
+      'Given an empty response, when loading finishes, then the empty catalog offers creation without a table or details panel',
+      async () => {
+        list.mockResolvedValue([])
+        await open()
+        expect(await screen.findByText('No specifications yet.')).toBeVisible()
+        expect(screen.getByRole('link', { name: 'New specification' })).toHaveAttribute(
+          'href',
+          '/specifications/new',
+        )
+        expect(screen.queryByRole('table')).not.toBeInTheDocument()
+        expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+        expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      },
+    )
+
+    scenario(
+      'Given two specifications, when the catalog renders, then each table row links its own name and description to the correct edit and delete URLs',
+      async () => {
+        const records = [{ id: 'abs-id', name: 'ABS', description: 'Braking' }, item]
+        list.mockResolvedValue(records)
+        await open()
+        const table = within(await screen.findByRole('table', { name: 'Specifications' }))
+        expect(table.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+          'Name',
+          'Description',
+          'Actions',
+        ])
+        const rows = table.getAllByRole('row').slice(1)
+        expect(rows).toHaveLength(records.length)
+        records.forEach((record, index) => {
+          const row = within(rows[index])
+          expect(row.getByRole('rowheader')).toHaveTextContent(record.name)
+          expect(row.getByText(record.description)).toBeVisible()
+          for (const action of ['Edit', 'Delete'])
+            expect(row.getByRole('link', { name: action + ' ' + record.name })).toHaveAttribute(
+              'href',
+              '/specifications/' + record.id + '/' + action.toLowerCase(),
+            )
+        })
+      },
+    )
+  })
+
+  describe('Action panel transitions', () => {
+    scenario.each(['edit', 'delete'])(
+      'Given a saved %s URL, when the catalog is still loading, then a missing record is not reported prematurely',
+      async (mode) => {
+        list.mockReturnValue(new Promise(() => {}))
+        await open('/specifications/gps-id/' + mode)
+        expect(screen.getByRole('status')).toHaveTextContent('Loading specifications')
+        const panel = within(screen.getByRole('complementary', { name: 'Specification details' }))
+        expect(panel.queryByRole('alert')).not.toBeInTheDocument()
+        expect(panel.queryByRole('button')).not.toBeInTheDocument()
+        expect(panel.getByRole('link', { name: 'Back to specifications' })).toBeVisible()
+      },
+    )
+
+    scenario(
+      'Given an edit link and an offline catalog, when retry succeeds, then the original URL opens the requested editor',
+      async () => {
+        list.mockRejectedValueOnce(new Error('Offline')).mockResolvedValue([item])
+        const history = await open('/specifications/gps-id/edit')
+        expect(await screen.findByRole('alert')).toHaveTextContent('Could not load specifications.')
+        expect(screen.queryByText('Specification not found.')).not.toBeInTheDocument()
+        await click('Try again')
+        expect(await screen.findByLabelText('Name')).toHaveValue('GPS')
+        expect(history.location.pathname).toBe('/specifications/gps-id/edit')
+      },
+    )
+
+    scenario(
+      'Given a conflicting create request, when saving fails, then the new URL and both draft fields survive until the user cancels',
+      async () => {
+        list.mockResolvedValue([item])
+        save.mockRejectedValue(new Error('A specification with this name already exists.'))
+        const history = await open('/specifications/new')
+        fill('Name', 'gps')
+        fill('Description', 'Draft maps')
+        await click('Save specification')
+        expect(await screen.findByRole('alert')).toHaveTextContent('already exists')
+        expect(history.location.pathname).toBe('/specifications/new')
+        expect(screen.getByLabelText('Name')).toHaveValue('gps')
+        expect(screen.getByLabelText('Description')).toHaveValue('Draft maps')
+        await click('Cancel')
+        expect(history.location.pathname).toBe('/specifications')
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        expect(save).toHaveBeenCalledTimes(1)
+      },
+    )
+
+    scenario(
+      'Given a confirmed deletion in flight, when the API has not yet responded, then confirmation and cancellation stay disabled until the list refreshes',
+      async () => {
+        let finish!: () => void
+        list.mockResolvedValueOnce([item]).mockResolvedValue([])
+        remove.mockReturnValue(
+          new Promise((resolve) => {
+            finish = resolve
+          }),
+        )
+        const history = await open('/specifications/gps-id/delete')
+        await screen.findByText('Delete GPS?')
+        await click('Confirm deletion')
+        const confirm = screen.getByRole('button', { name: 'Confirm deletion' })
+        await waitFor(() => expect(confirm).toBeDisabled())
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+        fireEvent.click(confirm)
+        expect(remove).toHaveBeenCalledExactlyOnceWith(item.id)
+        finish()
+        expect(await screen.findByText('Specification deleted.')).toBeVisible()
+        expect(await screen.findByText('No specifications yet.')).toBeVisible()
+        expect(history.location.pathname).toBe('/specifications')
       },
     )
   })

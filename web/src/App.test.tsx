@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, describe, test as scenario, vi } from 'vitest'
 import { openCatalogRoute } from './test/open-catalog-route'
 
@@ -19,6 +19,24 @@ describe('Application layout', () => {
       expect(
         within(screen.getByRole('main')).getByRole('heading', { name: 'Vehicle categories' }),
       ).toBeVisible()
+    },
+  )
+
+  scenario(
+    'Given the specifications catalog is active, when the user follows the brand link, then only the home menu remains',
+    async () => {
+      const history = openCatalogRoute('/specifications')
+      await screen.findByText('No specifications yet.')
+      const nav = within(screen.getByRole('navigation', { name: 'Vehicle catalogs' }))
+      expect(nav.getByRole('link', { name: 'Specifications' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      )
+      expect(nav.getByRole('link', { name: 'Categories' })).not.toHaveAttribute('aria-current')
+      fireEvent.click(screen.getByRole('link', { name: 'Rent Cars home' }))
+      await waitFor(() => expect(screen.getByRole('main')).toBeEmptyDOMElement())
+      expect(history.location.pathname).toBe('/')
+      expect(fetch).toHaveBeenCalledTimes(1)
     },
   )
 })

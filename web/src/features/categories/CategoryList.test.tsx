@@ -92,4 +92,26 @@ describe('CategoryList', () => {
       },
     )
   })
+
+  scenario(
+    'Given an unavailable category catalog, when the retry also fails, then the alert remains actionable and no list is shown',
+    async () => {
+      let rejectRetry!: (error: Error) => void
+      load.mockRejectedValueOnce(new Error('Offline')).mockReturnValueOnce(
+        new Promise((_, reject) => {
+          rejectRetry = reject
+        }),
+      )
+      renderWithQuery(<CategoryList />)
+      fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+      expect(await screen.findByRole('status')).toHaveTextContent('Loading categories')
+      rejectRetry(new Error('Still offline'))
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Could not load vehicle categories.',
+      )
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled()
+      expect(screen.queryByRole('list')).not.toBeInTheDocument()
+      expect(load).toHaveBeenCalledTimes(2)
+    },
+  )
 })
