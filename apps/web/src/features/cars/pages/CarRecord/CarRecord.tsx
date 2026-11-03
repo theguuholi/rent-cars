@@ -17,24 +17,24 @@ export function CarRecord({ id, mode }: { id: string; mode: 'detail' | 'edit' | 
       client.removeQueries({ queryKey: ['car', id], exact: true })
     },
   })
+  const error = record.isError && (
+    <div role="alert">
+      {record.error.message}{' '}
+      <button className="btn-secondary" onClick={() => void record.refetch()}>
+        Try again
+      </button>
+    </div>
+  )
+  if (mode === 'edit' && record.data)
+    return <CarFormPage key={record.data.id} car={record.data} refreshError={error} />
   if (!record.isSuccess)
     return (
       <PageSection eyebrow="Fleet" title="Car details">
-        {record.isPending ? (
-          <p role="status">Loading car…</p>
-        ) : (
-          <div role="alert">
-            {record.error.message}{' '}
-            <button className="btn-secondary" onClick={() => void record.refetch()}>
-              Try again
-            </button>
-          </div>
-        )}
+        {record.isPending ? <p role="status">Loading car…</p> : error}
         <Link to="/cars">Back to cars</Link>
       </PageSection>
     )
   const car = record.data
-  if (mode === 'edit') return <CarFormPage key={car.id} car={car} />
   if (mode === 'delete')
     return (
       <PageSection

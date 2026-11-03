@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import { act, fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test as scenario, vi } from 'vitest'
 import { openCatalogRoute } from '../../../../test/open-catalog-route'
 import { car, categories, specifications } from '../../../../test/car-fixtures'
@@ -53,6 +53,48 @@ describe('CarFormPage', () => {
       expect(history.location.pathname).toBe('/cars/second')
       const { id: _id, ...expected } = car
       expect(api.createCar).toHaveBeenCalledExactlyOnceWith(expected)
+    },
+  )
+
+  scenario.each(['car', 'categories', 'specifications'] as const)(
+    'Given an unsaved name, when the cached %s refresh fails, then the editor retains the draft through retry and patches only the name',
+    async (resource) => {
+      let stored = car
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      vi.mocked(api.getCar).mockImplementation(async () => stored)
+      vi.mocked(api.updateCar).mockImplementation(async (_id, patch) => {
+        stored = { ...stored, ...patch }
+        return stored
+      })
+      openCatalogRoute('/cars/second/edit', client)
+      const name = await screen.findByLabelText('Name')
+      fireEvent.change(name, { target: { value: 'My draft' } })
+      stored = { ...stored, dailyRateCents: 42000 }
+      const query = {
+        car: api.getCar,
+        categories: listCategories,
+        specifications: listSpecifications,
+      }[resource]
+      vi.mocked(query).mockRejectedValueOnce(new Error('Car refresh failed'))
+      await act(async () => {
+        await client.invalidateQueries({
+          queryKey: resource === 'car' ? ['car', car.id] : [resource],
+        })
+      })
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        resource === 'car' ? 'Car refresh failed' : 'Could not load vehicle catalogs.',
+      )
+      expect(screen.getByLabelText('Name')).toBe(name)
+      expect(name).toHaveValue('My draft')
+      expect(screen.getByRole('button', { name: 'Save car' })).toBeEnabled()
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+      await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+      expect(query).toHaveBeenCalledTimes(3)
+      expect(screen.getByLabelText('Name')).toBe(name)
+      fireEvent.click(screen.getByRole('button', { name: 'Save car' }))
+      expect(await screen.findByRole('heading', { name: 'My draft' })).toBeVisible()
+      expect(api.updateCar).toHaveBeenCalledExactlyOnceWith(car.id, { name: 'My draft' })
+      expect(screen.getByText('R$ 420,00')).toBeVisible()
     },
   )
 
