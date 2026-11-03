@@ -26,4 +26,10 @@ public class SpecificationRequest {
       description = "What the feature provides for the driver.",
       example = "Turn-by-turn satellite navigation.")
   String description;
+
+  @Schema(
+      name = "SpecificationCreateRequest",
+      allOf = SpecificationRequest.class,
+      requiredProperties = {"name", "description"})
+  interface CreateSchema {}
 }

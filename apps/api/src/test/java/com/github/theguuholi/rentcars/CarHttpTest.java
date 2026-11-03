@@ -201,7 +201,9 @@ class CarHttpTest {
               post("/cars")
                   .contentType("application/json")
                   .content(invalidBody(input(), invalidInput)))
-          .andExpect(status().isBadRequest());
+          .andExpect(status().isBadRequest())
+          .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+          .andExpect(jsonPath("$.detail").isString());
       mvc.perform(get("/cars")).andExpect(jsonPath("$").isEmpty());
     }
 
@@ -228,7 +230,10 @@ class CarHttpTest {
     @ParameterizedTest
     @ValueSource(strings = {"name", "description", "brand", "licensePlate"})
     void givenBlankTextWhenCreatingThenRejectsTheCar(String field) throws Exception {
-      create(input().put(field, "  ")).andExpect(status().is(422));
+      create(input().put(field, "  "))
+          .andExpect(status().is(422))
+          .andExpect(content().contentTypeCompatibleWith("application/json"))
+          .andExpect(jsonPath("$.errors." + field + "[0]").value("must not be blank"));
     }
 
     @DisplayName(
@@ -247,11 +252,27 @@ class CarHttpTest {
     @Test
     void unknownReferences() throws Exception {
       String missing = UUID.randomUUID().toString();
-      create(input().put("categoryId", missing)).andExpect(status().isBadRequest());
+      create(input().put("categoryId", missing))
+          .andExpect(status().isBadRequest())
+          .andExpect(content().contentTypeCompatibleWith("application/json"))
+          .andExpect(jsonPath("$.errors.reference[0]").value("A referenced record does not exist"));
       var badSpecs = input();
       badSpecs.putArray("specificationIds").add(gps).add(missing);
       create(badSpecs).andExpect(status().isBadRequest());
       mvc.perform(get("/cars")).andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    @DisplayName(
+        "Given an existing plate, when registering it again, then the conflict has a JSON error message")
+    void duplicatePlate() throws Exception {
+      givenCar();
+      create(input())
+          .andExpect(status().isConflict())
+          .andExpect(content().contentTypeCompatibleWith("application/json"))
+          .andExpect(
+              jsonPath("$.errors.conflict[0]")
+                  .value("A record with the same unique value already exists"));
     }
 
     @DisplayName("Given equivalent plates, when two creates race, then exactly one commits")
@@ -400,7 +421,9 @@ class CarHttpTest {
         throws Exception {
       String location = givenCar();
       edit(location, "{\"name\":\"New name\",\"licensePlate\":\"XYZ9876\"}")
-          .andExpect(status().is(422));
+          .andExpect(status().is(422))
+          .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+          .andExpect(jsonPath("$.detail").value("License plate cannot be changed"));
       mvc.perform(get(location))
           .andExpect(jsonPath("$.name").value("Civic"))
           .andExpect(jsonPath("$.licensePlate").value("ABC1234"));
@@ -526,12 +549,32 @@ class CarHttpTest {
             jsonPath("$.paths['/cars/{id}']." + op.getKey() + ".responses['" + op.getValue() + "']")
                 .exists());
       }
-      for (String status : List.of("400", "409", "422")) {
-        docs.andExpect(jsonPath("$.paths['/cars'].post.responses['" + status + "']").exists());
-      }
-      for (String status : List.of("400", "404", "422")) {
+      for (String operation : List.of("['/cars'].post", "['/cars/{id}'].patch")) {
+        String responses = "$.paths" + operation + ".responses";
+        for (String code : List.of("400", "422", "500")) {
+          docs.andExpect(
+              jsonPath(responses + "['" + code + "'].content['application/json'].schema['$ref']")
+                  .value("#/components/schemas/Errors"));
+        }
         docs.andExpect(
-            jsonPath("$.paths['/cars/{id}'].patch.responses['" + status + "']").exists());
+            jsonPath(responses + "['400'].content['application/problem+json'].schema['$ref']")
+                .value("#/components/schemas/ProblemDetail"));
+      }
+      docs.andExpect(
+          jsonPath(
+                  "$.paths['/cars'].post.responses['409'].content['application/json'].schema['$ref']")
+              .value("#/components/schemas/Errors"));
+      docs.andExpect(
+          jsonPath(
+                  "$.paths['/cars/{id}'].patch.responses['422'].content['application/problem+json'].schema['$ref']")
+              .value("#/components/schemas/ProblemDetail"));
+      for (String op : List.of("get", "patch", "delete")) {
+        docs.andExpect(
+            jsonPath(
+                    "$.paths['/cars/{id}']."
+                        + op
+                        + ".responses['404'].content['application/problem+json'].schema['$ref']")
+                .value("#/components/schemas/ProblemDetail"));
       }
       docs.andExpect(
               jsonPath("$.paths['/cars'].post.responses['201'].content.*.schema['$ref']")
