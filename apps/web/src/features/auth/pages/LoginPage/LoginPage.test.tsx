@@ -30,6 +30,7 @@ describe('LoginPage', () => {
       fireEvent.click(await screen.findByRole('link', { name: 'Sign in' }))
       const email = await screen.findByLabelText('Email'),
         password = screen.getByLabelText('Password')
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
       expect(email).toHaveValue('')
       expect(password).toHaveValue('')
       expect(email).toHaveAttribute('type', 'email')
@@ -67,7 +68,8 @@ describe('LoginPage', () => {
       vi.mocked(signIn).mockRejectedValue('offline')
       openCatalogRoute('/login')
       const button = await screen.findByRole('button', { name: 'Sign in' })
-      fireEvent.submit(button.closest('form')!)
+      expect(fireEvent.submit(button.closest('form')!)).toBe(false)
+      await waitFor(() => expect(signIn).toHaveBeenCalledExactlyOnceWith('', ''))
       expect(await screen.findByRole('alert')).toHaveTextContent('Could not sign in.')
     },
   )
