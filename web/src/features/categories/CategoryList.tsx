@@ -15,7 +15,9 @@ export function CategoryList() {
     return (
       <div role="alert">
         <p>Could not load vehicle categories.</p>
-        <button onClick={() => void categories.refetch()}>Try again</button>
+        <button className="btn-secondary" onClick={() => void categories.refetch()}>
+          Try again
+        </button>
       </div>
     )
   }
@@ -25,11 +27,11 @@ export function CategoryList() {
   }
 
   return (
-    <ul aria-label="Vehicle categories">
+    <ul className="grid gap-4 sm:grid-cols-2" aria-label="Vehicle categories">
       {categories.data.map(({ name, description }) => (
-        <li key={name}>
+        <li key={name} className="rounded-lg border border-slate-200 p-5">
           <strong>{name}</strong>
-          {description && <p>{description}</p>}
+          {description && <p className="mt-1 text-slate-600">{description}</p>}
         </li>
       ))}
     </ul>
