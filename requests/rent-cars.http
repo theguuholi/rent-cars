@@ -1,0 +1,117 @@
+@baseUrl = http://localhost:8080
+@adminEmail = test@test
+@adminPassword = test@tesT@dev
+@driverEmail = driver@example.com
+@driverPassword = local-example-only-123
+
+# Start with make api-dev. Click Send Request above each numbered request.
+# Steps 1–8 only read data or sign you in. The optional exercises modify local data.
+
+### 1. Browse the public fleet → 200
+# @name listCars
+GET {{baseUrl}}/cars
+
+### 2. Read the first car with its category and equipment → 200 (skip if the fleet is empty)
+GET {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}
+
+### 3. Get the CSRF header and cookie → 204 (an empty body is expected)
+# @name csrf
+GET {{baseUrl}}/csrf
+
+### 4. Sign in as the seeded admin → 200 (accessToken)
+# @name login
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}
+Cookie: XSRF-TOKEN={{csrf.response.headers.X-XSRF-TOKEN}}
+
+{"email":"{{adminEmail}}","password":"{{adminPassword}}"}
+
+### 5. Check your identity → 200 (role ADMIN)
+GET {{baseUrl}}/sessions/me
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### 6. List categories with the login token → 200
+# @name categories
+GET {{baseUrl}}/categories
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### 7. List specifications with the same token → 200
+# @name listSpecifications
+GET {{baseUrl}}/specifications
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Accept: application/json
+
+### 8. Read the first specification → 200 (skip if the list is empty)
+GET {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Optional · Create the example specification; continue after receiving 201 Created
+# @name createSpecification
+POST {{baseUrl}}/specifications
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{"name":"air conditioning","description":"Cabin temperature control."}
+
+### Optional · Fetch the specification created above
+GET {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Optional · Update both fields of the example specification
+PUT {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{"name":"climate control","description":"Automatic cabin temperature control."}
+
+### Optional · Change only its description
+PATCH {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{"description":"Dual-zone climate control."}
+
+### Optional · Delete the specification created above
+DELETE {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Optional · Register the example car; continue after receiving 201 Created
+# Use an unused license plate. Use [] to register without specifications.
+# @name createCar
+POST {{baseUrl}}/cars
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Argo",
+  "brand": "Fiat",
+  "description": "Five-door hatchback.",
+  "licensePlate": "abc1d23",
+  "dailyRateCents": 15050,
+  "fineAmountCents": 0,
+  "categoryId": "{{categories.response.body.$[0].id}}",
+  "specificationIds": ["{{listSpecifications.response.body.$[0].id}}"]
+}
+
+### Optional · Fetch the car registered above
+GET {{baseUrl}}/cars/{{createCar.response.body.$.id}}
+
+### Optional · Mark that car unavailable and clear its specifications
+PATCH {{baseUrl}}/cars/{{createCar.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{"available":false,"specificationIds":[]}
+
+### Optional · Delete the car registered above
+DELETE {{baseUrl}}/cars/{{createCar.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Optional · Register a separate USER account (once per email) → 201
+POST {{baseUrl}}/users
+Content-Type: application/json
+X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}
+Cookie: XSRF-TOKEN={{csrf.response.headers.X-XSRF-TOKEN}}
+
+{"email":"{{driverEmail}}","password":"{{driverPassword}}"}
