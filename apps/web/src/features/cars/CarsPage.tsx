@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageSection } from '../../components/PageSection'
 import { listCategories } from '../categories/categories-api'
 import { listSpecifications } from '../specifications/specifications-api'
+import { CarFacts } from './CarFacts'
+import { CarCatalogDetails } from './CarCatalogDetails'
 import { CarEditor } from './CarEditor'
 import {
   createCar,
@@ -186,7 +188,6 @@ export function CarRecord({ id, mode }: { id: string; mode: 'detail' | 'edit' | 
 
 function CarDetails({ car }: { car: Car }) {
   const catalogs = useCatalogs()
-  const specifications = catalogs.specifications.data
   return (
     <PageSection
       eyebrow="Fleet · Car details"
@@ -198,46 +199,13 @@ function CarDetails({ car }: { car: Car }) {
         </Link>
       }
     >
-      <dl className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <dt>Brand</dt>
-          <dd>{car.brand}</dd>
-        </div>
-        <div>
-          <dt>License plate</dt>
-          <dd>{car.licensePlate}</dd>
-        </div>
-        <div>
-          <dt>Availability</dt>
-          <dd>{car.available ? 'Available' : 'Unavailable'}</dd>
-        </div>
-        <div>
-          <dt>Daily rate</dt>
-          <dd>{formatBrl(car.dailyRateCents)}</dd>
-        </div>
-        <div>
-          <dt>Fine amount</dt>
-          <dd>{formatBrl(car.fineAmountCents)}</dd>
-        </div>
-      </dl>
+      <CarFacts car={car} />
       {catalogs.categories.isSuccess && catalogs.specifications.isSuccess ? (
-        <dl className="my-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <dt>Category</dt>
-            <dd>
-              {catalogs.categories.data.find((category) => category.id === car.categoryId)?.name ??
-                car.categoryId}
-            </dd>
-          </div>
-          <div>
-            <dt>Specifications</dt>
-            <dd>
-              {car.specificationIds
-                .map((specId) => specifications!.find((spec) => spec.id === specId)?.name ?? specId)
-                .join(', ') || 'None'}
-            </dd>
-          </div>
-        </dl>
+        <CarCatalogDetails
+          car={car}
+          categories={catalogs.categories.data}
+          specifications={catalogs.specifications.data}
+        />
       ) : (
         <CatalogStatus {...catalogs} />
       )}
