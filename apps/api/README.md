@@ -4,19 +4,15 @@ The Spring Boot API manages cars, vehicle categories and equipment specification
 
 ## Accounts and JWT sessions
 
-Run the four requests in [the sessions REST Client](../../requests/sessions.http) in order. First call `GET /csrf` and use its `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` response header on the registration and login POSTs. The REST Client examples carry both forward, and Swagger UI sends the CSRF header automatically. A missing or mismatched cookie/header pair returns 403.
+In [the sessions REST Client](../../requests/sessions.http), use the CSRF, admin login and profile requests to verify the seeded development account. The separate driver registration example is optional. First call `GET /csrf` and use its `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` response header on the registration and login POSTs. The REST Client examples carry both forward, and Swagger UI sends the CSRF header automatically. A missing or mismatched cookie/header pair returns 403.
 
 Register with a unique email and a password of at least 12 characters and at most 72 UTF-8 bytes. Registration returns the public profile with role `USER`. Email comparisons ignore case and surrounding whitespace.
 
-Sign in with the same credentials. The login response contains an `accessToken` valid for 15 minutes. The profile request automatically uses that token. In Swagger UI, copy the token from the login response, select **Authorize**, paste the token without the Bearer prefix and execute `GET /sessions/me`. Sign in again after expiration.
+For the seeded development admin, sign in with `test@test` and `test@tesT@dev`. The login response contains an `accessToken` valid for 15 minutes. The profile request automatically uses that token. In Swagger UI, copy the token from the login response, select **Authorize**, paste the token without the Bearer prefix and execute `GET /sessions/me`. Sign in again after expiration.
 
 Fleet browsing is public through `GET /cars` and `GET /cars/{id}`. The detail includes a `category` object and an alphabetical `specifications` array. Each catalog entry exposes its ID, name and description. The car also retains `categoryId` and `specificationIds`. Clients can display these names directly. Creating, editing or deleting a car and all category and specification endpoints require an `ADMIN` token. An anonymous request to those endpoints receives 401. A signed-in driver receives 403. Signup and login remain public, as does the Swagger documentation.
 
-To exercise administrative requests locally, register a dedicated development account and promote it in the development database. For example, run the following statement in psql with your local account email. Role changes apply to newly issued tokens. Previously issued tokens retain their roles until they expire. Sign in again to obtain a token carrying the new role. Set `RENT_CARS_ADMIN_TOKEN` in the environment of your REST Client before running the catalog examples.
-
-```sql
-UPDATE accounts SET role = 'ADMIN' WHERE email = 'local-admin@example.com';
-```
+Flyway creates this admin only when the `dev` migrations are enabled. If that email already exists, the seed preserves its password and role. To use the protected catalog examples, set `RENT_CARS_ADMIN_TOKEN` in the REST Client environment to the access token from admin login.
 
 Development and test profiles generate an ephemeral RSA key pair at startup. Restarting invalidates local tokens. For deployment, activate `prod`, serve the API over HTTPS and supply the same key files to every replica. Mount a PKCS#8 RSA private key and its X.509 public key from your secret store. Configure their Spring resource locations, for example:
 

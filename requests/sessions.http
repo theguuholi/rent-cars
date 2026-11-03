@@ -1,27 +1,29 @@
 @baseUrl = http://localhost:8080
-@email = driver@example.com
-@password = local-example-only-123
+@adminEmail = test@test
+@adminPassword = test@tesT@dev
+@driverEmail = driver@example.com
+@driverPassword = local-example-only-123
 
 ### Obtain the CSRF token and cookie for the two public writes
 # @name csrf
 GET {{baseUrl}}/csrf
 
-### Register a local driver (run once per email)
+### Optional: register a separate local driver (run once per email)
 POST {{baseUrl}}/users
 Content-Type: application/json
 X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}
 Cookie: XSRF-TOKEN={{csrf.response.headers.X-XSRF-TOKEN}}
 
-{"email":"{{email}}","password":"{{password}}"}
+{"email":"{{driverEmail}}","password":"{{driverPassword}}"}
 
-### Sign in
+### Sign in as the seeded development admin
 # @name login
 POST {{baseUrl}}/sessions
 Content-Type: application/json
 X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}
 Cookie: XSRF-TOKEN={{csrf.response.headers.X-XSRF-TOKEN}}
 
-{"email":"{{email}}","password":"{{password}}"}
+{"email":"{{adminEmail}}","password":"{{adminPassword}}"}
 
 ### Read the account that owns the token from the login request
 GET {{baseUrl}}/sessions/me

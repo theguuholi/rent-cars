@@ -266,6 +266,20 @@ class SessionControllerTest {
   class Login {
     @Test
     @DisplayName(
+        "Given the development seed, when signing in with the documented credentials, then the account has the ADMIN role and can read the protected catalog")
+    void seededAdmin() throws Exception {
+      email = "test@test";
+      password = "test@tesT@dev";
+      var bearer = "Bearer " + login();
+      mvc.perform(get("/sessions/me").header("Authorization", bearer))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.email").value(email))
+          .andExpect(jsonPath("$.role").value("ADMIN"));
+      mvc.perform(get("/categories").header("Authorization", bearer)).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName(
         "Given a CSRF cookie, when signing in with a mismatched header, then the API rejects the request before checking credentials")
     void rejectsMismatchedToken() throws Exception {
       var bootstrap = mvc.perform(get("/csrf")).andReturn().getResponse();

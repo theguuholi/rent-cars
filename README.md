@@ -15,6 +15,10 @@ make dev
 
 Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. Press Ctrl+C to stop the applications and run `make db-stop` to stop PostgreSQL.
 
+### Development admin
+
+The `dev` profile seeds an `ADMIN` account with email `test@test` and password `test@tesT@dev`. Start the API, then run the CSRF, admin login and profile requests in [sessions.http](requests/sessions.http). The profile returns `"role": "ADMIN"`.
+
 ## Repository layout
 
 | Directory | Contents |
