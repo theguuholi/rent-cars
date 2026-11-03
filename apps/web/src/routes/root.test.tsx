@@ -18,7 +18,7 @@ describe('Home route', () => {
         'href',
         '/specifications',
       )
-      expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()
+      expect(screen.getByRole('main')).toBeEmptyDOMElement()
       expect(fetch).not.toHaveBeenCalled()
     },
   )

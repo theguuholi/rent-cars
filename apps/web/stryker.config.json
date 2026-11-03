@@ -6,6 +6,7 @@
   },
   "mutate": ["src/**/*.{ts,tsx}", "!src/**/*.test.{ts,tsx}", "!src/test/**", "!src/**/*.d.ts"],
   "reporters": ["clear-text", "html", "json"],
+  "thresholds": { "high": 100, "low": 100, "break": 100 },
   "concurrency": 2,
   "ignorePatterns": ["/tsconfig.json", "/coverage", "/dist"]
 }

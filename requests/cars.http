@@ -1,0 +1,40 @@
+@baseUrl = http://localhost:8080
+
+### Choose an existing body style
+# @name categories
+GET {{baseUrl}}/categories
+
+### Choose an existing feature (in dev the catalog is seeded)
+# @name specifications
+GET {{baseUrl}}/specifications
+
+### Register a car. Use [] to register without specifications.
+POST {{baseUrl}}/cars
+Content-Type: application/json
+
+{
+  "name": "Argo",
+  "brand": "Fiat",
+  "description": "Five-door hatchback.",
+  "licensePlate": "abc1d23",
+  "dailyRateCents": 15050,
+  "fineAmountCents": 0,
+  "categoryId": "{{categories.response.body.$[0].id}}",
+  "specificationIds": ["{{specifications.response.body.$[0].id}}"]
+}
+
+### List cars and select the first for the following requests
+# @name listCars
+GET {{baseUrl}}/cars
+
+### View the selected car
+GET {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}
+
+### Mark the car unavailable and clear its specifications
+PATCH {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}
+Content-Type: application/json
+
+{"available":false,"specificationIds":[]}
+
+### Delete the selected car
+DELETE {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}

@@ -6,10 +6,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/web-mutation.yml'
-      - 'apps/web/stryker.config.json'
-      - 'apps/web/vite.config.ts'
-      - 'apps/web/package.json'
-      - 'apps/web/package-lock.json'
+      - 'apps/web/**'
 
 permissions:
   contents: read

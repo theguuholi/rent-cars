@@ -58,6 +58,13 @@ public class Category {
     this.description = description;
   }
 
+  @Schema(
+      description = "Identifier used to assign this category to a car.",
+      accessMode = Schema.AccessMode.READ_ONLY)
+  public UUID getId() {
+    return id;
+  }
+
   @Schema(description = "Unique uppercase category name.", example = "HATCHBACK", maxLength = 50)
   public String getName() {
     return name;

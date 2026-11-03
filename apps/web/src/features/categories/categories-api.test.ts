@@ -8,7 +8,7 @@ describe('Categories API client', () => {
     'Given a category response, when listCategories runs, then it forwards the signal and returns the decoded catalog',
     async () => {
       const signal = new AbortController().signal
-      const catalog = [{ name: 'SUV', description: null }]
+      const catalog = [{ id: 'suv', name: 'SUV', description: null }]
       const fetchMock = vi.fn().mockResolvedValue(Response.json(catalog))
       vi.stubGlobal('fetch', fetchMock)
 

@@ -1,6 +1,6 @@
 import { createRootRoute, createRoute } from '@tanstack/react-router'
-import { Layout } from '../App'
-import { NotFoundPage } from '../NotFoundPage'
+import { Layout } from '../components/Layout/Layout'
+import { NotFoundPage } from '../pages/NotFoundPage/NotFoundPage'
 
 declare module '@tanstack/react-router' {
   interface StaticDataRouteOption {
@@ -12,7 +12,6 @@ export const rootRoute = createRootRoute({ component: Layout, notFoundComponent:
 export const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => null,
 })
 
 export const unknownRoute = createRoute({
