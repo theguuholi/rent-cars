@@ -12,7 +12,6 @@ export const rootRoute = createRootRoute({ component: Layout, notFoundComponent:
 export const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => null,
 })
 
 export const unknownRoute = createRoute({

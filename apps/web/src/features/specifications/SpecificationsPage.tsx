@@ -34,8 +34,14 @@ export function SpecificationsPage() {
   const item = catalog.data?.find((entry) => entry.id === id)
   const change = useMutation({
     mutationFn: async (command: Change) => {
-      if (command.type === 'delete') await deleteSpecification(command.id)
-      else await saveSpecification(command.input, command.id)
+      switch (command.type) {
+        case 'save':
+          await saveSpecification(command.input, command.id)
+          break
+        case 'delete':
+          await deleteSpecification(command.id)
+          break
+      }
     },
     onSuccess: async (_, command) => {
       await navigate({
@@ -74,7 +80,11 @@ export function SpecificationsPage() {
         </p>
       )}
       {change.isError && <p role="alert">{change.error.message}</p>}
-      <div className={panelOpen ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]' : ''}>
+      <div
+        className={
+          panelOpen ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]' : undefined
+        }
+      >
         {panelOpen && (
           <aside
             aria-label="Specification details"
@@ -113,13 +123,7 @@ export function SpecificationsPage() {
                 key={id}
                 busy={change.isPending}
                 onCancel={close}
-                onSave={(input) =>
-                  change.mutate({
-                    type: 'save',
-                    input,
-                    id,
-                  })
-                }
+                onSave={(input) => change.mutate({ type: 'save', input, id })}
               />
             )}
           </aside>

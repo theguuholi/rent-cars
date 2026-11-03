@@ -29,7 +29,16 @@ describe('PageSection', () => {
       )
       expect(within(categories).getByText('Body styles')).toBeVisible()
       expect(within(categories).queryByRole('button')).not.toBeInTheDocument()
-      expect(within(specifications).getByText('Vehicle equipment')).toBeVisible()
+      expect(
+        within(categories)
+          .getAllByRole('paragraph')
+          .map((p) => p.textContent),
+      ).toEqual(['Catalog'])
+      expect(
+        within(specifications)
+          .getAllByRole('paragraph')
+          .map((p) => p.textContent),
+      ).toEqual(['Catalog', 'Vehicle equipment'])
       expect(within(specifications).getByRole('button', { name: 'Create' })).toBeVisible()
     },
   )

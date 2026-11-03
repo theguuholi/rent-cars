@@ -1,17 +1,22 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, describe, test as scenario, vi } from 'vitest'
 import { SpecificationEditor } from './SpecificationEditor'
 
 describe('SpecificationEditor', () => {
   scenario(
-    'Given a name with 255 uppercase characters, when the editor submits, then it saves the trimmed fields',
+    'Given a name with 255 uppercase characters, when the editor submits, then it prevents native navigation and saves the trimmed fields',
     async () => {
       const onSave = vi.fn()
       render(<SpecificationEditor busy={false} onSave={onSave} onCancel={vi.fn()} />)
       const name = 'ß'.repeat(127) + 'a'
       fireEvent.change(screen.getByLabelText('Name'), { target: { value: ' ' + name + ' ' } })
       fireEvent.change(screen.getByLabelText('Description'), { target: { value: '  Braking  ' } })
-      fireEvent.click(screen.getByRole('button', { name: 'Save specification' }))
+      const form = screen.getByRole<HTMLButtonElement>('button', {
+        name: 'Save specification',
+      }).form!
+      const submit = createEvent.submit(form)
+      fireEvent(form, submit)
+      expect(submit.defaultPrevented).toBe(true)
       await waitFor(() =>
         expect(onSave).toHaveBeenCalledExactlyOnceWith({ name, description: 'Braking' }),
       )

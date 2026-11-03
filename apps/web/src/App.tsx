@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Link, Outlet, useMatches } from '@tanstack/react-router'
 
 export function Layout() {
-  const title = useMatches({ select: (matches) => matches.at(-1)?.staticData.title })
+  const title = useMatches({ select: (matches) => matches.at(-1)!.staticData.title })
   useEffect(() => {
     document.title = title ? `${title} | Rent Cars` : 'Rent Cars'
   }, [title])

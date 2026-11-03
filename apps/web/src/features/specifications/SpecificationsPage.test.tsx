@@ -245,8 +245,22 @@ describe('SpecificationsPage', () => {
           expect(await screen.findByRole('heading', { name: 'Delete ABS?' })).toBeVisible()
         }
 
+        const panel = screen.getByRole('complementary', { name: 'Specification details' })
+        const layout = panel.parentElement
+        expect(layout).toHaveClass('grid', 'lg:grid-cols-[minmax(0,1fr)_22rem]')
+        for (const record of [item, second]) {
+          const row = screen.getByRole('row', { name: new RegExp(record.name) })
+          expect(row).toHaveAttribute('data-selected', String(record.id === second.id))
+          for (const action of ['Edit', 'Delete']) {
+            const link = within(row).getByLabelText(action + ' ' + record.name)
+            expect(link).toHaveAttribute('aria-disabled', 'true')
+            expect(link).not.toHaveAttribute('href')
+          }
+        }
+
         await click('Cancel')
         expect(history.location.pathname).toBe('/specifications')
+        expect(layout).not.toHaveClass('grid')
         expect(save).not.toHaveBeenCalled()
         expect(remove).not.toHaveBeenCalled()
       },

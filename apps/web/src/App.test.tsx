@@ -1,9 +1,42 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, describe, test as scenario, vi } from 'vitest'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
+import { Layout } from './App'
 import { openCatalogRoute } from './test/open-catalog-route'
 
 describe('Application layout', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  scenario(
+    'Given a catalog with a nested editor, when its URL opens, then the tab title identifies the editor instead of its parent catalog',
+    async () => {
+      const root = createRootRoute({ component: Layout })
+      const catalog = createRoute({
+        getParentRoute: () => root,
+        path: '/catalog',
+        staticData: { title: 'Catalog' },
+      })
+      const editor = createRoute({
+        getParentRoute: () => catalog,
+        path: 'edit',
+        staticData: { title: 'Edit entry' },
+        component: () => <h2>Edit entry</h2>,
+      })
+      const router = createRouter({
+        routeTree: root.addChildren([catalog.addChildren([editor])]),
+        history: createMemoryHistory({ initialEntries: ['/catalog/edit'] }),
+      })
+      render(<RouterProvider router={router} />)
+      expect(await screen.findByRole('heading', { name: 'Edit entry' })).toBeVisible()
+      await waitFor(() => expect(document.title).toBe('Edit entry | Rent Cars'))
+    },
+  )
 
   scenario(
     'Given an active catalog, when the layout renders, then the banner offers a home link and marks the current catalog',

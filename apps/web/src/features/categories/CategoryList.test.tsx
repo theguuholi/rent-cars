@@ -1,3 +1,4 @@
+import { QueryClient } from '@tanstack/react-query'
 import { fireEvent, screen, within } from '@testing-library/react'
 import { beforeEach, expect, describe, test as scenario, vi } from 'vitest'
 import { renderWithQuery } from '../../test/render-with-query'
@@ -36,7 +37,7 @@ describe('CategoryList', () => {
         const items = within(list).getAllByRole('listitem')
         expect(items).toHaveLength(2)
         expect(within(items[0]).getByText('HATCHBACK')).toBeVisible()
-        expect(within(items[0]).getByText('Compact car.')).toBeVisible()
+        expect(within(items[0]).getByRole('paragraph')).toHaveTextContent(/^Compact car\.$/)
         expect(within(items[1]).getByText('SUV')).toBeVisible()
         expect(screen.queryByRole('status')).not.toBeInTheDocument()
       },
@@ -47,7 +48,20 @@ describe('CategoryList', () => {
         load.mockResolvedValue([{ id: 'suv', name: 'SUV', description: null }])
         renderWithQuery(<CategoryList />)
 
-        expect(await screen.findByRole('listitem')).toHaveTextContent(/^SUV$/)
+        const row = await screen.findByRole('listitem')
+        expect(row).toHaveTextContent(/^SUV$/)
+        expect(within(row).queryByRole('paragraph')).not.toBeInTheDocument()
+      },
+    )
+    scenario(
+      'Given fresh categories in the shared cache, when the list opens, then it shows the cached catalog without fetching again',
+      () => {
+        const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
+        client.setQueryData(['categories'], [{ id: 'van', name: 'VAN', description: null }])
+        renderWithQuery(<CategoryList />, client)
+
+        expect(screen.getByRole('listitem')).toHaveTextContent(/^VAN$/)
+        expect(load).not.toHaveBeenCalled()
       },
     )
     scenario(
