@@ -1,5 +1,5 @@
-import { formatBrl } from './brl'
-import type { Car } from './cars-api'
+import { formatBrl } from '../../brl'
+import type { Car } from '../../cars-api'
 
 export function CarFacts({ car }: { car: Car }) {
   return (

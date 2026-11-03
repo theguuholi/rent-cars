@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageSection } from '../../components/PageSection'
 import { listCategories } from '../categories/categories-api'
 import { listSpecifications } from '../specifications/specifications-api'
-import { CarFacts } from './CarFacts'
-import { CarCatalogDetails } from './CarCatalogDetails'
+import { CarFacts } from './components/CarFacts/CarFacts'
+import { CarCatalogDetails } from './components/CarCatalogDetails/CarCatalogDetails'
 import { CarEditor } from './CarEditor'
 import {
   createCar,

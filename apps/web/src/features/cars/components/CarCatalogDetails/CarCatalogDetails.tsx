@@ -1,6 +1,6 @@
-import type { Category } from '../categories/categories-api'
-import type { Specification } from '../specifications/specifications-api'
-import type { Car } from './cars-api'
+import type { Category } from '../../../categories/categories-api'
+import type { Specification } from '../../../specifications/specifications-api'
+import type { Car } from '../../cars-api'
 
 type Props = {
   car: Pick<Car, 'categoryId' | 'specificationIds'>

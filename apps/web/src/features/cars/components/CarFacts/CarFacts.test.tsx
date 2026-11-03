@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, test as scenario, expect } from 'vitest'
-import { car } from '../../test/car-fixtures'
+import { car } from '../../../../test/car-fixtures'
 import { CarFacts } from './CarFacts'
 
 describe('CarFacts', () => {
