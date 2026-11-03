@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, describe, test as scenario, vi } from 'vitest'
-import { openCatalogRoute } from './test/open-catalog-route'
+import { openCatalogRoute } from '../../test/open-catalog-route'
 
 describe('NotFoundPage', () => {
   afterEach(() => vi.unstubAllGlobals())

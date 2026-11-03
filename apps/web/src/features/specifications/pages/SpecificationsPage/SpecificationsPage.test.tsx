@@ -1,12 +1,16 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, expect, describe, test as scenario, vi } from 'vitest'
-import { renderWithQuery } from '../../test/render-with-query'
+import { renderWithQuery } from '../../../../test/render-with-query'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
-import { createAppRouter } from '../../router'
+import { createAppRouter } from '../../../../router'
 import { act } from '@testing-library/react'
-import { deleteSpecification, listSpecifications, saveSpecification } from './specifications-api'
+import {
+  deleteSpecification,
+  listSpecifications,
+  saveSpecification,
+} from '../../specifications-api'
 
-vi.mock('./specifications-api', () => ({
+vi.mock('../../specifications-api', () => ({
   deleteSpecification: vi.fn(),
   listSpecifications: vi.fn(),
   saveSpecification: vi.fn(),

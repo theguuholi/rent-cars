@@ -1,10 +1,10 @@
 import { fireEvent, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, test as scenario, vi } from 'vitest'
-import { renderWithQuery } from '../../test/render-with-query'
+import { renderWithQuery } from '../../../../test/render-with-query'
 import { CategoriesPage } from './CategoriesPage'
-import { listCategories } from './categories-api'
+import { listCategories } from '../../categories-api'
 
-vi.mock('./categories-api', () => ({ listCategories: vi.fn() }))
+vi.mock('../../categories-api', () => ({ listCategories: vi.fn() }))
 
 describe('CategoriesPage', () => {
   const load = vi.mocked(listCategories)

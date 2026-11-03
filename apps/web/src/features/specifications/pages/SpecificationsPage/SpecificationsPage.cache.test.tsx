@@ -2,11 +2,11 @@ import { QueryClient } from '@tanstack/react-query'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
 import { act, fireEvent, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, test as scenario, vi } from 'vitest'
-import { createAppRouter } from '../../router'
-import { renderWithQuery } from '../../test/render-with-query'
-import { deleteSpecification, listSpecifications } from './specifications-api'
+import { createAppRouter } from '../../../../router'
+import { renderWithQuery } from '../../../../test/render-with-query'
+import { deleteSpecification, listSpecifications } from '../../specifications-api'
 
-vi.mock('./specifications-api', () => ({
+vi.mock('../../specifications-api', () => ({
   deleteSpecification: vi.fn(),
   listSpecifications: vi.fn(),
   saveSpecification: vi.fn(),

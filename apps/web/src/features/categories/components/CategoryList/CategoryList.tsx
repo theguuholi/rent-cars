@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { listCategories } from './categories-api'
+import { listCategories } from '../../categories-api'
 
 export function CategoryList() {
   const categories = useQuery({

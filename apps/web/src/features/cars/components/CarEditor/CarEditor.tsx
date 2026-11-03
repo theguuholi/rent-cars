@@ -1,8 +1,8 @@
 import { useForm } from '@tanstack/react-form'
-import type { Category } from '../categories/categories-api'
-import type { Specification } from '../specifications/specifications-api'
-import { formatBrlInput, parseBrl } from './brl'
-import type { Car, CarInput } from './cars-api'
+import type { Category } from '../../../categories/categories-api'
+import type { Specification } from '../../../specifications/specifications-api'
+import { formatBrlInput, parseBrl } from '../../brl'
+import type { Car, CarInput } from '../../cars-api'
 
 type CarDraft = Omit<CarInput, 'dailyRateCents' | 'fineAmountCents'> & {
   dailyRate: string

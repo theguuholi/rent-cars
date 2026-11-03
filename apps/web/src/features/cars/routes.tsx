@@ -1,6 +1,8 @@
 import { createRoute } from '@tanstack/react-router'
 import { rootRoute } from '../../routes/root'
-import { CarsPage, CarRecord, CarFormPage } from './CarsPage'
+import { CarsPage } from './pages/CarsPage/CarsPage'
+import { CarRecord } from './pages/CarRecord/CarRecord'
+import { CarFormPage } from './pages/CarFormPage/CarFormPage'
 
 const list = createRoute({
   getParentRoute: () => rootRoute,

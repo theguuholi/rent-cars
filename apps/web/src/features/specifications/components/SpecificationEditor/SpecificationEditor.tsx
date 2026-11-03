@@ -1,5 +1,5 @@
 import { useForm } from '@tanstack/react-form'
-import type { Specification, SpecificationInput } from './specifications-api'
+import type { Specification, SpecificationInput } from '../../specifications-api'
 
 type Props = {
   item?: Specification

@@ -1,9 +1,13 @@
-import { PageSection } from '../../components/PageSection'
+import { PageSection } from '../../../../components/PageSection/PageSection'
 import { Link, useMatchRoute, useNavigate, useLocation } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { SpecificationEditor } from './SpecificationEditor'
-import { deleteSpecification, listSpecifications, saveSpecification } from './specifications-api'
-import type { SpecificationInput } from './specifications-api'
+import { SpecificationEditor } from '../../components/SpecificationEditor/SpecificationEditor'
+import {
+  deleteSpecification,
+  listSpecifications,
+  saveSpecification,
+} from '../../specifications-api'
+import type { SpecificationInput } from '../../specifications-api'
 
 declare module '@tanstack/react-router' {
   interface HistoryState {

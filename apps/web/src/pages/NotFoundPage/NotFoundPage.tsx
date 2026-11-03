@@ -1,4 +1,4 @@
-import { PageSection } from './components/PageSection'
+import { PageSection } from '../../components/PageSection/PageSection'
 import { Link } from '@tanstack/react-router'
 
 export function NotFoundPage() {

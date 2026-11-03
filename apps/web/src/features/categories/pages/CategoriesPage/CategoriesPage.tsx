@@ -1,5 +1,5 @@
-import { PageSection } from '../../components/PageSection'
-import { CategoryList } from './CategoryList'
+import { PageSection } from '../../../../components/PageSection/PageSection'
+import { CategoryList } from '../../components/CategoryList/CategoryList'
 
 export function CategoriesPage() {
   return (

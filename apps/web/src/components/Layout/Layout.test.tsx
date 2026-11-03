@@ -7,8 +7,8 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { Layout } from './App'
-import { openCatalogRoute } from './test/open-catalog-route'
+import { Layout } from './Layout'
+import { openCatalogRoute } from '../../test/open-catalog-route'
 
 describe('Application layout', () => {
   afterEach(() => vi.unstubAllGlobals())

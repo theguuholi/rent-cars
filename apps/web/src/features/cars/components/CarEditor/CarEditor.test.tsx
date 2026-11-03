@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, test as scenario, vi } from 'vitest'
 import { CarEditor } from './CarEditor'
-import { car, categories, specifications } from '../../test/car-fixtures'
+import { car, categories, specifications } from '../../../../test/car-fixtures'
 
 describe('CarEditor', () => {
   scenario(

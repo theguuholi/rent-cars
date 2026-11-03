@@ -1,11 +1,11 @@
 import { QueryClient } from '@tanstack/react-query'
 import { fireEvent, screen, within } from '@testing-library/react'
 import { beforeEach, expect, describe, test as scenario, vi } from 'vitest'
-import { renderWithQuery } from '../../test/render-with-query'
-import { listCategories } from './categories-api'
+import { renderWithQuery } from '../../../../test/render-with-query'
+import { listCategories } from '../../categories-api'
 import { CategoryList } from './CategoryList'
 
-vi.mock('./categories-api', () => ({ listCategories: vi.fn() }))
+vi.mock('../../categories-api', () => ({ listCategories: vi.fn() }))
 
 const load = vi.mocked(listCategories)
 describe('CategoryList', () => {
