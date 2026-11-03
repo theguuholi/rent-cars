@@ -146,7 +146,7 @@ it('validates required fields and the normalized name length before submitting',
   expect(save).not.toHaveBeenCalled()
 })
 
-it('supports refresh at an edit URL, back navigation and non-destructive delete links', async () => {
+it('opens edit and delete links from the list and supports back navigation', async () => {
   list.mockResolvedValue([item])
   const history = await open()
   await screen.findByRole('link', { name: 'Edit GPS' })
@@ -173,3 +173,28 @@ it('opens new directly without fetching an individual specification', async () =
   await click('Cancel')
   expect(history.location.pathname).toBe('/specifications')
 })
+
+it.each(['edit', 'delete'])(
+  'opens a saved %s URL for the requested record without performing a mutation',
+  async (action) => {
+    const second = {
+      id: '9bb13a38-2b2e-4082-8bc7-8ad60af49b8c',
+      name: 'ABS',
+      description: 'Anti-lock braking.',
+    }
+    list.mockResolvedValue([item, second])
+    const history = await open(`/specifications/${second.id}/${action}`)
+
+    if (action === 'edit') {
+      expect(await screen.findByLabelText('Name')).toHaveValue(second.name)
+      expect(screen.getByLabelText('Description')).toHaveValue(second.description)
+    } else {
+      expect(await screen.findByRole('heading', { name: 'Delete ABS?' })).toBeVisible()
+    }
+
+    await click('Cancel')
+    expect(history.location.pathname).toBe('/specifications')
+    expect(save).not.toHaveBeenCalled()
+    expect(remove).not.toHaveBeenCalled()
+  },
+)

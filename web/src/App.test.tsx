@@ -46,6 +46,10 @@ it('supports navigation and browser history between catalogs', async () => {
   expect(history.location.pathname).toBe('/specifications')
   await act(async () => history.back())
   expect(await screen.findByText('No vehicle categories available.')).toBeVisible()
+  expect(history.location.pathname).toBe('/categories')
+  await act(async () => history.forward())
+  expect(await screen.findByText('No specifications yet.')).toBeVisible()
+  expect(history.location.pathname).toBe('/specifications')
 })
 
 it.each(['/category', '/specification', '/categories/unknown', '/specifications/unknown'])(
