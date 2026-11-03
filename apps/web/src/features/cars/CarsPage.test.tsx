@@ -33,7 +33,7 @@ describe('Car catalog and record pages', () => {
       openCatalogRoute('/cars')
       await screen.findByText('Loading cars…')
       await act(async () => reject(new Error('Offline')))
-      expect(await screen.findByRole('alert')).toHaveTextContent('Offline')
+      expect(await screen.findByRole('alert')).toHaveTextContent('Offline Try again')
       fireEvent.click(screen.getByText('Try again'))
       expect(await screen.findByText('No cars yet.')).toBeVisible()
       expect(screen.getByRole('link', { name: 'New car' })).toHaveAttribute('href', '/cars/new')
@@ -55,11 +55,64 @@ describe('Car catalog and record pages', () => {
       openCatalogRoute('/cars/second')
       await screen.findByText('Loading car…')
       await act(async () => reject(new Error('This car no longer exists.')))
-      expect(await screen.findByRole('alert')).toHaveTextContent('This car no longer exists.')
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'This car no longer exists. Try again',
+      )
       fireEvent.click(screen.getByText('Try again'))
       expect(await screen.findByText('None')).toBeVisible()
       for (const value of ['Sedan', 'Available', 'R$ 150,50', 'R$ 5,00', 'Family sedan', 'Toyota'])
         expect(screen.getByText(value)).toBeVisible()
+    },
+  )
+
+  scenario(
+    'Given a car with several specifications, when its catalogs finish loading, then details resolve only its selected entries in order',
+    async () => {
+      let resolve!: (items: typeof specifications) => void
+      vi.mocked(api.getCar).mockResolvedValue({ ...car, specificationIds: ['air', 'gps'] })
+      vi.mocked(listCategories).mockResolvedValue([
+        { ...categories[0], id: 'van', name: 'Van' },
+        ...categories,
+      ])
+      vi.mocked(listSpecifications).mockImplementationOnce(
+        () =>
+          new Promise((success) => {
+            resolve = success
+          }),
+      )
+      openCatalogRoute('/cars/second')
+      expect(await screen.findByText('Loading vehicle catalogs…')).toBeVisible()
+      expect(screen.getByText('Unavailable')).toBeVisible()
+      await act(async () =>
+        resolve([
+          ...specifications,
+          { id: 'air', name: 'Air conditioning', description: 'Climate control' },
+        ]),
+      )
+      expect(await screen.findByText('Air conditioning, GPS')).toBeVisible()
+      expect(screen.getByText('Sedan')).toBeVisible()
+      expect(screen.getByRole('link', { name: 'Edit car' })).toHaveAttribute(
+        'href',
+        '/cars/second/edit',
+      )
+      expect(screen.getByRole('link', { name: 'Delete car' })).toHaveAttribute(
+        'href',
+        '/cars/second/delete',
+      )
+    },
+  )
+
+  scenario(
+    'Given a failed specifications lookup, when opening car details, then the record remains visible and the catalog offers a retry',
+    async () => {
+      vi.mocked(listSpecifications).mockRejectedValueOnce(new Error('Offline'))
+      openCatalogRoute('/cars/second')
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Could not load vehicle catalogs. Try again',
+      )
+      expect(screen.getByRole('heading', { name: 'Corolla' })).toBeVisible()
+      fireEvent.click(screen.getByText('Try again'))
+      expect(await screen.findByText('GPS')).toBeVisible()
     },
   )
 
@@ -81,7 +134,9 @@ describe('Car catalog and record pages', () => {
         vi.mocked(listCategories).mockRejectedValueOnce(new Error('offline'))
       else vi.mocked(listSpecifications).mockRejectedValueOnce(new Error('offline'))
       openCatalogRoute('/cars/new')
-      expect(await screen.findByRole('alert')).toHaveTextContent('Could not load vehicle catalogs.')
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Could not load vehicle catalogs. Try again',
+      )
       fireEvent.click(screen.getByText('Try again'))
       expect(await screen.findByLabelText('GPS')).toBeVisible()
       expect(screen.getByRole('option', { name: 'Sedan' })).toBeInTheDocument()
@@ -101,6 +156,7 @@ describe('Car catalog and record pages', () => {
       vi.mocked(api.createCar).mockResolvedValue(car)
       const history = openCatalogRoute('/cars/new')
       await screen.findByText('Loading vehicle catalogs…')
+      expect(screen.getByRole('heading', { name: 'New car', level: 2 })).toBeVisible()
       await act(async () => resolve(categories))
       await screen.findByText('Save car')
       for (const [label, value] of [
@@ -133,6 +189,7 @@ describe('Car catalog and record pages', () => {
       vi.mocked(api.getCar).mockResolvedValueOnce(car).mockResolvedValue(updated)
       const history = openCatalogRoute('/cars/second/edit')
       fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Renamed' } })
+      expect(screen.getByRole('heading', { name: 'Edit car', level: 2 })).toBeVisible()
       fireEvent.click(screen.getByText('Save car'))
       expect(await screen.findByRole('alert')).toHaveTextContent('Save refused')
       expect(screen.getByLabelText('Name')).toHaveValue('Renamed')
@@ -157,7 +214,12 @@ describe('Car catalog and record pages', () => {
             }),
         )
       const history = openCatalogRoute('/cars/second/delete')
-      fireEvent.click(await screen.findByText('Confirm deletion'))
+      await screen.findByRole('heading', { name: 'Delete Corolla?' })
+      expect(
+        screen.getByText('Remove the vehicle with plate ABC1234 from the fleet.'),
+      ).toBeVisible()
+      expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute('href', '/cars/second')
+      fireEvent.click(screen.getByText('Confirm deletion'))
       expect(await screen.findByRole('alert')).toHaveTextContent('Deletion failed')
       fireEvent.click(screen.getByText('Confirm deletion'))
       await waitFor(() => expect(screen.getByText('Confirm deletion')).toBeDisabled())

@@ -20,7 +20,12 @@ describe('CarEditor', () => {
       expect(screen.getByText('No specifications available.')).toBeVisible()
       expect(screen.getByLabelText('Name')).toHaveFocus()
       expect(screen.getByLabelText('Available')).toBeChecked()
-      fireEvent.click(screen.getByText('Save car'))
+      for (const label of ['Daily rate (BRL)', 'Fine amount (BRL)']) {
+        expect(screen.getByLabelText(label)).toHaveValue('')
+      }
+      const submit = new Event('submit', { bubbles: true, cancelable: true })
+      fireEvent(screen.getByRole('button', { name: 'Save car' }).closest('form')!, submit)
+      expect(submit.defaultPrevented).toBe(true)
       await waitFor(() =>
         expect(screen.getByLabelText('Name')).toHaveAccessibleDescription('Enter a name.'),
       )
@@ -33,6 +38,11 @@ describe('CarEditor', () => {
         'Fine amount (BRL)',
       ])
         expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'true')
+      for (const label of ['Daily rate (BRL)', 'Fine amount (BRL)']) {
+        expect(screen.getByLabelText(label)).toHaveAccessibleDescription(
+          'Enter a nonnegative BRL amount with up to two decimal places.',
+        )
+      }
       expect(onSave).not.toHaveBeenCalled()
     },
   )
@@ -52,6 +62,8 @@ describe('CarEditor', () => {
       )
       const change = (label: string, value: string) =>
         fireEvent.change(screen.getByLabelText(label), { target: { value } })
+      expect(screen.getByLabelText('License plate')).not.toHaveAttribute('readonly')
+      expect(screen.queryByText('No specifications available.')).not.toBeInTheDocument()
       change('License plate', 'ß'.repeat(128))
       await waitFor(() =>
         expect(screen.getByLabelText('License plate')).toHaveAccessibleDescription(
@@ -81,6 +93,7 @@ describe('CarEditor', () => {
       const props = { car, categories, specifications, onSave: vi.fn(), onCancel: vi.fn() }
       const view = render(<CarEditor {...props} busy={false} />)
       expect(screen.getByLabelText('License plate')).toHaveAttribute('readonly')
+      expect(screen.getByLabelText('Name')).not.toHaveAttribute('readonly')
       expect(screen.getByLabelText('Daily rate (BRL)')).toHaveValue('150,50')
       expect(screen.getByLabelText('Fine amount (BRL)')).toHaveValue('5,00')
       expect(screen.getByLabelText('Available')).not.toBeChecked()
@@ -96,6 +109,60 @@ describe('CarEditor', () => {
       view.rerender(<CarEditor {...props} busy />)
       expect(screen.getByText('Saving…')).toBeDisabled()
       expect(screen.getByLabelText('Name')).toBeDisabled()
+    },
+  )
+  scenario(
+    'Given padded 255-character values, when validating name and plate, then only the plate length uses uppercase expansion',
+    async () => {
+      render(
+        <CarEditor
+          categories={categories}
+          specifications={specifications}
+          busy={false}
+          onSave={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      )
+      for (const [label, value] of [
+        ['Name', 'ß'.repeat(255)],
+        ['License plate', 'a'.repeat(255)],
+      ]) {
+        const field = screen.getByLabelText(label)
+        fireEvent.change(field, { target: { value: 'x'.repeat(256) } })
+        await waitFor(() =>
+          expect(field).toHaveAccessibleDescription('Use at most 255 characters.'),
+        )
+        fireEvent.change(field, { target: { value: ` ${value} ` } })
+        await waitFor(() => expect(field).toHaveAttribute('aria-invalid', 'false'))
+      }
+    },
+  )
+
+  scenario(
+    'Given two selected specifications, when one is removed and the car is saved, then the other remains selected',
+    async () => {
+      const onSave = vi.fn()
+      render(
+        <CarEditor
+          car={{ ...car, specificationIds: ['gps', 'bluetooth'] }}
+          categories={categories}
+          specifications={[
+            ...specifications,
+            { id: 'bluetooth', name: 'Bluetooth', description: 'Wireless audio' },
+          ]}
+          busy={false}
+          onSave={onSave}
+          onCancel={vi.fn()}
+        />,
+      )
+      fireEvent.click(screen.getByLabelText('GPS'))
+      expect(screen.getByLabelText('Bluetooth')).toBeChecked()
+      fireEvent.click(screen.getByText('Save car'))
+      await waitFor(() =>
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({ specificationIds: ['bluetooth'] }),
+        ),
+      )
     },
   )
 })

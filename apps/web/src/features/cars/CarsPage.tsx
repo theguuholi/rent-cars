@@ -120,11 +120,7 @@ export function CarFormPage({ car }: { car?: Car }) {
           specifications={catalogs.specifications.data}
           busy={save.isPending}
           onSave={(input) => save.mutate(input)}
-          onCancel={() =>
-            void (car
-              ? navigate({ to: '/cars/$id', params: { id: car.id } })
-              : navigate({ to: '/cars' }))
-          }
+          onCancel={() => void (car ? navigate({ to: '..' }) : navigate({ to: '/cars' }))}
         />
       ) : (
         <CatalogStatus {...catalogs} />
@@ -179,13 +175,7 @@ export function CarRecord({ id, mode }: { id: string; mode: 'detail' | 'edit' | 
           >
             Confirm deletion
           </button>
-          <Link
-            autoFocus
-            className="btn-secondary"
-            disabled={remove.isPending}
-            to="/cars/$id"
-            params={{ id }}
-          >
+          <Link autoFocus className="btn-secondary" disabled={remove.isPending} to="..">
             Cancel
           </Link>
         </div>
@@ -197,7 +187,6 @@ export function CarRecord({ id, mode }: { id: string; mode: 'detail' | 'edit' | 
 function CarDetails({ car }: { car: Car }) {
   const catalogs = useCatalogs()
   const specifications = catalogs.specifications.data
-  const id = car.id
   return (
     <PageSection
       eyebrow="Fleet · Car details"
@@ -253,10 +242,10 @@ function CarDetails({ car }: { car: Car }) {
         <CatalogStatus {...catalogs} />
       )}
       <div className="mt-6 flex flex-wrap gap-3">
-        <Link className="btn-primary" to="/cars/$id/edit" params={{ id }}>
+        <Link className="btn-primary" from="/cars/$id" to="./edit">
           Edit car
         </Link>
-        <Link className="btn-secondary" to="/cars/$id/delete" params={{ id }}>
+        <Link className="btn-secondary" from="/cars/$id" to="./delete">
           Delete car
         </Link>
       </div>

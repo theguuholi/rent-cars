@@ -153,10 +153,11 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
           {(field) => (
             <label className="self-center">
               <input
+                className="mr-1"
                 type="checkbox"
                 checked={field.state.value}
                 onChange={(event) => field.handleChange(event.target.checked)}
-              />{' '}
+              />
               Available
             </label>
           )}
@@ -169,6 +170,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
               {specifications.map((spec) => (
                 <label className="mr-5 inline-block" key={spec.id}>
                   <input
+                    className="mr-1"
                     type="checkbox"
                     checked={field.state.value.includes(spec.id)}
                     onChange={(event) =>
@@ -178,7 +180,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
                           : field.state.value.filter((id) => id !== spec.id),
                       )
                     }
-                  />{' '}
+                  />
                   {spec.name}
                 </label>
               ))}

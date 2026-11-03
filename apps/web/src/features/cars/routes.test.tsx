@@ -24,11 +24,12 @@ describe('Car routes', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   scenario(
-    'Given the fleet catalog, when navigating through the second record to its edit and delete forms, then each URL retains its identity and cancel leaves it intact',
+    'Given the fleet catalog, when navigating through the second record to its edit and delete forms, then URLs and tab titles identify the current page and cancel leaves the car intact',
     async () => {
       const history = openCatalogRoute('/')
       fireEvent.click(await screen.findByRole('link', { name: 'Cars' }))
       await screen.findByText('Civic')
+      await waitFor(() => expect(document.title).toBe('Cars | Rent Cars'))
       expect(screen.getByText('Available')).toBeVisible()
       expect(screen.getByText('Unavailable')).toBeVisible()
       fireEvent.click(screen.getByRole('link', { name: 'Corolla' }))
@@ -48,6 +49,7 @@ describe('Car routes', () => {
       fireEvent.click(await screen.findByText('New car'))
       await screen.findByText('Save car')
       expect(history.location.pathname).toBe('/cars/new')
+      await waitFor(() => expect(document.title).toBe('New car | Rent Cars'))
       fireEvent.click(screen.getByText('Cancel'))
       await screen.findByText('Civic')
       expect(api.deleteCar).not.toHaveBeenCalled()
