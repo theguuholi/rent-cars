@@ -1,14 +1,23 @@
 @baseUrl = http://localhost:8080
 
-### Choose an existing body style
+### Browse the fleet
+# @name listCars
+GET {{baseUrl}}/cars
+
+### Inspect the first car (optional; run listCars first and skip if empty)
+GET {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}
+
+### Start the registration example by choosing a body style
 # @name categories
 GET {{baseUrl}}/categories
 
-### Choose an existing feature (in dev the catalog is seeded)
+### Choose a feature for the example (the dev catalog is seeded)
 # @name specifications
 GET {{baseUrl}}/specifications
 
-### Register a car. Use [] to register without specifications.
+### Register the example car; continue after receiving 201 Created
+# Use an unused license plate. Use [] to register without specifications.
+# @name createCar
 POST {{baseUrl}}/cars
 Content-Type: application/json
 
@@ -23,18 +32,14 @@ Content-Type: application/json
   "specificationIds": ["{{specifications.response.body.$[0].id}}"]
 }
 
-### List cars and select the first for the following requests
-# @name listCars
-GET {{baseUrl}}/cars
+### Fetch the car registered above
+GET {{baseUrl}}/cars/{{createCar.response.body.$.id}}
 
-### View the selected car
-GET {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}
-
-### Mark the car unavailable and clear its specifications
-PATCH {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}
+### Mark that car unavailable and clear its specifications
+PATCH {{baseUrl}}/cars/{{createCar.response.body.$.id}}
 Content-Type: application/json
 
 {"available":false,"specificationIds":[]}
 
-### Delete the selected car
-DELETE {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}
+### Delete the car registered above
+DELETE {{baseUrl}}/cars/{{createCar.response.body.$.id}}

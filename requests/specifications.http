@@ -1,32 +1,34 @@
 @baseUrl = http://localhost:8080
 
-### List specifications alphabetically and select the first result for the requests below
-# If the list is empty, create a specification, then send this request again.
+### Browse the specifications catalog
 # @name listSpecifications
 GET {{baseUrl}}/specifications
 Accept: application/json
 
-### Create a specification
+### Inspect the first specification (optional; run listSpecifications first and skip if empty)
+GET {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
+
+### Create the example specification; continue after receiving 201 Created
 # @name createSpecification
 POST {{baseUrl}}/specifications
 Content-Type: application/json
 
 {"name":"air conditioning","description":"Cabin temperature control."}
 
-### Fetch the first specification from the last list response
-GET {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
+### Fetch the specification created above
+GET {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
 
-### Update both fields
-PUT {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
+### Update both fields of the example specification
+PUT {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
 Content-Type: application/json
 
 {"name":"climate control","description":"Automatic cabin temperature control."}
 
-### Change only the description
-PATCH {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
+### Change only its description
+PATCH {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
 Content-Type: application/json
 
 {"description":"Dual-zone climate control."}
 
-### Delete the selected specification; refresh the list before selecting another
-DELETE {{baseUrl}}/specifications/{{listSpecifications.response.body.$[0].id}}
+### Delete the specification created above
+DELETE {{baseUrl}}/specifications/{{createSpecification.response.body.$.id}}
