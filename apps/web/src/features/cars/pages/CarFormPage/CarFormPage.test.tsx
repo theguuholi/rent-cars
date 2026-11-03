@@ -36,6 +36,7 @@ describe('CarFormPage', () => {
       expect(screen.getByRole('heading', { name: 'New car', level: 2 })).toBeVisible()
       await act(async () => resolve(categories))
       await screen.findByText('Save car')
+      expect(screen.queryByText('Loading vehicle catalogs…')).not.toBeInTheDocument()
       for (const [label, value] of [
         ['Name', car.name],
         ['Description', car.description],
