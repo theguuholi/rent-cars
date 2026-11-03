@@ -1,14 +1,20 @@
 # Rent Cars Web
 
-React and TypeScript frontend for the vehicle category and specification catalogs. Follow the [full-stack setup guide](../../README.md#run-the-full-stack-locally) to start PostgreSQL, Spring Boot and Vite with Make.
+React and TypeScript frontend for the rental fleet, categories and specifications. Follow the [full-stack setup guide](../../README.md#run-the-full-stack-locally) to start PostgreSQL, Spring Boot and Vite with Make.
 
 For frontend-only development, run `make setup` and `make web-dev` from the repository root. The default backend is the Java API on port 8080. To use the Go API, start it separately and run `API_TARGET=http://127.0.0.1:8081 make web-dev`.
 
 The home page (`/`) contains only the navigation menu. Open `/categories` to browse body styles. Select **Specifications** (`/specifications`) to list vehicle features, create a new feature, edit its name and description, or confirm deletion. This catalog uses the Java backend. The Go backend currently serves categories only.
 
-See [web quality checks](../../README.md#web-quality-checks) for formatting, lint, tests, coverage and the production build.
+See [web quality checks](#web-quality-checks) for formatting, lint, tests, coverage and the production build.
 
 Specification actions have their own browser URLs. Open `/specifications/new` to create a record, `/specifications/:id/edit` to edit it, or `/specifications/:id/delete` to review deletion. Replace `:id` with the record's UUID. Opening or refreshing a deletion URL only shows the confirmation.
+
+## Web quality checks
+
+From this directory, use the Node version in `.node-version` and install dependencies with `npm ci`. Run `npm run format:check`, `npm run lint`, `npm run test:coverage` and `npm run build` to reproduce **Web verification**. Use `npm run format` to apply Oxfmt fixes or `npm run lint:fix` for automatic Oxlint fixes.
+
+Vitest requires at least **95% each** for global line, statement, function and branch coverage across application TypeScript under `src/`. Tests, test helpers and declarations are excluded. Open `coverage/index.html` for the HTML report; `coverage/lcov.info` is available for tooling. Download **web-coverage** from the Web quality workflow to inspect a PR, including one that failed its coverage threshold.
 
 ### Writing a test scenario
 
