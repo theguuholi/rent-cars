@@ -17,25 +17,48 @@ import tools.jackson.databind.type.LogicalType;
 @Schema(
     description =
         "Car attributes. On PATCH, omitted fields retain their values. All supplied values must be non-null.")
-public class CarRequest {
-  public String name;
-  public String description;
-  public String brand;
-  public String licensePlate;
-  public Boolean available;
+public record CarRequest(
+    @Schema(description = "Model name.", maxLength = 100, example = "Argo") String name,
+    @Schema(description = "Description of this vehicle.", maxLength = 255) String description,
+    @Schema(description = "Vehicle manufacturer.", maxLength = 80, example = "Fiat") String brand,
+    @Schema(
+            description = "Unique plate, trimmed and uppercased before validation.",
+            maxLength = 20,
+            example = "ABC1D23")
+        String licensePlate,
+    @Schema(description = "Whether this car can be rented.") Boolean available,
+    @Schema(description = "Daily rental price in Brazilian centavos.", example = "15050") @Min(0)
+        Integer dailyRateCents,
+    @Schema(description = "Fine in Brazilian centavos.", example = "0") @Min(0)
+        Integer fineAmountCents,
+    @Schema(description = "Identifier of the car's body style.") UUID categoryId,
+    @Schema(
+            description =
+                "Full selection of feature identifiers. An empty array clears the selection.")
+        Set<UUID> specificationIds) {
 
-  @Min(0)
-  public Integer dailyRateCents;
+  public CarRequest {
+    if (specificationIds != null) specificationIds = Set.copyOf(specificationIds);
+  }
 
-  @Min(0)
-  public Integer fineAmountCents;
+  @Schema(
+      name = "CarCreateRequest",
+      allOf = CarRequest.class,
+      requiredProperties = {
+        "name",
+        "description",
+        "brand",
+        "licensePlate",
+        "dailyRateCents",
+        "fineAmountCents",
+        "categoryId"
+      })
+  interface CreateSchema {}
 
-  public UUID categoryId;
-  public Set<UUID> specificationIds;
   // Rental prices are integer cents. Reject coercions (e.g. 1.99 to 1) for this contract.
   private static final ObjectReader READER =
       JsonMapper.builder()
-          .changeDefaultNullHandling(ignored -> JsonSetter.Value.construct(Nulls.FAIL, Nulls.FAIL))
+          .changeDefaultNullHandling(ignored -> JsonSetter.Value.construct(Nulls.SET, Nulls.FAIL))
           .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
           .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS)
           .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
@@ -52,6 +75,9 @@ public class CarRequest {
   static CarRequest parse(JsonNode body) {
     if (!body.isObject())
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expected a car object");
+    // A missing record component means “keep the existing value” on PATCH.
+    if (body.valueStream().anyMatch(JsonNode::isNull))
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Car attributes cannot be null");
     try {
       return READER.readValue(body);
     } catch (JacksonException e) {

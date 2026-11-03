@@ -40,25 +40,13 @@ public class CarController {
   @Operation(
       summary = "Add a car",
       description =
-          "Name, description, brand, license plate, both integer-cent charges and category ID are required. Availability defaults to true and specifications to an empty list.",
-      requestBody =
-          @io.swagger.v3.oas.annotations.parameters.RequestBody(
-              required = true,
-              content =
-                  @Content(
-                      mediaType = "application/json",
-                      schema =
-                          @Schema(
-                              allOf = CarRequest.class,
-                              requiredProperties = {
-                                "name",
-                                "description",
-                                "brand",
-                                "licensePlate",
-                                "dailyRateCents",
-                                "fineAmountCents",
-                                "categoryId"
-                              }))))
+          "Name, description, brand, license plate, both integer-cent charges and category ID are required. Availability defaults to true and specifications to an empty list.")
+  @io.swagger.v3.oas.annotations.parameters.RequestBody(
+      required = true,
+      content =
+          @Content(
+              mediaType = "application/json",
+              schema = @Schema(implementation = CarRequest.CreateSchema.class)))
   @ApiResponse(responseCode = "201", description = "Car created", useReturnTypeSchema = true)
   @ApiResponse(
       responseCode = "400",
@@ -78,14 +66,13 @@ public class CarController {
   @Operation(
       summary = "Update selected car attributes",
       description =
-          "Omitted fields retain their values. License plate is immutable. Supplying specificationIds replaces the full selection.",
-      requestBody =
-          @io.swagger.v3.oas.annotations.parameters.RequestBody(
-              required = true,
-              content =
-                  @Content(
-                      mediaType = "application/json",
-                      schema = @Schema(implementation = CarRequest.class))))
+          "Omitted fields retain their values. License plate is immutable. Supplying specificationIds replaces the full selection.")
+  @io.swagger.v3.oas.annotations.parameters.RequestBody(
+      required = true,
+      content =
+          @Content(
+              mediaType = "application/json",
+              schema = @Schema(implementation = CarRequest.class)))
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
   @ApiResponse(
       responseCode = "400",

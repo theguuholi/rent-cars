@@ -3,6 +3,7 @@ package com.github.theguuholi.rentcars.cars;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
+/** Persists a rental charge in the existing integer-cent columns. */
 @Converter(autoApply = true)
 public class BrlAmountConverter implements AttributeConverter<BrlAmount, Integer> {
   @Override

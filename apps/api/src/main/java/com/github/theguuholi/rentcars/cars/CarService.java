@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional(readOnly = true)
 class CarService {
   private final CarRepository cars;
+  // The validator reads rules such as @Min and @NotBlank and reports which fields failed.
   private final Validator validator;
 
   CarService(CarRepository cars, Validator validator) {
@@ -45,6 +46,8 @@ class CarService {
   }
 
   private Car save(Car car, CarRequest request) {
+    // Check supplied charges before constructing BrlAmount, then check required fields on
+    // the merged car. A PATCH can omit a required field that the stored car already has.
     validate(request);
     car.apply(request);
     validate(car);

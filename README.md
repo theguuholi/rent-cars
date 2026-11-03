@@ -57,6 +57,18 @@ Open **Cars** in the web menu or use the [Cars REST Client](requests/cars.http).
 
 Use `GET /cars` to list the fleet, `POST /cars` to register, and `GET`, `PATCH` or `DELETE /cars/{id}` for an individual car. A patch that omits `specificationIds` preserves equipment, while an empty array clears the links. Deleting a car preserves its catalog entries.
 
+### Upgrade an existing fleet
+
+Flyway V5 limits a car name to 100 characters, brand to 80, and license plate to 20. On a database already running V4, review any rows returned by this query before upgrading. Choose corrected values for those records before restarting the API. The migration fails if existing values exceed a limit.
+
+```sql
+SELECT id, name, brand, license_plate
+FROM cars
+WHERE char_length(name) > 100
+   OR char_length(brand) > 80
+   OR char_length(license_plate) > 20;
+```
+
 ## Development database
 
 The `dev` profile includes ten sample vehicle specifications. Start the API with `make api-dev` or `make dev`, then send `GET /specifications` from [the specifications REST Client](requests/specifications.http). Flyway runs the development seed after the schema migrations and preserves existing specifications with matching names. Other explicit profiles use only the shared migrations; set `SPRING_PROFILES_ACTIVE=prod` in production because the project's default profile is `dev`.
