@@ -98,6 +98,8 @@ For trusted branches, the Java verification job uploads the JaCoCo XML to Sonar 
 
 ## Web quality checks
 
+GitHub runs the full Stryker suite on every PR touching the web application. A mutation score below 100% fails the job. See the [web mutation testing guide](apps/web/README.md#mutation-testing) for the local command and reports.
+
 From `apps/web/`, use the Node version in `.node-version` and install dependencies with `npm ci`. Run `npm run format:check`, `npm run lint`, `npm run test:coverage` and `npm run build` to reproduce **Web verification**. Use `npm run format` to apply Oxfmt fixes or `npm run lint:fix` for automatic Oxlint fixes.
 
 Vitest requires at least **95% each** for global line, statement, function and branch coverage across application TypeScript under `src/`. Tests, test helpers and declarations are excluded. Open `apps/web/coverage/index.html` for the HTML report; `apps/web/coverage/lcov.info` is available for tooling. Download **web-coverage** from the Web quality workflow to inspect a PR, including one that failed its coverage threshold.

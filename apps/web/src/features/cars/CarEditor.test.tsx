@@ -64,10 +64,10 @@ describe('CarEditor', () => {
         fireEvent.change(screen.getByLabelText(label), { target: { value } })
       expect(screen.getByLabelText('License plate')).not.toHaveAttribute('readonly')
       expect(screen.queryByText('No specifications available.')).not.toBeInTheDocument()
-      change('License plate', 'ß'.repeat(128))
+      change('License plate', 'ß'.repeat(11))
       await waitFor(() =>
         expect(screen.getByLabelText('License plate')).toHaveAccessibleDescription(
-          'Use at most 255 characters.',
+          'Use at most 20 characters.',
         ),
       )
       change('Daily rate (BRL)', '1,001')
@@ -112,7 +112,7 @@ describe('CarEditor', () => {
     },
   )
   scenario(
-    'Given padded 255-character values, when validating name and plate, then only the plate length uses uppercase expansion',
+    'Given padded car attributes, when validating their normalized lengths, then each field accepts its exact registration limit',
     async () => {
       render(
         <CarEditor
@@ -124,13 +124,15 @@ describe('CarEditor', () => {
         />,
       )
       for (const [label, value] of [
-        ['Name', 'ß'.repeat(255)],
-        ['License plate', 'a'.repeat(255)],
+        ['Name', 'ß'.repeat(100)],
+        ['Description', 'd'.repeat(255)],
+        ['Brand', 'b'.repeat(80)],
+        ['License plate', 'a'.repeat(20)],
       ]) {
         const field = screen.getByLabelText(label)
-        fireEvent.change(field, { target: { value: 'x'.repeat(256) } })
+        fireEvent.change(field, { target: { value: value + 'x' } })
         await waitFor(() =>
-          expect(field).toHaveAccessibleDescription('Use at most 255 characters.'),
+          expect(field).toHaveAccessibleDescription(`Use at most ${value.length} characters.`),
         )
         fireEvent.change(field, { target: { value: ` ${value} ` } })
         await waitFor(() => expect(field).toHaveAttribute('aria-invalid', 'false'))

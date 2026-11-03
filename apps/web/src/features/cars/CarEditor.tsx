@@ -14,10 +14,10 @@ type Props = {
 }
 
 const textFields = [
-  ['name', 'Name'],
-  ['description', 'Description'],
-  ['brand', 'Brand'],
-  ['licensePlate', 'License plate'],
+  ['name', 'Name', 100],
+  ['description', 'Description', 255],
+  ['brand', 'Brand', 80],
+  ['licensePlate', 'License plate', 20],
 ] as const
 const rates = [
   ['dailyRate', 'Daily rate (BRL)'],
@@ -60,7 +60,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
       }}
     >
       <fieldset className="grid min-w-0 gap-5 sm:grid-cols-2" disabled={busy}>
-        {textFields.map(([name, label]) => (
+        {textFields.map(([name, label, maxLength]) => (
           <form.Field
             key={name}
             name={name}
@@ -69,7 +69,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
                 const normalized =
                   name === 'licensePlate' ? value.trim().toUpperCase() : value.trim()
                 if (!normalized) return `Enter a ${label.toLowerCase()}.`
-                if (normalized.length > 255) return 'Use at most 255 characters.'
+                if (normalized.length > maxLength) return `Use at most ${maxLength} characters.`
               },
             }}
           >
