@@ -10,6 +10,7 @@ export interface CarInput {
   specificationIds: string[]
 }
 
+export type CarPatch = Partial<Omit<CarInput, 'licensePlate'>>
 export type Car = CarInput & { id: string }
 
 const collection = '/api/cars'
@@ -54,7 +55,7 @@ export function createCar(input: CarInput): Promise<Car> {
   return writeCar(collection, 'POST', input)
 }
 
-export function updateCar(id: string, input: Partial<CarInput>): Promise<Car> {
+export function updateCar(id: string, input: CarPatch): Promise<Car> {
   return writeCar(itemUrl(id), 'PATCH', input)
 }
 
