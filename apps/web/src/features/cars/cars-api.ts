@@ -19,13 +19,49 @@ const errors: Record<number, string> = {
   400: 'Check the car details and selected catalog entries.',
   404: 'This car no longer exists.',
   409: 'A car with this license plate already exists.',
-  422: 'Check the car details. The license plate cannot change after registration.',
+  422: 'Check the car details.',
+}
+
+const fieldLabels = new Map(
+  Object.entries({
+    name: 'Name',
+    description: 'Description',
+    brand: 'Brand',
+    licensePlate: 'License plate',
+    available: 'Available',
+    dailyRateCents: 'Daily rate (BRL)',
+    fineAmountCents: 'Fine amount (BRL)',
+    categoryId: 'Category',
+    specificationIds: 'Specifications',
+    reference: 'Catalog selection',
+  }),
+)
+
+async function carError(response: Response): Promise<string> {
+  const fallback = errors[response.status] ?? `Request failed (${response.status}). Try again.`
+  if (response.status !== 400 && response.status !== 422) return fallback
+
+  try {
+    const body = await response.json()
+    if (typeof body.detail === 'string' && body.detail.trim()) return body.detail
+    if (Array.isArray(body.errors)) return fallback
+    const messages = Object.entries(body.errors).flatMap(([field, values]) =>
+      Array.isArray(values)
+        ? values
+            .filter((value) => typeof value === 'string' && value.trim())
+            .map((value) => `${fieldLabels.get(field) ?? field}: ${value}`)
+        : [],
+    )
+    return messages.join('. ') || fallback
+  } catch {
+    return fallback
+  }
 }
 
 async function request(url: string, options: RequestInit): Promise<Response> {
   const response = await fetch(url, options)
   if (!response.ok) {
-    throw new Error(errors[response.status] ?? `Request failed (${response.status}). Try again.`)
+    throw new Error(await carError(response))
   }
   return response
 }

@@ -48,6 +48,20 @@ public class SpecificationController {
       responseCode = "200",
       description = "Requested specification.",
       useReturnTypeSchema = true)
+  @ApiResponse(
+      responseCode = "400",
+      description = "Invalid request",
+      content =
+          @Content(
+              mediaType = "application/problem+json",
+              schema = @Schema(implementation = ProblemDetail.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "Specification does not exist",
+      content =
+          @Content(
+              mediaType = "application/problem+json",
+              schema = @Schema(implementation = ProblemDetail.class)))
   public Specification get(@PathVariable UUID id) {
     return service.get(id);
   }
@@ -62,7 +76,7 @@ public class SpecificationController {
               content =
                   @Content(
                       mediaType = "application/json",
-                      schema = @Schema(implementation = SpecificationRequest.class),
+                      schema = @Schema(implementation = SpecificationRequest.CreateSchema.class),
                       examples =
                           @ExampleObject(
                               value =
@@ -91,6 +105,13 @@ public class SpecificationController {
       responseCode = "201",
       description = "Specification created. Location identifies the new resource.",
       useReturnTypeSchema = true)
+  @ApiResponse(
+      responseCode = "400",
+      description = "Invalid request",
+      content =
+          @Content(
+              mediaType = "application/problem+json",
+              schema = @Schema(implementation = ProblemDetail.class)))
   public ResponseEntity<Specification> create(@RequestBody SpecificationRequest request) {
     var item = service.create(request);
     return ResponseEntity.created(URI.create("/specifications/" + item.getId())).body(item);
@@ -137,6 +158,20 @@ public class SpecificationController {
       responseCode = "200",
       description = "Updated specification.",
       useReturnTypeSchema = true)
+  @ApiResponse(
+      responseCode = "400",
+      description = "Invalid request",
+      content =
+          @Content(
+              mediaType = "application/problem+json",
+              schema = @Schema(implementation = ProblemDetail.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "Specification does not exist",
+      content =
+          @Content(
+              mediaType = "application/problem+json",
+              schema = @Schema(implementation = ProblemDetail.class)))
   public Specification update(@PathVariable UUID id, @RequestBody SpecificationRequest request) {
     return service.update(id, request);
   }
@@ -145,6 +180,20 @@ public class SpecificationController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(summary = "Delete a specification")
   @ApiResponse(responseCode = "204", description = "Specification deleted.", content = @Content)
+  @ApiResponse(
+      responseCode = "400",
+      description = "Invalid request",
+      content =
+          @Content(
+              mediaType = "application/problem+json",
+              schema = @Schema(implementation = ProblemDetail.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "Specification does not exist",
+      content =
+          @Content(
+              mediaType = "application/problem+json",
+              schema = @Schema(implementation = ProblemDetail.class)))
   public void delete(@PathVariable UUID id) {
     service.delete(id);
   }

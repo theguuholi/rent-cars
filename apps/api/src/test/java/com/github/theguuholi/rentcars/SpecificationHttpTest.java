@@ -73,6 +73,8 @@ class SpecificationHttpTest {
   }
 
   @Test
+  @org.junit.jupiter.api.DisplayName(
+      "Given the specification operations, when reading OpenAPI, then write requirements and error responses match each operation")
   void documentsErrorMessagesAndWriteExamples() throws Exception {
     var docs = mvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
     var errors = "$.components.schemas.Errors";
@@ -80,12 +82,35 @@ class SpecificationHttpTest {
         .andExpect(
             jsonPath(errors + ".properties.errors.additionalProperties.items.type")
                 .value("string"));
+    docs.andExpect(
+            jsonPath("$.components.schemas.SpecificationCreateRequest.required")
+                .value(org.hamcrest.Matchers.containsInAnyOrder("name", "description")))
+        .andExpect(
+            jsonPath("$.components.schemas.SpecificationCreateRequest.allOf[0]['$ref']")
+                .value("#/components/schemas/SpecificationRequest"))
+        .andExpect(jsonPath("$.components.schemas.SpecificationRequest.required").doesNotExist());
+    for (String op : java.util.List.of("get", "put", "patch", "delete")) {
+      docs.andExpect(
+          jsonPath(
+                  "$.paths['/specifications/{id}']."
+                      + op
+                      + ".responses['404'].content['application/problem+json'].schema['$ref']")
+              .value("#/components/schemas/ProblemDetail"));
+    }
     for (String op : java.util.List.of("post", "put", "patch")) {
       String route = op.equals("post") ? "/specifications" : "/specifications/{id}";
       String path = "$.paths['" + route + "']." + op;
       String body = path + ".requestBody.content['application/json']";
       docs.andExpect(
-              jsonPath(body + ".schema['$ref']").value("#/components/schemas/SpecificationRequest"))
+              jsonPath(body + ".schema['$ref']")
+                  .value(
+                      op.equals("post")
+                          ? "#/components/schemas/SpecificationCreateRequest"
+                          : "#/components/schemas/SpecificationRequest"))
+          .andExpect(
+              jsonPath(
+                      path + ".responses['400'].content['application/problem+json'].schema['$ref']")
+                  .value("#/components/schemas/ProblemDetail"))
           .andExpect(jsonPath(body + ".example.description").isString());
       for (String status : java.util.List.of("409", "422", "500")) {
         String content = path + ".responses['" + status + "'].content['application/json']";
@@ -127,7 +152,10 @@ class SpecificationHttpTest {
         .andExpect(jsonPath("$.name").value("NAVIGATION"))
         .andExpect(jsonPath("$.description").value(longDescription));
     mvc.perform(delete(location)).andExpect(status().isNoContent());
-    mvc.perform(get(location)).andExpect(status().isNotFound());
+    mvc.perform(get(location))
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+        .andExpect(jsonPath("$.detail").value("Specification not found"));
   }
 
   @Test

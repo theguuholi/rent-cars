@@ -135,15 +135,22 @@ describe('CarFormPage', () => {
     'Given an edit draft, when the server rejects it and the user retries, then the draft survives and the updated record appears',
     async () => {
       const updated = { ...car, name: 'Renamed' }
-      vi.mocked(api.updateCar)
-        .mockRejectedValueOnce(new Error('Save refused'))
-        .mockResolvedValue(updated)
+      const http = await vi.importActual<typeof api>('../../cars-api')
+      vi.mocked(api.updateCar).mockImplementationOnce(http.updateCar).mockResolvedValue(updated)
       vi.mocked(api.getCar).mockResolvedValueOnce(car).mockResolvedValue(updated)
       const history = openCatalogRoute('/cars/second/edit')
+      vi.mocked(fetch).mockResolvedValueOnce(
+        Response.json(
+          { errors: { dailyRateCents: ['must be greater than or equal to 0'] } },
+          { status: 422 },
+        ),
+      )
       fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Renamed' } })
       expect(screen.getByRole('heading', { name: 'Edit car', level: 2 })).toBeVisible()
       fireEvent.click(screen.getByText('Save car'))
-      expect(await screen.findByRole('alert')).toHaveTextContent('Save refused')
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Daily rate (BRL): must be greater than or equal to 0',
+      )
       expect(screen.getByLabelText('Name')).toHaveValue('Renamed')
       fireEvent.click(screen.getByText('Save car'))
       expect(await screen.findByRole('heading', { name: 'Renamed' })).toBeVisible()

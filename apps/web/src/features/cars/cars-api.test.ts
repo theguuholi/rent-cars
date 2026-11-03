@@ -80,10 +80,68 @@ describe('Cars HTTP client', () => {
   )
 
   scenario.each([
+    ['description', 'Description'],
+    ['licensePlate', 'License plate'],
+    ['available', 'Available'],
+    ['dailyRateCents', 'Daily rate (BRL)'],
+    ['fineAmountCents', 'Fine amount (BRL)'],
+    ['categoryId', 'Category'],
+    ['specificationIds', 'Specifications'],
+    ['futureField', 'futureField'],
+  ])(
+    'Given a validation failure for %s, when saving, then the error identifies %s',
+    async (field, label) => {
+      mockResponse(Response.json({ errors: { [field]: ['invalid'] } }, { status: 422 }))
+      await expect(createCar(input)).rejects.toEqual(new Error(`${label}: invalid`))
+    },
+  )
+
+  scenario.each([
+    [
+      422,
+      { errors: { brand: ['must not be blank', 'too long'], name: ['required'] } },
+      'Brand: must not be blank. Brand: too long. Name: required',
+    ],
+    [422, { detail: 'License plate cannot be changed' }, 'License plate cannot be changed'],
+    [
+      400,
+      { errors: { reference: ['A referenced record does not exist'] } },
+      'Catalog selection: A referenced record does not exist',
+    ],
+    [400, { detail: 'Failed to read request' }, 'Failed to read request'],
+    [
+      409,
+      { errors: { conflict: ['A record with the same unique value already exists'] } },
+      'A car with this license plate already exists.',
+    ],
+    [422, { errors: { brand: 1, name: [42, '  '] }, detail: '  ' }, 'Check the car details.'],
+    [422, { errors: { name: ['  ', 42, 'required'] } }, 'Name: required'],
+    [422, { errors: [['not a field']] }, 'Check the car details.'],
+    [422, null, 'Check the car details.'],
+    [503, { detail: 'Proxy internals' }, 'Request failed (503). Try again.'],
+  ] as const)(
+    'Given HTTP %s and %j, when saving, then the client reports %s',
+    async (status, body, expected) => {
+      mockResponse(Response.json(body, { status }))
+      await expect(createCar(input)).rejects.toEqual(new Error(expected))
+    },
+  )
+
+  scenario(
+    'Given an HTML gateway response, when saving, then the client uses the status fallback',
+    async () => {
+      mockResponse(new Response('<html>Proxy error</html>', { status: 400 }))
+      await expect(createCar(input)).rejects.toThrow(
+        'Check the car details and selected catalog entries.',
+      )
+    },
+  )
+
+  scenario.each([
     [400, 'selected catalog'],
     [404, 'no longer exists'],
     [409, 'already exists'],
-    [422, 'cannot change'],
+    [422, 'Check the car details.'],
     [500, '500'],
   ] as const)(
     'Given HTTP %s, when the API rejects a write, then the message includes "%s"',
