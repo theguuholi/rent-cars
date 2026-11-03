@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,8 +27,10 @@ class CarService {
     return cars.findAll(Sort.by("name", "id"));
   }
 
-  Car get(UUID id) {
-    return cars.findById(id).orElseThrow(CarService::notFound);
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  CarDetail get(UUID id) {
+    var row = cars.findWithCategory(id).orElseThrow(CarService::notFound);
+    return new CarDetail(row.car(), row.categoryName(), cars.findAssignedSpecifications(id));
   }
 
   @Transactional

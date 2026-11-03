@@ -36,7 +36,10 @@ public class CarController {
   }
 
   @GetMapping("/{id}")
-  @Operation(summary = "Fetch a car by UUID")
+  @Operation(
+      summary = "Fetch a car by UUID",
+      description =
+          "Includes the current category name and assigned specification IDs and names for public display.")
   @ApiResponse(
       responseCode = "400",
       description = "Invalid car UUID",
@@ -52,7 +55,7 @@ public class CarController {
           @Content(
               mediaType = "application/problem+json",
               schema = @Schema(implementation = ProblemDetail.class)))
-  public Car get(@PathVariable UUID id) {
+  public CarDetail get(@PathVariable UUID id) {
     return cars.get(id);
   }
 

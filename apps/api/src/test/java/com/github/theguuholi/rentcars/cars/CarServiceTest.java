@@ -68,14 +68,17 @@ class CarServiceTest {
     @Test
     void givenExistingIdWhenFetchingThenReturnsTheCar() {
       var car = new Car();
-      when(repository.findById(id)).thenReturn(Optional.of(car));
-      assertThat(service.get(id)).isSameAs(car);
+      when(repository.findWithCategory(id))
+          .thenReturn(Optional.of(new CarRepository.CategorizedCar(car, "SEDAN")));
+      var specs = List.of(new CarDetail.AssignedSpecification(UUID.randomUUID(), "GPS"));
+      when(repository.findAssignedSpecifications(id)).thenReturn(specs);
+      assertThat(service.get(id)).isEqualTo(new CarDetail(car, "SEDAN", specs));
     }
 
     @DisplayName("Given an unknown ID, when fetching it, then the service reports not found")
     @Test
     void givenUnknownIdWhenFetchingThenReportsNotFound() {
-      when(repository.findById(id)).thenReturn(Optional.empty());
+      when(repository.findWithCategory(id)).thenReturn(Optional.empty());
       assertThatExceptionOfType(ResponseStatusException.class)
           .isThrownBy(() -> service.get(id))
           .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));

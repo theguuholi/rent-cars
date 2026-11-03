@@ -23,6 +23,52 @@ class CarRepositoryTest {
   @Autowired JdbcTemplate jdbc;
   @Autowired TransactionTemplate tx;
 
+  private UUID sedan(String plate) {
+    return jdbc.queryForObject(
+        """
+        insert into cars (name,description,brand,license_plate,category_id,daily_rate_cents,fine_amount_cents)
+        select 'Test','Sedan','Honda',?,id,100,0 from categories where name='SEDAN' returning id
+        """,
+        UUID.class,
+        plate);
+  }
+
+  @Nested
+  class FindWithCategory {
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    @DisplayName(
+        "Given a sedan, when fetching its category with the car, then its own ID and category name are returned")
+    void selectedCategory() {
+      var id = sedan("CAT1234");
+      var row = cars.findWithCategory(id).orElseThrow();
+      assertThat(row.car().id()).isEqualTo(id);
+      assertThat(row.categoryName()).isEqualTo("SEDAN");
+      assertThat(cars.findWithCategory(UUID.randomUUID())).isEmpty();
+    }
+  }
+
+  @Nested
+  class FindAssignedSpecifications {
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    @DisplayName(
+        "Given two cars and a feature assigned to only one, when looking up specifications, then only that car returns its ID and name")
+    void separatesCars() {
+      var first = sedan("EQP1234");
+      var second = sedan("EQP1235");
+      var feature =
+          jdbc.queryForObject(
+              "insert into specifications(name,description) values ('TEST CAMERA','Rear view') returning id",
+              UUID.class);
+      jdbc.update(
+          "insert into cars_specifications(car_id,specification_id) values (?,?)", first, feature);
+      assertThat(cars.findAssignedSpecifications(first))
+          .containsExactly(new CarDetail.AssignedSpecification(feature, "TEST CAMERA"));
+      assertThat(cars.findAssignedSpecifications(second)).isEmpty();
+    }
+  }
+
   @Nested
   @DisplayName("findForUpdate")
   class FindForUpdate {

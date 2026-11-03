@@ -4,7 +4,7 @@
 # @name listCars
 GET {{baseUrl}}/cars
 
-### Inspect the first car (optional; run listCars first and skip if empty)
+### Inspect the first car with its category name and assigned specifications (optional; run listCars first and skip if empty)
 GET {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}
 
 ### Start the registration example by choosing a body style

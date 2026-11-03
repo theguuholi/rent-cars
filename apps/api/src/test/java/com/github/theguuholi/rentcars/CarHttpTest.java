@@ -311,13 +311,41 @@ class CarHttpTest {
   @DisplayName("GET /cars/{id}")
   class GetCar {
     @DisplayName(
-        "Given an existing car, when fetching its location, then its representation matches the creation response")
+        "Given an existing car, when fetching its location, then its detail retains the creation fields and shows the category with no assigned features")
     @Test
     void persistedCar() throws Exception {
       var created = create(input()).andExpect(status().isCreated()).andReturn().getResponse();
       mvc.perform(get(created.getHeader("Location")))
           .andExpect(status().isOk())
-          .andExpect(content().json(created.getContentAsString()));
+          .andExpect(content().json(created.getContentAsString()))
+          .andExpect(jsonPath("$.categoryName").value("SEDAN"))
+          .andExpect(jsonPath("$.specifications").isEmpty());
+    }
+
+    @Test
+    @DisplayName(
+        "Given a car whose category and equipment change, when fetching its detail, then only its current assignments and their latest names appear")
+    void currentCatalogLabels() throws Exception {
+      var car = input();
+      car.putArray("specificationIds").add(gps);
+      var location =
+          create(car)
+              .andExpect(status().isCreated())
+              .andReturn()
+              .getResponse()
+              .getHeader("Location");
+      var patch = json.createObjectNode().put("categoryId", suv);
+      patch.putArray("specificationIds").add(abs);
+      edit(location, patch.toString()).andExpect(status().isOk());
+      jdbc.update("update specifications set name=? where id=?::uuid", "ANTI-LOCK BRAKES", abs);
+      mvc.perform(get(location))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.categoryName").value("SUV"))
+          .andExpect(jsonPath("$.specificationIds").value(org.hamcrest.Matchers.contains(abs)))
+          .andExpect(jsonPath("$.specifications[*].id").value(org.hamcrest.Matchers.contains(abs)))
+          .andExpect(
+              jsonPath("$.specifications[*].name")
+                  .value(org.hamcrest.Matchers.contains("ANTI-LOCK BRAKES")));
     }
 
     @DisplayName("Given an unknown car, when fetching it, then the API returns 404")
@@ -506,7 +534,7 @@ class CarHttpTest {
       var car = json.readTree(response.getContentAsString());
       var docs =
           mvc.perform(get("/v3/api-docs")).andExpect(status().isOk()).andReturn().getResponse();
-      var schema = json.readTree(docs.getContentAsString()).at("/components/schemas/Car");
+      var schema = json.readTree(docs.getContentAsString()).at("/components/schemas/CarDetail");
       var properties = schema.get("properties");
 
       assertThat(car.propertyNames())
@@ -520,7 +548,9 @@ class CarHttpTest {
               "dailyRateCents",
               "fineAmountCents",
               "categoryId",
-              "specificationIds");
+              "specificationIds",
+              "categoryName",
+              "specifications");
       assertThat(car.get("dailyRateCents").isIntegralNumber()).isTrue();
       assertThat(car.get("dailyRateCents").asInt()).isEqualTo(12345);
       assertThat(car.get("fineAmountCents").isIntegralNumber()).isTrue();
@@ -587,6 +617,9 @@ class CarHttpTest {
           .andExpect(
               jsonPath("$.paths['/cars'].get.responses['200'].content.*.schema.items['$ref']")
                   .value(org.hamcrest.Matchers.contains("#/components/schemas/Car")));
+      docs.andExpect(
+          jsonPath("$.paths['/cars/{id}'].get.responses['200'].content.*.schema['$ref']")
+              .value(org.hamcrest.Matchers.contains("#/components/schemas/CarDetail")));
       String postBody = "$.paths['/cars'].post.requestBody.content['application/json'].schema";
       String patchBody =
           "$.paths['/cars/{id}'].patch.requestBody.content['application/json'].schema";
