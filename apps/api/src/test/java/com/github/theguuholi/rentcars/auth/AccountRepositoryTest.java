@@ -31,7 +31,7 @@ class AccountRepositoryTest {
             try {
               accounts.saveAndFlush(new Account(email, "encoded"));
               return true;
-            } catch (DataIntegrityViolationException conflict) {
+            } catch (DataIntegrityViolationException _) {
               return false;
             }
           };

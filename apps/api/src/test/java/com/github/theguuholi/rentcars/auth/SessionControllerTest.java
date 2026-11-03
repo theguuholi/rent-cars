@@ -161,6 +161,22 @@ class SessionControllerTest {
   class Register {
     @Test
     @DisplayName(
+        "Given a browser cookie without a CSRF token, when registering, then the request is forbidden and the account is not created")
+    void rejectsUnprotectedCookieWrite() throws Exception {
+      mvc.perform(
+              post("/users")
+                  .cookie(new jakarta.servlet.http.Cookie("JSESSIONID", "example"))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(credentials(email, password)))
+          .andExpect(status().isForbidden());
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from accounts where email=?", Integer.class, email))
+          .isZero();
+    }
+
+    @Test
+    @DisplayName(
         "Given a mixed-case email and an injected admin role, when registering, then only the normalized USER profile is exposed and the password is hashed")
     void publicProfile() throws Exception {
       var body =

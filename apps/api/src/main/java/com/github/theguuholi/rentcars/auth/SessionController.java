@@ -93,7 +93,7 @@ class SessionController {
           authentication.authenticate(
               UsernamePasswordAuthenticationToken.unauthenticated(input.email(), input.password()));
       return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(tokens.issue(principal));
-    } catch (BadCredentialsException invalid) {
+    } catch (BadCredentialsException _) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
   }

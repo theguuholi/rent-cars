@@ -91,7 +91,11 @@ class JwtConfigurationTest {
         case "invalid subject" -> claims.put("sub", "invalid");
         case "missing subject" -> claims.remove("sub");
         case "future not-before" -> claims.put("nbf", now.plusSeconds(300));
-        default -> {}
+        case "untrusted signature", "modified payload" -> {
+          // These cases change the key or the signed payload below, keeping the original claims
+          // valid.
+        }
+        default -> throw new IllegalArgumentException("Unknown scenario: " + scenario);
       }
       var signingKey = scenario.equals("untrusted signature") ? config.localSigningKeys() : keys;
       String signed =

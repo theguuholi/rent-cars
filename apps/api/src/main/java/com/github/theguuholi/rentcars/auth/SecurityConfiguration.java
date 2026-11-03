@@ -8,7 +8,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -39,15 +38,16 @@ class SecurityConfiguration {
   }
 
   @Bean
-  SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+  SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
     var roles = new JwtGrantedAuthoritiesConverter();
     roles.setAuthoritiesClaimName("roles");
     roles.setAuthorityPrefix("ROLE_");
     var authentication = new JwtAuthenticationConverter();
     authentication.setJwtGrantedAuthoritiesConverter(roles);
 
-    return http.csrf(
-            AbstractHttpConfigurer::disable) // Stateless API using explicit Bearer headers only.
+    // Browsers attach cookies automatically. Cookie-free API clients provide credentials
+    // explicitly.
+    return http.csrf(csrf -> csrf.ignoringRequestMatchers(request -> request.getCookies() == null))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             a ->
