@@ -6,10 +6,10 @@ on:
   pull_request:
     paths:
       - '.github/workflows/web-mutation.yml'
-      - 'web/stryker.config.json'
-      - 'web/vite.config.ts'
-      - 'web/package.json'
-      - 'web/package-lock.json'
+      - 'apps/web/stryker.config.json'
+      - 'apps/web/vite.config.ts'
+      - 'apps/web/package.json'
+      - 'apps/web/package-lock.json'
 
 permissions:
   contents: read
@@ -21,20 +21,20 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: web
+        working-directory: apps/web
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version-file: web/.node-version
+          node-version-file: apps/web/.node-version
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
       - run: npm run mutation
       - name: Upload mutation reports
-        if: always() && hashFiles('web/reports/mutation/*.html') != ''
+        if: always() && hashFiles('apps/web/reports/mutation/*.html') != ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web-mutation
-          path: web/reports/mutation/
+          path: apps/web/reports/mutation/
           if-no-files-found: error

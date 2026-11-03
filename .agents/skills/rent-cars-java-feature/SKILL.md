@@ -1,9 +1,9 @@
 ---
 name: rent-cars-java-feature
-description: Implement or change a Rent Cars Java API resource, domain rule, persistence operation or HTTP contract. Use for Spring Boot feature work in api/.
+description: Implement or change a Rent Cars Java API resource, domain rule, persistence operation or HTTP contract. Use for Spring Boot feature work in apps/api/.
 ---
 
-Read the [backend conventions](../../../api/AGENTS.md) and the [repository testing and exception policy](../../../AGENTS.md).
+Read the [backend conventions](../../../apps/api/AGENTS.md) and the [repository testing and exception policy](../../../AGENTS.md).
 
 1. Trace the nearest HTTP example from `requests/` through its controller to persistence and tests. Write down the change in terms of one successful request and its important failure modes. For updates, distinguish a missing record, omitted field, explicit null and conflicting value where relevant.
 2. Choose the smallest layer that owns the change. For a schema change, inspect existing migrations, distinguish sample data from shared data and consider existing rows. For a multi-step mutation, determine which writes must commit or roll back together and which requests might race.

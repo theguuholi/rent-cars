@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mutation.yml'
-      - 'api/**'
+      - 'apps/api/**'
   workflow_dispatch:
   schedule:
     - cron: '17 6 * * 1'
@@ -22,12 +22,12 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-          cache-dependency-path: api/pom.xml
+          cache-dependency-path: apps/api/pom.xml
       - name: Run mutation tests across the API
-        working-directory: api
+        working-directory: apps/api
         run: ./mvnw -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pitest-api
-          path: api/target/pit-reports/
+          path: apps/api/target/pit-reports/
           if-no-files-found: error
