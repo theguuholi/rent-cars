@@ -62,7 +62,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   ResponseEntity<Errors> integrity(DataIntegrityViolationException exception) {
     for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
       // PostgreSQL reports unique violations with SQLSTATE 23505 for every unique index.
-      if (cause instanceof SQLException sql && "23505".equals(sql.getSQLState())) {
+      if (!(cause instanceof SQLException sql)) continue;
+      if ("23503".equals(sql.getSQLState())) {
+        return ResponseEntity.badRequest()
+            .body(new Errors(Map.of("reference", List.of("A referenced record does not exist"))));
+      }
+      if ("23505".equals(sql.getSQLState())) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
             .body(
                 new Errors(

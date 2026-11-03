@@ -1,4 +1,5 @@
 import { createRouter, type RouterHistory } from '@tanstack/react-router'
+import { carRoutes } from './features/cars/routes'
 import { categoriesRoute } from './features/categories/routes'
 import { specificationRoutes } from './features/specifications/routes'
 import { rootRoute, homeRoute, unknownRoute } from './routes/root'
@@ -6,6 +7,7 @@ import { rootRoute, homeRoute, unknownRoute } from './routes/root'
 const tree = rootRoute.addChildren([
   homeRoute,
   categoriesRoute,
+  ...carRoutes,
   ...specificationRoutes,
   unknownRoute,
 ])

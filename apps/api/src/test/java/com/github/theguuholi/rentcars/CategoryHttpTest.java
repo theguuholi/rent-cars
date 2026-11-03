@@ -30,10 +30,13 @@ class CategoryHttpTest {
         "Passenger van",
         "COUPE",
         "Two-door car");
+    var expectedId =
+        jdbc.queryForObject("select id::text from categories where name = 'COUPE'", String.class);
     mvc.perform(get("/categories").accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$[*].name").value(org.hamcrest.Matchers.contains("COUPE", "VAN")))
+        .andExpect(jsonPath("$[0].id").value(expectedId))
         .andExpect(jsonPath("$[0].description").value("Two-door car"));
   }
 

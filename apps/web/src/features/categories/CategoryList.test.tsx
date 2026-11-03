@@ -27,8 +27,8 @@ describe('CategoryList', () => {
       'Given two categories, when listCategories resolves, then the list displays both records in response order',
       async () => {
         load.mockResolvedValue([
-          { name: 'HATCHBACK', description: 'Compact car.' },
-          { name: 'SUV', description: 'Sport utility vehicle.' },
+          { id: 'hatchback', name: 'HATCHBACK', description: 'Compact car.' },
+          { id: 'suv', name: 'SUV', description: 'Sport utility vehicle.' },
         ])
         renderWithQuery(<CategoryList />)
 
@@ -44,7 +44,7 @@ describe('CategoryList', () => {
     scenario(
       'Given a category with a null description, when its row renders, then only its name is shown',
       async () => {
-        load.mockResolvedValue([{ name: 'SUV', description: null }])
+        load.mockResolvedValue([{ id: 'suv', name: 'SUV', description: null }])
         renderWithQuery(<CategoryList />)
 
         expect(await screen.findByRole('listitem')).toHaveTextContent(/^SUV$/)
@@ -79,7 +79,7 @@ describe('CategoryList', () => {
       async () => {
         load
           .mockRejectedValueOnce(new Error('Unavailable'))
-          .mockResolvedValueOnce([{ name: 'VAN', description: 'Passenger van.' }])
+          .mockResolvedValueOnce([{ id: 'van', name: 'VAN', description: 'Passenger van.' }])
         renderWithQuery(<CategoryList />)
 
         const alert = await screen.findByRole('alert')

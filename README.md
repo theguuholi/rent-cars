@@ -1,6 +1,6 @@
 # Rent Cars
 
-Rent Cars is a car rental project built with Java, Spring Boot, and PostgreSQL. The API currently exposes the vehicle category catalog. Use it to build a category picker or show drivers what each body style means.
+Rent Cars is a car rental project built with Java, Spring Boot, and PostgreSQL. The API and web application manage a rental fleet, its vehicle categories and equipment specifications.
 
 
 ## Run the full stack locally
@@ -35,10 +35,11 @@ With the API running, list the vehicle categories from any terminal:
 curl -i -H 'Accept: application/json' http://localhost:8080/categories
 ```
 
-Expect `200 OK` and a JSON array sorted by name in ascending order. Each entry contains a name and an optional description. For example, the seeded catalog includes this entry:
+Expect `200 OK` and a JSON array sorted by name in ascending order. Each entry contains a category UUID, a name and an optional description. For example, the seeded catalog includes this entry:
 
 ```json
 {
+  "id": "a99aaadc-ddd5-4fa9-9bbc-4927c48e01d5",
   "name": "HATCHBACK",
   "description": "Compact car with a rear hatch."
 }
@@ -49,6 +50,12 @@ An empty catalog returns `200 OK` with `[]`.
 - **From the editor:** install the [VS Code REST Client extension](https://marketplace.visualstudio.com/items?itemName=humao.rest-client), open [requests/categories.http](requests/categories.http), and click **Send Request** above the request. Set `@baseUrl` at the top of the file to target another environment. Requests are grouped by resource in `requests/`.
 - **From the browser:** open [Swagger UI](http://localhost:8080/swagger-ui.html), expand `GET /categories`, and select **Try it out** followed by **Execute**.
 - **For tooling:** read the generated [OpenAPI specification](http://localhost:8080/v3/api-docs).
+
+### Manage the fleet
+
+Open **Cars** in the web menu or use the [Cars REST Client](requests/cars.http). Register a car with a category ID and any existing specification IDs. The license plate is stored in uppercase and is immutable after registration. Availability defaults to true. Daily rates and fines use Brazilian reais. In the form enter `150,50` for R$ 150,50. The API represents the same value as `15050` integer cents.
+
+Use `GET /cars` to list the fleet, `POST /cars` to register, and `GET`, `PATCH` or `DELETE /cars/{id}` for an individual car. A patch that omits `specificationIds` preserves equipment, while an empty array clears the links. Deleting a car preserves its catalog entries.
 
 ## Development database
 

@@ -16,6 +16,7 @@ export function Layout() {
             </Link>
           </h1>
           <nav className="catalog-nav flex gap-5" aria-label="Vehicle catalogs">
+            <Link to="/cars">Cars</Link>
             <Link to="/categories">Categories</Link>
             <Link to="/specifications">Specifications</Link>
           </nav>

@@ -62,8 +62,19 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  void givenMissingForeignKeyWhenSavingThenReturnsSafeReferenceError() {
+    var error =
+        new DataIntegrityViolationException(
+            "private detail", new SQLException("private key", "23503"));
+    var result = handler.integrity(error);
+    assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(result.getBody().errors())
+        .isEqualTo(Map.of("reference", List.of("A referenced record does not exist")));
+  }
+
+  @Test
   void unexpectedIntegrityFailureHidesInternalDetails() {
-    var violation = new SQLException("private constraint details", "23503");
+    var violation = new SQLException("private constraint details", "23514");
     var result =
         handler.integrity(new DataIntegrityViolationException("private detail", violation));
     assertThat(result.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);

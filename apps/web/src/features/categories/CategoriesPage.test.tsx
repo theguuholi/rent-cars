@@ -44,8 +44,8 @@ describe('CategoriesPage', () => {
     'Given categories with and without descriptions, when loading succeeds, then each row shows its own details in catalog order',
     async () => {
       load.mockResolvedValue([
-        { name: 'COUPE', description: 'Two doors' },
-        { name: 'SUV', description: null },
+        { id: 'coupe', name: 'COUPE', description: 'Two doors' },
+        { id: 'suv', name: 'SUV', description: null },
       ])
       const page = openPage()
       const catalog = within(await page.findByRole('list', { name: 'Vehicle categories' }))
@@ -87,7 +87,7 @@ describe('CategoriesPage', () => {
     async () => {
       load
         .mockRejectedValueOnce(new Error('Offline'))
-        .mockResolvedValueOnce([{ name: 'VAN', description: 'Passenger van' }])
+        .mockResolvedValueOnce([{ id: 'van', name: 'VAN', description: 'Passenger van' }])
       const page = openPage()
       fireEvent.click(await page.findByRole('button', { name: 'Try again' }))
       expect(await page.findByRole('listitem')).toHaveTextContent('Passenger van')
