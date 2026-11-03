@@ -24,4 +24,4 @@ Open the [web application](http://localhost:5173) or explore the endpoints in [S
 | [requests/](requests/) | Executable HTTP examples for cars, categories and specifications |
 | [.github/workflows/](.github/workflows/) | CI workflows for verification, coverage and mutation testing |
 
-Run Make commands from the repository root. Use `make api-dev` or `make web-dev` to start a single application and `make check` to verify both. See the [contributor guide](AGENTS.md) for development conventions.
+From the repository root, run `make dev` to start PostgreSQL, the API and the frontend together. Use `make api-dev` or `make web-dev` to start a single application, and `make check` to verify both. See the [contributor guide](AGENTS.md) for development conventions.
