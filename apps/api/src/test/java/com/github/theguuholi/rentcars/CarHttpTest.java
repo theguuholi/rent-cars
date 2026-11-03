@@ -337,7 +337,7 @@ class CarHttpTest {
     }
 
     @DisplayName(
-        "Given an assigned specification, when omitted it is preserved and when cleared it is removed")
+        "Given an assigned specification, when a patch omits the selection or sends an empty list, then the link is preserved or removed respectively")
     @Test
     void omittedAndEmptySpecifications() throws Exception {
       var car = input().put("available", false);

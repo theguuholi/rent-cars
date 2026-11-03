@@ -34,7 +34,7 @@ class CarTest {
   @DisplayName("apply")
   class Apply {
     @DisplayName(
-        "Given a complete car, applying its attributes sets the catalog details and defaults availability to true")
+        "Given a complete request, when its attributes are applied, then the car has the submitted details and defaults to available")
     @Test
     void givenCompleteCarWhenApplyingThenSetsDetailsAndDefaultAvailability() {
       car.apply(civic(" abc1234 "));
@@ -53,7 +53,7 @@ class CarTest {
     }
 
     @DisplayName(
-        "Given replacement assignments, the car takes the new category and keeps its own copy of the specifications")
+        "Given replacement assignments, when the car is patched, then it takes the new category and copies the selected specifications")
     @Test
     void givenReplacementAssignmentsWhenPatchingThenReplacesCategoryAndCopiesSpecs() {
       car.apply(civic("ABC1234"));
@@ -74,7 +74,7 @@ class CarTest {
     }
 
     @DisplayName(
-        "Given an empty specification set, a patch clears the links and preserves the category and plate")
+        "Given an empty specification set, when the car is patched, then the links are cleared and the category and plate are preserved")
     @Test
     void givenEmptySpecificationsWhenPatchingThenClearsOnlyTheLinks() {
       car.apply(civic("ABC1234"));
@@ -89,7 +89,7 @@ class CarTest {
     }
 
     @DisplayName(
-        "Given an existing plate, a different plate is rejected and the original is retained")
+        "Given an existing plate, when a different plate is submitted, then the change is rejected and the original is retained")
     @Test
     void givenChangedPlateWhenPatchingThenRejectsTheNewPlate() {
       car.apply(civic("ABC1234"));

@@ -45,7 +45,7 @@ class CarServiceTest {
   @Nested
   @DisplayName("list")
   class ListCars {
-    @DisplayName("Given cars with matching names, listing requests ID as the stable tie-breaker")
+    @DisplayName("Given cars with matching names, when listing the fleet, then ID breaks ties")
     @Test
     void givenMatchingNamesWhenListingThenUsesIdAsTieBreaker() {
       var rows = List.of(new Car(), new Car());
@@ -53,7 +53,7 @@ class CarServiceTest {
       assertThat(service.list()).containsExactlyElementsOf(rows);
     }
 
-    @DisplayName("Given an empty catalog, listing returns no cars")
+    @DisplayName("Given an empty catalog, when listing the fleet, then no cars are returned")
     @Test
     void givenEmptyCatalogWhenListingThenReturnsNoCars() {
       when(repository.findAll(Sort.by("name", "id"))).thenReturn(List.of());
@@ -64,7 +64,7 @@ class CarServiceTest {
   @Nested
   @DisplayName("get")
   class Get {
-    @DisplayName("Given an existing ID, fetching it returns that car")
+    @DisplayName("Given an existing ID, when fetching it, then the matching car is returned")
     @Test
     void givenExistingIdWhenFetchingThenReturnsTheCar() {
       var car = new Car();
@@ -72,7 +72,7 @@ class CarServiceTest {
       assertThat(service.get(id)).isSameAs(car);
     }
 
-    @DisplayName("Given an unknown ID, fetching it reports not found")
+    @DisplayName("Given an unknown ID, when fetching it, then the service reports not found")
     @Test
     void givenUnknownIdWhenFetchingThenReportsNotFound() {
       when(repository.findById(id)).thenReturn(Optional.empty());
@@ -85,7 +85,8 @@ class CarServiceTest {
   @Nested
   @DisplayName("create")
   class Create {
-    @DisplayName("Given a valid request, creating returns the car saved by the repository")
+    @DisplayName(
+        "Given a valid request, when creating a car, then the service returns the persisted entity")
     @Test
     void givenValidCarWhenCreatingThenReturnsSavedCar() {
       var persisted = new Car();
@@ -93,7 +94,8 @@ class CarServiceTest {
       assertThat(service.create(validCar())).isSameAs(persisted);
     }
 
-    @DisplayName("Given an incomplete request, creating reports all missing fields before saving")
+    @DisplayName(
+        "Given an incomplete request, when creating a car, then all missing fields are reported before saving")
     @Test
     void givenMissingFieldsWhenCreatingThenReportsAllViolations() {
       var incomplete = new CarRequest();
@@ -115,7 +117,7 @@ class CarServiceTest {
     }
 
     @DisplayName(
-        "Given a plate that expands beyond 20 characters in uppercase, creating rejects the normalized plate")
+        "Given a plate that expands beyond 20 characters in uppercase, when creating a car, then the normalized plate is rejected")
     @Test
     void givenExpandingPlateWhenCreatingThenRejectsNormalizedLength() {
       var request = validCar();
@@ -130,7 +132,8 @@ class CarServiceTest {
       verifyNoInteractions(repository);
     }
 
-    @DisplayName("Given a negative rate, creating rejects the request before building the car")
+    @DisplayName(
+        "Given a negative rate, when creating a car, then the service rejects the request before building the car")
     @Test
     void givenNegativeRateWhenCreatingThenRejectsTheRequest() {
       var negative = new CarRequest();
@@ -149,7 +152,8 @@ class CarServiceTest {
   @Nested
   @DisplayName("update")
   class Update {
-    @DisplayName("Given a partial patch, updating saves the locked car and returns it")
+    @DisplayName(
+        "Given a partial patch, when updating the fleet, then the service saves and returns the locked car")
     @Test
     void givenPartialPatchWhenUpdatingThenSavesLockedCar() {
       var car = new Car();
@@ -161,7 +165,7 @@ class CarServiceTest {
     }
 
     @DisplayName(
-        "Given a blank replacement name, updating reports the invalid field without saving")
+        "Given a blank replacement name, when updating the car, then the service reports the invalid field without saving")
     @Test
     void givenInvalidPatchWhenUpdatingThenRejectsWithoutSaving() {
       var car = new Car();
@@ -178,7 +182,8 @@ class CarServiceTest {
       verify(repository, never()).saveAndFlush(any());
     }
 
-    @DisplayName("Given an unknown ID, updating reports not found before validating the patch")
+    @DisplayName(
+        "Given an unknown ID, when updating a car, then the service reports not found before validating the patch")
     @Test
     void givenUnknownIdWhenUpdatingThenReportsNotFoundBeforeValidation() {
       when(repository.findForUpdate(id)).thenReturn(Optional.empty());
@@ -194,7 +199,7 @@ class CarServiceTest {
   @Nested
   @DisplayName("delete")
   class Delete {
-    @DisplayName("Given an existing ID, deleting removes the locked car")
+    @DisplayName("Given an existing ID, when deleting it, then the service removes the locked car")
     @Test
     void givenExistingIdWhenDeletingThenDeletesTheLockedCar() {
       var car = new Car();
@@ -203,7 +208,8 @@ class CarServiceTest {
       verify(repository).delete(car);
     }
 
-    @DisplayName("Given an unknown ID, deleting reports not found without writing")
+    @DisplayName(
+        "Given an unknown ID, when deleting it, then the service reports not found without writing")
     @Test
     void givenUnknownIdWhenDeletingThenReportsNotFoundWithoutWriting() {
       when(repository.findForUpdate(id)).thenReturn(Optional.empty());
