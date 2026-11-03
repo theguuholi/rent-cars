@@ -1,5 +1,6 @@
 package com.github.theguuholi.rentcars.auth;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -10,7 +11,12 @@ import java.util.UUID;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 
-/** Internal credential record. Only the public profile leaves the API. */
+/**
+ * Persisted login account. The normalized email identifies an account at sign-in, while the UUID
+ * remains its stable JWT subject. Public registration assigns USER. Only the public profile is
+ * returned over HTTP.
+ */
+@Schema(hidden = true, description = "Internal login account.")
 @Entity
 @Table(name = "accounts")
 class Account {
@@ -21,6 +27,7 @@ class Account {
   @Column(nullable = false, unique = true, length = 254)
   private String email;
 
+  /** Encoded password used by the authentication provider to verify sign-in attempts. */
   @Column(nullable = false, length = 100)
   private String passwordHash;
 
@@ -34,6 +41,7 @@ class Account {
     this.passwordHash = passwordHash;
   }
 
+  /** Supplies Spring Security with the account ID, encoded password and granted role. */
   UserDetails principal() {
     return User.withUsername(id.toString()).password(passwordHash).roles(role).build();
   }

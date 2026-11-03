@@ -20,6 +20,11 @@ class AccessTokenService {
     this.encoder = encoder;
   }
 
+  /**
+   * Issues a token after password authentication succeeds. The account UUID becomes the subject,
+   * and only application roles enter the claims. The encoder signs these claims for this API with
+   * the private key. Subsequent requests verify the signature with the public key.
+   */
   SessionToken issue(Authentication principal) {
     Instant now = Instant.now();
     var claims =
