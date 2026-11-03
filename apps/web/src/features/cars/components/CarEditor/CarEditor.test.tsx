@@ -82,7 +82,7 @@ describe('CarEditor', () => {
       fireEvent.click(screen.getByLabelText('Available'))
       fireEvent.click(screen.getByLabelText('GPS'))
       fireEvent.click(screen.getByText('Save car'))
-      const { id: _id, ...expected } = car
+      const { id: _id, category: _category, specifications: _specifications, ...expected } = car
       await waitFor(() => expect(onSave).toHaveBeenCalledExactlyOnceWith(expected))
     },
   )

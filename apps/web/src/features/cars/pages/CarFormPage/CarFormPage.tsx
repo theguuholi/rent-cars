@@ -26,7 +26,9 @@ export function CarFormPage({
       return updateCar(car.id, changedCarFields(car, input))
     },
     onSuccess: async (saved) => {
-      client.setQueryData(['car', saved.id], saved)
+      await client.invalidateQueries({
+        queryKey: ['car', saved.id],
+      })
       await client.invalidateQueries({ queryKey: ['cars'] })
       await navigate({ to: '/cars/$id', params: { id: saved.id }, replace: true })
     },

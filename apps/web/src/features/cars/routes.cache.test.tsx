@@ -29,11 +29,12 @@ describe('Fleet navigation with fresh cached records', () => {
   })
 
   scenario(
-    'Given a cached car and catalogs, when an edit succeeds, then the saved detail replaces the form and only the fleet list reloads',
+    'Given a cached car and catalogs, when an edit succeeds, then the saved detail replaces the form and the complete detail and fleet list reload',
     async () => {
       const client = cachedFleet()
       const saved = { ...car, name: 'Updated Corolla' }
       vi.mocked(api.updateCar).mockResolvedValue(saved)
+      vi.mocked(api.getCar).mockResolvedValue(saved)
       vi.mocked(api.listCars).mockResolvedValue([saved])
       const history = openCatalogRoute('/cars', client)
 
@@ -47,7 +48,7 @@ describe('Fleet navigation with fresh cached records', () => {
       expect(await screen.findByText('GPS')).toBeVisible()
       expect(listCategories).not.toHaveBeenCalled()
       expect(listSpecifications).not.toHaveBeenCalled()
-      expect(api.getCar).not.toHaveBeenCalled()
+      expect(api.getCar).toHaveBeenCalledExactlyOnceWith(car.id, expect.any(AbortSignal))
       expect(api.listCars).not.toHaveBeenCalled()
       fireEvent.click(screen.getByRole('link', { name: 'Back to cars' }))
       expect(await screen.findByRole('link', { name: saved.name })).toBeVisible()

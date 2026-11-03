@@ -31,7 +31,7 @@ describe('CarRecord', () => {
               reject = failure
             }),
         )
-        .mockResolvedValue({ ...car, available: true, specificationIds: [] })
+        .mockResolvedValue({ ...car, available: true, specificationIds: [], specifications: [] })
       openCatalogRoute('/cars/second')
       await screen.findByText('Loading car…')
       await act(async () => reject(new Error('This car no longer exists.')))
