@@ -39,7 +39,18 @@ class SessionControllerTest {
   String password = "driver-example-123";
 
   ResultActions send(String path, String body) throws Exception {
-    return mvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(body));
+    var bootstrap =
+        mvc.perform(get("/csrf"))
+            .andExpect(status().isNoContent())
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andReturn()
+            .getResponse();
+    return mvc.perform(
+        post(path)
+            .cookie(bootstrap.getCookie("XSRF-TOKEN"))
+            .header("X-XSRF-TOKEN", bootstrap.getHeader("X-XSRF-TOKEN"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body));
   }
 
   String credentials(String email, String password) {
@@ -161,6 +172,18 @@ class SessionControllerTest {
   class Register {
     @Test
     @DisplayName(
+        "Given a cross-site browser request without cookies, when registering without a CSRF token, then the signup is rejected")
+    void rejectsCrossSiteSignup() throws Exception {
+      mvc.perform(
+              post("/users")
+                  .header("Sec-Fetch-Site", "cross-site")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(credentials(email, password)))
+          .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName(
         "Given a browser cookie without a CSRF token, when registering, then the request is forbidden and the account is not created")
     void rejectsUnprotectedCookieWrite() throws Exception {
       mvc.perform(
@@ -241,6 +264,20 @@ class SessionControllerTest {
 
   @Nested
   class Login {
+    @Test
+    @DisplayName(
+        "Given a CSRF cookie, when signing in with a mismatched header, then the API rejects the request before checking credentials")
+    void rejectsMismatchedToken() throws Exception {
+      var bootstrap = mvc.perform(get("/csrf")).andReturn().getResponse();
+      mvc.perform(
+              post("/sessions")
+                  .cookie(bootstrap.getCookie("XSRF-TOKEN"))
+                  .header("X-XSRF-TOKEN", "different")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(credentials(email, password)))
+          .andExpect(status().isForbidden());
+    }
+
     @Test
     @DisplayName(
         "Given valid credentials, when signing in, then the signed token identifies the account, issuer, audience, role and fifteen-minute lifetime")

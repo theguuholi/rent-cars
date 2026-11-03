@@ -2,6 +2,7 @@ package com.github.theguuholi.rentcars.auth;
 
 import com.github.theguuholi.rentcars.shared.http.GlobalExceptionHandler.Errors;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,8 +22,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.web.csrf.DeferredCsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,6 +56,24 @@ class SessionController {
     this.tokens = tokens;
   }
 
+  @GetMapping("/csrf")
+  @Operation(summary = "Get a CSRF cookie and header for registration and sign-in")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  ResponseEntity<Void> csrf(
+      @Parameter(hidden = true)
+          @RequestAttribute("org.springframework.security.web.csrf.DeferredCsrfToken")
+          DeferredCsrfToken deferred) {
+    var token = deferred.get();
+    return ResponseEntity.noContent()
+        .cacheControl(CacheControl.noStore())
+        .header(token.getHeaderName(), token.getToken())
+        .build();
+  }
+
+  @ApiResponse(
+      responseCode = "403",
+      description = "Missing or invalid CSRF cookie/header pair",
+      content = @Content)
   @PostMapping(value = "/users", produces = MediaType.APPLICATION_JSON_VALUE)
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
@@ -76,6 +97,10 @@ class SessionController {
         .profile();
   }
 
+  @ApiResponse(
+      responseCode = "403",
+      description = "Missing or invalid CSRF cookie/header pair",
+      content = @Content)
   @PostMapping(value = "/sessions", produces = MediaType.APPLICATION_JSON_VALUE)
   @Operation(summary = "Sign in with email and password")
   @ApiResponse(

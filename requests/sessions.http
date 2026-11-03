@@ -2,9 +2,15 @@
 @email = driver@example.com
 @password = local-example-only-123
 
+### Obtain the CSRF token and cookie for the two public writes
+# @name csrf
+GET {{baseUrl}}/csrf
+
 ### Register a local driver (run once per email)
 POST {{baseUrl}}/users
 Content-Type: application/json
+X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}
+Cookie: XSRF-TOKEN={{csrf.response.headers.X-XSRF-TOKEN}}
 
 {"email":"{{email}}","password":"{{password}}"}
 
@@ -12,6 +18,8 @@ Content-Type: application/json
 # @name login
 POST {{baseUrl}}/sessions
 Content-Type: application/json
+X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}
+Cookie: XSRF-TOKEN={{csrf.response.headers.X-XSRF-TOKEN}}
 
 {"email":"{{email}}","password":"{{password}}"}
 
