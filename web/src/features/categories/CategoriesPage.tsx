@@ -1,17 +1,10 @@
+import { PageSection } from '../../components/PageSection'
 import { CategoryList } from './CategoryList'
 
 export function CategoriesPage() {
   return (
-    <section className="page-section" aria-labelledby="categories-title">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">Catalog</p>
-          <h2 className="page-title" id="categories-title">
-            Vehicle categories
-          </h2>
-        </div>
-      </header>
+    <PageSection eyebrow="Catalog" title="Vehicle categories">
       <CategoryList />
-    </section>
+    </PageSection>
   )
 }

@@ -5,5 +5,6 @@ import { CategoriesPage } from './CategoriesPage'
 export const categoriesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/categories',
+  staticData: { title: 'Categories' },
   component: CategoriesPage,
 })

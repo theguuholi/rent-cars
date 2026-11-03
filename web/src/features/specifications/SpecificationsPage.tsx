@@ -1,3 +1,4 @@
+import { PageSection } from '../../components/PageSection'
 import { Link, useMatchRoute, useNavigate, useLocation } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { SpecificationEditor } from './SpecificationEditor'
@@ -55,23 +56,18 @@ export function SpecificationsPage() {
     void navigate({ to: '/specifications', replace: true })
   }
   return (
-    <section className="page-section" aria-labelledby="specs-title">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">Catalog</p>
-          <h2 className="page-title" id="specs-title">
-            Vehicle specifications
-          </h2>
-          <p className="supporting-text">
-            Manage the features and equipment available on rental vehicles.
-          </p>
-        </div>
-        {!panelOpen && (
+    <PageSection
+      eyebrow="Catalog"
+      title="Vehicle specifications"
+      description="Manage the features and equipment available on rental vehicles."
+      action={
+        !panelOpen && (
           <Link className="btn-primary" to="/specifications/new">
             New specification
           </Link>
-        )}
-      </header>
+        )
+      }
+    >
       {notice && (
         <p role="status" className="mb-4 text-brand">
           {notice}
@@ -80,7 +76,10 @@ export function SpecificationsPage() {
       {change.isError && <p role="alert">{change.error.message}</p>}
       <div className={panelOpen ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]' : ''}>
         {panelOpen && (
-          <aside aria-label="Specification details" className="panel lg:col-start-2 lg:row-start-1">
+          <aside
+            aria-label="Specification details"
+            className="rounded-lg border border-slate-200 p-5 lg:col-start-2 lg:row-start-1"
+          >
             {selected && !item ? (
               <div>
                 {catalog.isSuccess && <p role="alert">Specification not found.</p>}
@@ -180,6 +179,6 @@ export function SpecificationsPage() {
           )}
         </div>
       </div>
-    </section>
+    </PageSection>
   )
 }

@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, describe, test as scenario, vi } from 'vitest'
 import { openCatalogRoute } from './test/open-catalog-route'
 
@@ -21,4 +21,20 @@ describe('Catalog navigation', () => {
       expect(history.location.pathname).toBe('/specifications')
     },
   )
+})
+
+describe('Document title', () => {
+  scenario.each([
+    ['/', 'Rent Cars'],
+    ['/categories', 'Categories | Rent Cars'],
+    ['/specifications', 'Specifications | Rent Cars'],
+    ['/specifications/new', 'New specification | Rent Cars'],
+    ['/specifications/123/edit', 'Edit specification | Rent Cars'],
+    ['/specifications/123/delete', 'Delete specification | Rent Cars'],
+    ['/unknown', 'Page not found | Rent Cars'],
+  ])('Given %s, when the route opens, then the browser title is %s', async (path, title) => {
+    openCatalogRoute(path)
+    await screen.findByRole('navigation')
+    await waitFor(() => expect(document.title).toBe(title))
+  })
 })
