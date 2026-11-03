@@ -4,6 +4,11 @@ import type { Specification } from '../specifications/specifications-api'
 import { formatBrlInput, parseBrl } from './brl'
 import type { Car, CarInput } from './cars-api'
 
+type CarDraft = Omit<CarInput, 'dailyRateCents' | 'fineAmountCents'> & {
+  dailyRate: string
+  fineAmount: string
+}
+
 type Props = {
   car?: Car
   categories: Category[]
@@ -25,18 +30,19 @@ const rates = [
 ] as const
 
 export function CarEditor({ car, categories, specifications, busy, onSave, onCancel }: Props) {
+  const defaultValues: CarDraft = {
+    name: car?.name ?? '',
+    description: car?.description ?? '',
+    brand: car?.brand ?? '',
+    licensePlate: car?.licensePlate ?? '',
+    available: car?.available ?? true,
+    categoryId: car?.categoryId ?? '',
+    specificationIds: car?.specificationIds ?? [],
+    dailyRate: car ? formatBrlInput(car.dailyRateCents) : '',
+    fineAmount: car ? formatBrlInput(car.fineAmountCents) : '',
+  }
   const form = useForm({
-    defaultValues: {
-      name: car?.name ?? '',
-      description: car?.description ?? '',
-      brand: car?.brand ?? '',
-      licensePlate: car?.licensePlate ?? '',
-      available: car?.available ?? true,
-      categoryId: car?.categoryId ?? '',
-      specificationIds: car?.specificationIds ?? ([] as string[]),
-      dailyRate: car ? formatBrlInput(car.dailyRateCents) : '',
-      fineAmount: car ? formatBrlInput(car.fineAmountCents) : '',
-    },
+    defaultValues,
     onSubmit: ({ value }) =>
       onSave({
         name: value.name.trim(),

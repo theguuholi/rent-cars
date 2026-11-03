@@ -1,9 +1,9 @@
 CREATE TABLE cars (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    name varchar(255) NOT NULL CHECK (name ~ '[^[:space:]]'),
+    name varchar(100) NOT NULL CHECK (name ~ '[^[:space:]]'),
     description varchar(255) NOT NULL CHECK (description ~ '[^[:space:]]'),
-    brand varchar(255) NOT NULL CHECK (brand ~ '[^[:space:]]'),
-    license_plate varchar(255) NOT NULL UNIQUE CHECK (
+    brand varchar(80) NOT NULL CHECK (brand ~ '[^[:space:]]'),
+    license_plate varchar(20) NOT NULL UNIQUE CHECK (
         license_plate ~ '[^[:space:]]' AND license_plate = upper(trim(license_plate))
     ),
     available boolean NOT NULL DEFAULT true,
