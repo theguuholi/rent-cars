@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, expect, test as scenario, vi } from 'vitest'
 import { openCatalogRoute } from './test/open-catalog-route'
 
 afterEach(() => vi.unstubAllGlobals())
 
-it.each(['/category', '/specification', '/categories/unknown', '/specifications/unknown'])(
-  'offers a way home from %s without fetching a catalog',
+scenario.each(['/category', '/specification', '/categories/unknown', '/specifications/unknown'])(
+  'Given an unknown URL %s, when the visitor follows the 404 page’s home link, then the menu opens without fetching a catalog',
   async (path) => {
     const history = openCatalogRoute(path)
     const link = await screen.findByRole('link', { name: 'Back to home' })
