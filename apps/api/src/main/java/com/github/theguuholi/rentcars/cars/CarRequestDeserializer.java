@@ -6,6 +6,7 @@ import org.springframework.boot.jackson.JacksonComponent;
 import tools.jackson.core.JsonParser;
 import tools.jackson.databind.*;
 import tools.jackson.databind.cfg.*;
+import tools.jackson.databind.exc.MismatchedInputException;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.type.LogicalType;
 
@@ -32,9 +33,10 @@ final class CarRequestDeserializer extends ValueDeserializer<CarRequest> {
   public CarRequest deserialize(JsonParser parser, DeserializationContext context) {
     JsonNode body = context.readTree(parser);
     if (!body.isObject())
-      return context.reportInputMismatch(CarRequest.class, "Expected a car object");
+      throw MismatchedInputException.from(parser, CarRequest.class, "Expected a car object");
     if (body.valueStream().anyMatch(JsonNode::isNull))
-      return context.reportInputMismatch(CarRequest.class, "Car attributes cannot be null");
+      throw MismatchedInputException.from(
+          parser, CarRequest.class, "Car attributes cannot be null");
     return READER.readValue(body);
   }
 }
