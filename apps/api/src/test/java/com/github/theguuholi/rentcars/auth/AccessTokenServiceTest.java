@@ -15,7 +15,7 @@ class AccessTokenServiceTest {
     @DisplayName(
         "Given an admin authenticated with a password factor, when issuing a token, then only application roles become role claims")
     void roles() throws Exception {
-      var config = new SecurityConfiguration();
+      var config = new JwtConfiguration();
       var keys = config.localSigningKeys();
       String id = UUID.randomUUID().toString();
       var admin =
