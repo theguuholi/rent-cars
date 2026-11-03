@@ -23,16 +23,16 @@ public class CarController {
 
   @GetMapping
   @Operation(summary = "List all cars alphabetically")
-  public List<CarResponse> list() {
-    return cars.list().stream().map(Car::toResponse).toList();
+  public List<Car> list() {
+    return cars.list();
   }
 
   @GetMapping("/{id}")
   @Operation(summary = "Fetch a car by UUID")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
   @ApiResponse(responseCode = "404", description = "Car does not exist", content = @Content)
-  public CarResponse get(@PathVariable UUID id) {
-    return cars.get(id).toResponse();
+  public Car get(@PathVariable UUID id) {
+    return cars.get(id);
   }
 
   @PostMapping
@@ -49,8 +49,8 @@ public class CarController {
       content = @Content)
   @ApiResponse(responseCode = "422", description = "Invalid car attributes", content = @Content)
   @ApiResponse(responseCode = "409", description = "Duplicate license plate", content = @Content)
-  public ResponseEntity<CarResponse> create(@RequestBody CarRequest request) {
-    CarResponse car = cars.create(request).toResponse();
+  public ResponseEntity<Car> create(@RequestBody CarRequest request) {
+    Car car = cars.create(request);
     return ResponseEntity.created(URI.create("/cars/" + car.id())).body(car);
   }
 
@@ -69,8 +69,8 @@ public class CarController {
       description = "Invalid attributes or new plate",
       content = @Content)
   @ApiResponse(responseCode = "404", description = "Car does not exist", content = @Content)
-  public CarResponse update(@PathVariable UUID id, @RequestBody CarRequest request) {
-    return cars.update(id, request).toResponse();
+  public Car update(@PathVariable UUID id, @RequestBody CarRequest request) {
+    return cars.update(id, request);
   }
 
   @DeleteMapping("/{id}")

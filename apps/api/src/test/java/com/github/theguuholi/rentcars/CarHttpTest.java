@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -85,6 +87,58 @@ class CarHttpTest {
     return mvc.perform(patch(location).contentType("application/json").content(patchBody));
   }
 
+  // Use the same wire examples for POST and PATCH. A complete POST isolates each invalid field.
+  private static final String INVALID_INPUTS =
+      "com.github.theguuholi.rentcars.CarHttpTest#invalidInputs";
+
+  static Stream<String> invalidInputs() {
+    return """
+        null
+        []
+        42
+        {"extra":1}
+        {"id":"12ac672c-89bd-4da2-bdb4-73f3733509ca"}
+        {"insertedAt":"2025-01-01T00:00:00Z"}
+        {"updatedAt":"2025-01-01T00:00:00Z"}
+        {"name":42}
+        {"brand":true}
+        {"description":1.75}
+        {"licensePlate":{}}
+        {"categoryId":"invalid"}
+        {"categoryId":4}
+        {"specificationIds":{}}
+        {"specificationIds":[null]}
+        {"specificationIds":["invalid"]}
+        {"available":"true"}
+        {"available":1}
+        {"dailyRateCents":0.5}
+        {"dailyRateCents":"15050"}
+        {"fineAmountCents":150.9}
+        {"dailyRateCents":2147483648}
+        {"fineAmountCents":"0"}
+        {"fineAmountCents":false}
+        {"name":null}
+        {"description":null}
+        {"brand":null}
+        {"licensePlate":null}
+        {"available":null}
+        {"dailyRateCents":null}
+        {"fineAmountCents":null}
+        {"categoryId":null}
+        {"specificationIds":null}
+        """
+        .lines();
+  }
+
+  private String invalidBody(ObjectNode validFields, String invalidInput) {
+    var body = json.readTree(invalidInput);
+    if (body instanceof ObjectNode fields) {
+      validFields.setAll(fields);
+      return validFields.toString();
+    }
+    return invalidInput;
+  }
+
   private String givenCar() throws Exception {
     return create(input())
         .andExpect(status().isCreated())
@@ -139,11 +193,14 @@ class CarHttpTest {
       assertThat(location).endsWith("/cars/" + UUID.fromString(id));
     }
 
-    @DisplayName("Given a non-object body, when creating, then the API rejects it before saving")
+    @DisplayName("Given malformed input, when creating a car, then it is rejected before saving")
     @ParameterizedTest
-    @ValueSource(strings = {"null", "[]", "42"})
-    void malformedBody(String body) throws Exception {
-      mvc.perform(post("/cars").contentType("application/json").content(body))
+    @MethodSource(INVALID_INPUTS)
+    void rejectsMalformedInput(String invalidInput) throws Exception {
+      mvc.perform(
+              post("/cars")
+                  .contentType("application/json")
+                  .content(invalidBody(input(), invalidInput)))
           .andExpect(status().isBadRequest());
       mvc.perform(get("/cars")).andExpect(jsonPath("$").isEmpty());
     }
@@ -283,9 +340,14 @@ class CarHttpTest {
         "Given an assigned specification, when omitted it is preserved and when cleared it is removed")
     @Test
     void omittedAndEmptySpecifications() throws Exception {
-      var car = input();
-      car.putArray("specificationIds").add(gps);
-      var created = create(car).andExpect(status().isCreated()).andReturn().getResponse();
+      var car = input().put("available", false);
+      car.putArray("specificationIds").add(gps).add(gps);
+      var created =
+          create(car)
+              .andExpect(status().isCreated())
+              .andExpect(jsonPath("$.specificationIds").value(containsInAnyOrder(gps)))
+              .andReturn()
+              .getResponse();
       String location = created.getHeader("Location");
       edit(location, "{}")
           .andExpect(status().isOk())
@@ -296,39 +358,37 @@ class CarHttpTest {
       mvc.perform(get(location)).andExpect(jsonPath("$.specificationIds").isEmpty());
     }
 
-    @DisplayName("Given an explicit null, when patching, then the entire car stays unchanged")
+    @DisplayName("Given malformed input, when patching, then the entire car stays unchanged")
     @ParameterizedTest
-    @ValueSource(
-        strings = {
-          "name",
-          "description",
-          "brand",
-          "licensePlate",
-          "dailyRateCents",
-          "fineAmountCents",
-          "categoryId",
-          "available",
-          "specificationIds"
-        })
-    void givenExplicitNullWhenPatchingThenRejectsWithoutChangingTheCar(String field)
-        throws Exception {
-      String location = givenCar();
-      String before = mvc.perform(get(location)).andReturn().getResponse().getContentAsString();
-      edit(location, json.createObjectNode().put("name", "Mutated").putNull(field).toString())
+    @MethodSource(INVALID_INPUTS)
+    void rejectsMalformedInput(String invalidInput) throws Exception {
+      var created = create(input()).andExpect(status().isCreated()).andReturn().getResponse();
+      String location = created.getHeader("Location");
+      edit(location, invalidBody(json.createObjectNode().put("brand", "Changed"), invalidInput))
           .andExpect(status().isBadRequest());
-      mvc.perform(get(location)).andExpect(content().json(before));
+      mvc.perform(get(location)).andExpect(content().json(created.getContentAsString()));
     }
 
-    @DisplayName("Given invalid cents, when patching, then the original amounts are preserved")
+    @Test
+    @DisplayName(
+        "Given vendor JSON, when patching a price, then integers are accepted and fractional centavos are rejected")
+    void appliesTheSameContractToVendorJson() throws Exception {
+      var location = givenCar();
+      var mediaType = "application/vnd.rent+json";
+      mvc.perform(patch(location).contentType(mediaType).content("{\"dailyRateCents\":15050}"))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.dailyRateCents").value(15050));
+      mvc.perform(patch(location).contentType(mediaType).content("{\"dailyRateCents\":150.9}"))
+          .andExpect(status().isBadRequest());
+      mvc.perform(get(location)).andExpect(jsonPath("$.dailyRateCents").value(15050));
+    }
+
+    @DisplayName("Given negative cents, when patching, then the original amounts are preserved")
     @ParameterizedTest
     @ValueSource(strings = {"dailyRateCents", "fineAmountCents"})
-    void givenNonIntegerOrNegativeCentsWhenPatchingThenPreservesOriginalAmount(String field)
-        throws Exception {
+    void rejectsNegativeCents(String field) throws Exception {
       String location = givenCar();
-      for (String value : List.of("0.5", "\"42\"", "2147483648", "true")) {
-        edit(location, "{\"%s\":%s}".formatted(field, value)).andExpect(status().isBadRequest());
-      }
-      edit(location, "{\"%s\":-1}".formatted(field)).andExpect(status().is(422));
+      edit(location, json.createObjectNode().put(field, -1).toString()).andExpect(status().is(422));
       mvc.perform(get(location))
           .andExpect(jsonPath("$.dailyRateCents").value(12345))
           .andExpect(jsonPath("$.fineAmountCents").value(0));
@@ -421,10 +481,25 @@ class CarHttpTest {
       var schema = json.readTree(docs.getContentAsString()).at("/components/schemas/Car");
       var properties = schema.get("properties");
 
+      assertThat(car.propertyNames())
+          .containsExactlyInAnyOrder(
+              "id",
+              "name",
+              "description",
+              "brand",
+              "licensePlate",
+              "available",
+              "dailyRateCents",
+              "fineAmountCents",
+              "categoryId",
+              "specificationIds");
+      assertThat(car.get("dailyRateCents").isIntegralNumber()).isTrue();
+      assertThat(car.get("dailyRateCents").asInt()).isEqualTo(12345);
+      assertThat(car.get("fineAmountCents").isIntegralNumber()).isTrue();
+      assertThat(car.get("fineAmountCents").asInt()).isZero();
       assertThat(schema.get("description").asString()).contains("Brazilian centavos");
       assertThat(properties.propertyNames())
-          .containsExactlyInAnyOrderElementsOf(car.propertyNames())
-          .doesNotContain("insertedAt", "updatedAt");
+          .containsExactlyInAnyOrderElementsOf(car.propertyNames());
       for (var field : car.propertyNames()) {
         assertThat(properties.get(field).path("description").asString("")).as(field).isNotBlank();
       }

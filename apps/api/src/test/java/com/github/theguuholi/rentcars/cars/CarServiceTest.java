@@ -8,7 +8,6 @@ import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.*;
 import org.springframework.data.domain.Sort;
@@ -20,20 +19,22 @@ class CarServiceTest {
   private final CarRepository repository = mock();
   private final CarService service = new CarService(repository, validators.getValidator());
   private final UUID id = UUID.randomUUID();
-  private final CarRequest valid =
-      new CarRequest(
-          "Civic",
-          "Sedan",
-          "Honda",
-          " abc1234 ",
-          false,
-          100,
-          0,
-          UUID.randomUUID(),
-          Set.of(UUID.randomUUID()));
+
+  private static CarRequest validCar() {
+    var request = patchName("Civic");
+    request.description = "Sedan";
+    request.brand = "Honda";
+    request.licensePlate = " abc1234 ";
+    request.dailyRateCents = 100;
+    request.fineAmountCents = 0;
+    request.categoryId = UUID.randomUUID();
+    return request;
+  }
 
   private static CarRequest patchName(String name) {
-    return new CarRequest(name, null, null, null, null, null, null, null, null);
+    var request = new CarRequest();
+    request.name = name;
+    return request;
   }
 
   @AfterAll
@@ -84,23 +85,18 @@ class CarServiceTest {
   @Nested
   @DisplayName("create")
   class Create {
-    @DisplayName(
-        "Given a valid request, creating flushes the normalized car with its category and specifications")
+    @DisplayName("Given a valid request, creating returns the car saved by the repository")
     @Test
-    void givenValidCarWhenCreatingThenFlushesNormalizedAssignments() {
-      when(repository.saveAndFlush(any(Car.class))).thenAnswer(call -> call.getArgument(0));
-      var created = service.create(valid);
-      verify(repository).saveAndFlush(created);
-      var response = created.toResponse();
-      assertThat(response.licensePlate()).isEqualTo("ABC1234");
-      assertThat(response.categoryId()).isEqualTo(valid.categoryId());
-      assertThat(response.specificationIds()).isEqualTo(valid.specificationIds());
+    void givenValidCarWhenCreatingThenReturnsSavedCar() {
+      var persisted = new Car();
+      when(repository.saveAndFlush(any(Car.class))).thenReturn(persisted);
+      assertThat(service.create(validCar())).isSameAs(persisted);
     }
 
     @DisplayName("Given an incomplete request, creating reports all missing fields before saving")
     @Test
     void givenMissingFieldsWhenCreatingThenReportsAllViolations() {
-      var incomplete = patchName(null);
+      var incomplete = new CarRequest();
       assertThatThrownBy(() -> service.create(incomplete))
           .isInstanceOfSatisfying(
               ConstraintViolationException.class,
@@ -122,17 +118,8 @@ class CarServiceTest {
         "Given a plate that expands beyond 20 characters in uppercase, creating rejects the normalized plate")
     @Test
     void givenExpandingPlateWhenCreatingThenRejectsNormalizedLength() {
-      var request =
-          new CarRequest(
-              "Civic",
-              "Sedan",
-              "Honda",
-              "a".repeat(19) + "ß",
-              true,
-              100,
-              0,
-              valid.categoryId(),
-              Set.of());
+      var request = validCar();
+      request.licensePlate = "a".repeat(19) + "ß";
       assertThatExceptionOfType(ConstraintViolationException.class)
           .isThrownBy(() -> service.create(request))
           .satisfies(
@@ -146,7 +133,8 @@ class CarServiceTest {
     @DisplayName("Given a negative rate, creating rejects the request before building the car")
     @Test
     void givenNegativeRateWhenCreatingThenRejectsTheRequest() {
-      var negative = new CarRequest(null, null, null, null, null, -1, null, null, null);
+      var negative = new CarRequest();
+      negative.dailyRateCents = -1;
       assertThatExceptionOfType(ConstraintViolationException.class)
           .isThrownBy(() -> service.create(negative))
           .satisfies(
@@ -161,19 +149,15 @@ class CarServiceTest {
   @Nested
   @DisplayName("update")
   class Update {
-    @DisplayName(
-        "Given a partial patch, updating saves the locked car and preserves omitted assignments")
+    @DisplayName("Given a partial patch, updating saves the locked car and returns it")
     @Test
-    void givenPartialPatchWhenUpdatingThenPreservesOmittedFields() {
+    void givenPartialPatchWhenUpdatingThenSavesLockedCar() {
       var car = new Car();
-      car.apply(valid);
+      car.apply(validCar());
       when(repository.findForUpdate(id)).thenReturn(Optional.of(car));
       when(repository.saveAndFlush(car)).thenReturn(car);
       assertThat(service.update(id, patchName("Accord"))).isSameAs(car);
-      var response = car.toResponse();
-      assertThat(response.name()).isEqualTo("Accord");
-      assertThat(response.categoryId()).isEqualTo(valid.categoryId());
-      assertThat(response.specificationIds()).isEqualTo(valid.specificationIds());
+      verify(repository).saveAndFlush(car);
     }
 
     @DisplayName(
@@ -181,7 +165,7 @@ class CarServiceTest {
     @Test
     void givenInvalidPatchWhenUpdatingThenRejectsWithoutSaving() {
       var car = new Car();
-      car.apply(valid);
+      car.apply(validCar());
       when(repository.findForUpdate(id)).thenReturn(Optional.of(car));
       var blankName = patchName(" ");
       assertThatExceptionOfType(ConstraintViolationException.class)
@@ -198,7 +182,8 @@ class CarServiceTest {
     @Test
     void givenUnknownIdWhenUpdatingThenReportsNotFoundBeforeValidation() {
       when(repository.findForUpdate(id)).thenReturn(Optional.empty());
-      var invalid = new CarRequest(null, null, null, null, null, -1, null, null, null);
+      var invalid = new CarRequest();
+      invalid.dailyRateCents = -1;
       assertThatExceptionOfType(ResponseStatusException.class)
           .isThrownBy(() -> service.update(id, invalid))
           .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));

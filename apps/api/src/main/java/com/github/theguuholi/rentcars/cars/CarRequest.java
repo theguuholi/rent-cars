@@ -1,5 +1,6 @@
 package com.github.theguuholi.rentcars.cars;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import java.util.Set;
@@ -8,29 +9,40 @@ import java.util.UUID;
 @Schema(
     description =
         "Car attributes. On PATCH, omitted fields retain their values. All supplied values must be non-null.")
-public record CarRequest(
-    @Schema(description = "Model name.", maxLength = 100, example = "Argo") String name,
-    @Schema(description = "Description of this vehicle.", maxLength = 255) String description,
-    @Schema(description = "Vehicle manufacturer.", maxLength = 80, example = "Fiat") String brand,
-    @Schema(
-            description = "Unique plate, trimmed and uppercased before validation.",
-            maxLength = 20,
-            example = "ABC1D23")
-        String licensePlate,
-    @Schema(description = "Whether this car can be rented.") Boolean available,
-    @Schema(description = "Daily rental price in Brazilian centavos.", example = "15050") @Min(0)
-        Integer dailyRateCents,
-    @Schema(description = "Fine in Brazilian centavos.", example = "0") @Min(0)
-        Integer fineAmountCents,
-    @Schema(description = "Identifier of the car's body style.") UUID categoryId,
-    @Schema(
-            description =
-                "Full selection of feature identifiers. An empty array clears the selection.")
-        Set<UUID> specificationIds) {
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NON_PRIVATE)
+public class CarRequest {
+  @Schema(description = "Model name.", maxLength = 100, example = "Argo")
+  String name;
 
-  public CarRequest {
-    if (specificationIds != null) specificationIds = Set.copyOf(specificationIds);
-  }
+  @Schema(description = "Description of this vehicle.", maxLength = 255)
+  String description;
+
+  @Schema(description = "Vehicle manufacturer.", maxLength = 80, example = "Fiat")
+  String brand;
+
+  @Schema(
+      description = "Unique plate, trimmed and uppercased before validation.",
+      maxLength = 20,
+      example = "ABC1D23")
+  String licensePlate;
+
+  @Schema(description = "Whether this car can be rented.")
+  Boolean available;
+
+  @Schema(description = "Daily rental price in Brazilian centavos.", example = "15050")
+  @Min(0)
+  Integer dailyRateCents;
+
+  @Schema(description = "Fine in Brazilian centavos.", example = "0")
+  @Min(0)
+  Integer fineAmountCents;
+
+  @Schema(description = "Identifier of the car's body style.")
+  UUID categoryId;
+
+  @Schema(
+      description = "Full selection of feature identifiers. An empty array clears the selection.")
+  Set<UUID> specificationIds;
 
   @Schema(
       name = "CarCreateRequest",

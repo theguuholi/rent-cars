@@ -1,7 +1,7 @@
 package com.github.theguuholi.rentcars.cars;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -29,11 +29,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 @Schema(description = "A catalog vehicle with rental charges expressed in Brazilian centavos.")
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonAutoDetect(
+    fieldVisibility = JsonAutoDetect.Visibility.NONE,
+    getterVisibility = JsonAutoDetect.Visibility.NONE,
+    isGetterVisibility = JsonAutoDetect.Visibility.NONE)
 @Entity
 @Table(name = "cars")
 public class Car {
 
+  @JsonProperty
   @Schema(
       description = "Server-generated identifier of this rental vehicle.",
       example = "2dfbdb0a-249e-42db-a0db-a4c066ffb067",
@@ -42,12 +46,14 @@ public class Car {
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
+  @JsonProperty
   @Schema(description = "Model name.", example = "Argo", maxLength = 100)
   @NotBlank
   @Size(max = 100)
   @Column(name = "name", nullable = false, length = 100)
   private String name;
 
+  @JsonProperty
   @Schema(
       description = "Description of this vehicle.",
       example = "Five-door hatchback.",
@@ -57,12 +63,14 @@ public class Car {
   @Column(name = "description", nullable = false, length = 255)
   private String description;
 
+  @JsonProperty
   @Schema(description = "Vehicle manufacturer.", example = "Fiat", maxLength = 80)
   @NotBlank
   @Size(max = 80)
   @Column(name = "brand", nullable = false, length = 80)
   private String brand;
 
+  @JsonProperty
   @Schema(
       description = "Unique, immutable uppercase license plate.",
       example = "ABC1D23",
@@ -72,10 +80,12 @@ public class Car {
   @Column(name = "license_plate", nullable = false, length = 20, unique = true, updatable = false)
   private String licensePlate;
 
+  @JsonProperty
   @Schema(description = "Whether this car can be rented.", example = "true")
   @Column(nullable = false)
   private boolean available = true;
 
+  @JsonProperty
   @Schema(
       description = "Daily rental price in Brazilian centavos.",
       implementation = Integer.class,
@@ -85,6 +95,7 @@ public class Car {
   @Column(name = "daily_rate_cents", nullable = false)
   private BrlAmount dailyRateCents;
 
+  @JsonProperty
   @Schema(
       description = "Fine in Brazilian centavos.",
       implementation = Integer.class,
@@ -94,6 +105,7 @@ public class Car {
   @Column(name = "fine_amount_cents", nullable = false)
   private BrlAmount fineAmountCents;
 
+  @JsonProperty
   @Schema(
       description = "Identifier of the assigned body style.",
       example = "b54350ca-00ba-4fd6-bc97-8524a4f1bfdd")
@@ -101,6 +113,7 @@ public class Car {
   @Column(name = "category_id", nullable = false)
   private UUID categoryId;
 
+  @JsonProperty
   @Schema(description = "Identifiers of the features assigned to this vehicle.")
   @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "cars_specifications", joinColumns = @JoinColumn(name = "car_id"))
@@ -108,12 +121,10 @@ public class Car {
   @Fetch(FetchMode.SUBSELECT)
   private Set<UUID> specificationIds = new HashSet<>();
 
-  @JsonIgnore
   @CreationTimestamp
   @Column(name = "inserted_at", nullable = false, updatable = false)
   private Instant insertedAt;
 
-  @JsonIgnore
   @UpdateTimestamp
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
@@ -121,17 +132,17 @@ public class Car {
   protected Car() {}
 
   void apply(CarRequest fields) {
-    if (fields.name() != null) name = fields.name();
-    if (fields.description() != null) description = fields.description();
-    if (fields.brand() != null) brand = fields.brand();
-    if (fields.licensePlate() != null) registerPlate(fields.licensePlate());
-    if (fields.available() != null) available = fields.available();
-    if (fields.dailyRateCents() != null) dailyRateCents = new BrlAmount(fields.dailyRateCents());
-    if (fields.fineAmountCents() != null) fineAmountCents = new BrlAmount(fields.fineAmountCents());
-    if (fields.categoryId() != null) categoryId = fields.categoryId();
-    if (fields.specificationIds() != null) {
+    if (fields.name != null) name = fields.name;
+    if (fields.description != null) description = fields.description;
+    if (fields.brand != null) brand = fields.brand;
+    if (fields.licensePlate != null) registerPlate(fields.licensePlate);
+    if (fields.available != null) available = fields.available;
+    if (fields.dailyRateCents != null) dailyRateCents = new BrlAmount(fields.dailyRateCents);
+    if (fields.fineAmountCents != null) fineAmountCents = new BrlAmount(fields.fineAmountCents);
+    if (fields.categoryId != null) categoryId = fields.categoryId;
+    if (fields.specificationIds != null) {
       specificationIds.clear();
-      specificationIds.addAll(fields.specificationIds());
+      specificationIds.addAll(fields.specificationIds);
     }
   }
 
@@ -148,17 +159,7 @@ public class Car {
     licensePlate = normalized;
   }
 
-  CarResponse toResponse() {
-    return new CarResponse(
-        id,
-        name,
-        description,
-        brand,
-        licensePlate,
-        available,
-        dailyRateCents.cents(),
-        fineAmountCents.cents(),
-        categoryId,
-        specificationIds);
+  UUID id() {
+    return id;
   }
 }

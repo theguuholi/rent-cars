@@ -5,7 +5,6 @@ import static org.mockito.Mockito.*;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,15 +16,6 @@ class CarControllerTest {
   private final CarService service = mock();
   private final CarController controller = new CarController(service);
   private final UUID id = UUID.randomUUID();
-
-  private Car car(UUID id) {
-    var entity = mock(Car.class);
-    when(entity.toResponse())
-        .thenReturn(
-            new CarResponse(
-                id, "Argo", "Five doors", "Fiat", "ABC1234", true, 100, 0, null, Set.of()));
-    return entity;
-  }
 
   @Nested
   @DisplayName("list()")
@@ -41,10 +31,10 @@ class CarControllerTest {
     @Test
     @DisplayName("Given ordered cars, when listing, then the service order is preserved")
     void populatedFleet() {
-      var first = car(UUID.randomUUID());
-      var second = car(UUID.randomUUID());
+      var first = new Car();
+      var second = new Car();
       when(service.list()).thenReturn(List.of(second, first));
-      assertThat(controller.list()).containsExactly(second.toResponse(), first.toResponse());
+      assertThat(controller.list()).containsExactly(second, first);
     }
   }
 
@@ -54,9 +44,9 @@ class CarControllerTest {
     @Test
     @DisplayName("Given a known ID, when fetching, then the matching car is returned")
     void knownCar() {
-      var car = car(UUID.randomUUID());
+      var car = new Car();
       when(service.get(id)).thenReturn(car);
-      assertThat(controller.get(id)).isEqualTo(car.toResponse());
+      assertThat(controller.get(id)).isEqualTo(car);
     }
 
     @Test
@@ -75,16 +65,18 @@ class CarControllerTest {
     @DisplayName(
         "Given accepted attributes, when creating, then the new car and its location are returned")
     void createdCar() {
-      var saved = car(id);
+      var saved = mock(Car.class);
+      when(saved.id()).thenReturn(id);
       when(service.create(any())).thenReturn(saved);
 
-      var request = new CarRequest(null, null, null, "ABC1234", null, null, null, null, null);
+      var request = new CarRequest();
+      request.licensePlate = "ABC1234";
       var response = controller.create(request);
 
       verify(service).create(request);
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
       assertThat(response.getHeaders().getLocation()).isEqualTo(URI.create("/cars/" + id));
-      assertThat(response.getBody()).isEqualTo(saved.toResponse());
+      assertThat(response.getBody()).isEqualTo(saved);
     }
 
     @Test
@@ -92,7 +84,7 @@ class CarControllerTest {
     void rejectedCreation() {
       var conflict = new org.springframework.dao.DataIntegrityViolationException("duplicate plate");
       when(service.create(any())).thenThrow(conflict);
-      var body = new CarRequest(null, null, null, null, null, null, null, null, null);
+      var body = new CarRequest();
       assertThatThrownBy(() -> controller.create(body)).isSameAs(conflict);
     }
   }
@@ -104,11 +96,12 @@ class CarControllerTest {
     @DisplayName(
         "Given partial attributes, when updating, then only supplied values reach the service for that ID")
     void partialUpdate() {
-      var updated = car(UUID.randomUUID());
+      var updated = new Car();
       when(service.update(eq(id), any())).thenReturn(updated);
 
-      var request = new CarRequest(null, null, null, null, false, null, null, null, null);
-      assertThat(controller.update(id, request)).isEqualTo(updated.toResponse());
+      var request = new CarRequest();
+      request.available = false;
+      assertThat(controller.update(id, request)).isEqualTo(updated);
       verify(service).update(id, request);
     }
 
@@ -117,7 +110,7 @@ class CarControllerTest {
     void missingCar() {
       var missing = new ResponseStatusException(HttpStatus.NOT_FOUND);
       when(service.update(eq(id), any())).thenThrow(missing);
-      var body = new CarRequest(null, null, null, null, null, null, null, null, null);
+      var body = new CarRequest();
       assertThatThrownBy(() -> controller.update(id, body)).isSameAs(missing);
     }
   }

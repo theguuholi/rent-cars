@@ -8,14 +8,26 @@ import java.util.UUID;
 import org.junit.jupiter.api.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 class CarTest {
+  private final JsonMapper json = JsonMapper.builder().build();
   private final Car car = new Car();
   private final UUID category = UUID.randomUUID();
   private final UUID spec = UUID.randomUUID();
 
-  private CarRequest withText(String name, String description, String brand, String plate) {
-    return new CarRequest(name, description, brand, plate, null, 100, 0, category, Set.of(spec));
+  private CarRequest civic(String plate) {
+    var request = new CarRequest();
+    request.name = "Civic";
+    request.description = "Automatic sedan";
+    request.brand = "Honda";
+    request.licensePlate = plate;
+    request.dailyRateCents = 100;
+    request.fineAmountCents = 0;
+    request.categoryId = category;
+    request.specificationIds = Set.of(spec);
+    return request;
   }
 
   @Nested
@@ -25,78 +37,69 @@ class CarTest {
         "Given a complete car, applying its attributes sets the catalog details and defaults availability to true")
     @Test
     void givenCompleteCarWhenApplyingThenSetsDetailsAndDefaultAvailability() {
-      car.apply(withText("Civic", "Automatic sedan", "Honda", " abc1234 "));
-      assertThat(car.toResponse())
+      car.apply(civic(" abc1234 "));
+      JsonNode response = json.valueToTree(car);
+      assertThat(response)
           .isEqualTo(
-              new CarResponse(
-                  null,
-                  "Civic",
-                  "Automatic sedan",
-                  "Honda",
-                  "ABC1234",
-                  true,
-                  100,
-                  0,
-                  category,
-                  Set.of(spec)));
+              json.readTree(
+                  """
+              {
+                "id": null, "name": "Civic", "description": "Automatic sedan", "brand": "Honda",
+                "licensePlate": "ABC1234", "available": true, "dailyRateCents": 100,
+                "fineAmountCents": 0, "categoryId": "%s", "specificationIds": ["%s"]
+              }
+              """
+                      .formatted(category, spec)));
     }
 
     @DisplayName(
         "Given replacement assignments, the car takes the new category and keeps its own copy of the specifications")
     @Test
     void givenReplacementAssignmentsWhenPatchingThenReplacesCategoryAndCopiesSpecs() {
-      car.apply(withText("Civic", "Automatic sedan", "Honda", "ABC1234"));
+      car.apply(civic("ABC1234"));
       var otherCategory = UUID.randomUUID();
       var otherSpec = UUID.randomUUID();
       var specs = new HashSet<>(Set.of(otherSpec));
-      car.apply(new CarRequest(null, null, null, null, false, null, null, otherCategory, specs));
+      var patch = new CarRequest();
+      patch.available = false;
+      patch.categoryId = otherCategory;
+      patch.specificationIds = specs;
+      car.apply(patch);
       specs.clear();
-      var response = car.toResponse();
-      assertThat(response.categoryId()).isEqualTo(otherCategory);
-      assertThat(response.specificationIds()).containsExactly(otherSpec);
-      assertThat(response.available()).isFalse();
-      assertThat(response.dailyRateCents()).isEqualTo(100);
+      JsonNode response = json.valueToTree(car);
+      assertThat(response.get("categoryId").asString()).isEqualTo(otherCategory.toString());
+      assertThat(response.get("specificationIds")).isEqualTo(json.valueToTree(Set.of(otherSpec)));
+      assertThat(response.get("available").asBoolean()).isFalse();
+      assertThat(response.get("dailyRateCents").asInt()).isEqualTo(100);
     }
 
     @DisplayName(
         "Given an empty specification set, a patch clears the links and preserves the category and plate")
     @Test
     void givenEmptySpecificationsWhenPatchingThenClearsOnlyTheLinks() {
-      car.apply(withText("Civic", "Automatic sedan", "Honda", "ABC1234"));
-      car.apply(new CarRequest(null, null, null, "abc1234", null, null, null, null, Set.of()));
-      var response = car.toResponse();
-      assertThat(response.specificationIds()).isEmpty();
-      assertThat(response.licensePlate()).isEqualTo("ABC1234");
-      assertThat(response.categoryId()).isEqualTo(category);
+      car.apply(civic("ABC1234"));
+      var patch = new CarRequest();
+      patch.licensePlate = "abc1234";
+      patch.specificationIds = Set.of();
+      car.apply(patch);
+      JsonNode response = json.valueToTree(car);
+      assertThat(response.get("specificationIds")).isEqualTo(json.createArrayNode());
+      assertThat(response.get("licensePlate").asString()).isEqualTo("ABC1234");
+      assertThat(response.get("categoryId").asString()).isEqualTo(category.toString());
     }
 
     @DisplayName(
         "Given an existing plate, a different plate is rejected and the original is retained")
     @Test
     void givenChangedPlateWhenPatchingThenRejectsTheNewPlate() {
-      car.apply(withText("Civic", "Automatic sedan", "Honda", "ABC1234"));
-      var change = new CarRequest(null, null, null, "DIFFERENT", null, null, null, null, null);
+      car.apply(civic("ABC1234"));
+      var change = new CarRequest();
+      change.licensePlate = "DIFFERENT";
       assertThatExceptionOfType(ResponseStatusException.class)
           .isThrownBy(() -> car.apply(change))
           .satisfies(
               ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT));
-      assertThat(car.toResponse().licensePlate()).isEqualTo("ABC1234");
-    }
-  }
-
-  @Nested
-  @DisplayName("toResponse")
-  class ToResponse {
-    @DisplayName(
-        "Given a car with specifications, its response keeps an immutable snapshot after a patch")
-    @Test
-    void givenCarWhenTakingSnapshotThenSpecificationsStayImmutable() {
-      car.apply(withText("Civic", "Automatic sedan", "Honda", "ABC1234"));
-      var response = car.toResponse();
-      car.apply(new CarRequest(null, null, null, null, null, null, null, null, Set.of()));
-      assertThat(response.specificationIds()).containsExactly(spec);
-      assertThatThrownBy(response.specificationIds()::clear)
-          .isInstanceOf(UnsupportedOperationException.class);
+      assertThat(json.valueToTree(car).get("licensePlate").asString()).isEqualTo("ABC1234");
     }
   }
 }
