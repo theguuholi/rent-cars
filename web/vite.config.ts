@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { loadEnv } from 'vite'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { createApiProxy } from './config/api-proxy.ts'
 
 // https://vite.dev/config/
@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     test: {
       environment: 'jsdom',
+      exclude: [...configDefaults.exclude, '**/.stryker-tmp/**'],
       coverage: {
         provider: 'v8',
         reporter: ['text', 'html', 'lcov'],
