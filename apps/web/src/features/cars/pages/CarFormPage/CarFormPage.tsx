@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { PageSection } from '../../../../components/PageSection/PageSection'
@@ -8,7 +8,13 @@ import { changedCarFields } from '../../changed-car-fields'
 import { useCatalogs } from '../../useCatalogs'
 import { createCar, updateCar, type Car, type CarInput } from '../../cars-api'
 
-export function CarFormPage({ car: loadedCar }: { car?: Car }) {
+export function CarFormPage({
+  car: loadedCar,
+  refreshError,
+}: {
+  car?: Car
+  refreshError?: ReactNode
+}) {
   // CarRecord keys this form by ID. A refetch must not replace the starting point of an open edit.
   const [car] = useState(loadedCar)
   const catalogs = useCatalogs()
@@ -27,8 +33,12 @@ export function CarFormPage({ car: loadedCar }: { car?: Car }) {
   })
   return (
     <PageSection eyebrow="Fleet" title={car ? 'Edit car' : 'New car'}>
+      {refreshError}
       {save.isError && <p role="alert">{save.error.message}</p>}
-      {catalogs.categories.isSuccess && catalogs.specifications.isSuccess ? (
+      {(!catalogs.categories.isSuccess || !catalogs.specifications.isSuccess) && (
+        <CatalogStatus {...catalogs} />
+      )}
+      {catalogs.categories.data && catalogs.specifications.data && (
         <CarEditor
           car={car}
           categories={catalogs.categories.data}
@@ -37,8 +47,6 @@ export function CarFormPage({ car: loadedCar }: { car?: Car }) {
           onSave={(input) => save.mutate(input)}
           onCancel={() => void (car ? navigate({ to: '..' }) : navigate({ to: '/cars' }))}
         />
-      ) : (
-        <CatalogStatus {...catalogs} />
       )}
     </PageSection>
   )
