@@ -1,3 +1,4 @@
+import { QueryClient } from '@tanstack/react-query'
 import { act, fireEvent, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test as scenario, vi } from 'vitest'
 import { openCatalogRoute } from '../../../../test/open-catalog-route'
@@ -55,6 +56,38 @@ describe('CarFormPage', () => {
     },
   )
 
+  scenario.each([
+    { cache: 'unchanged', refetch: false },
+    { cache: 'refreshed', refetch: true },
+  ])(
+    'Given an open editor with a $cache cache, when another user changes the daily rate and availability and I save only the name, then my PATCH preserves their changes',
+    async ({ refetch }) => {
+      let stored = { ...car, available: true }
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      vi.mocked(api.getCar).mockImplementation(async () => stored)
+      vi.mocked(api.updateCar).mockImplementation(async (_id, patch) => {
+        stored = { ...stored, ...patch }
+        return stored
+      })
+      openCatalogRoute('/cars/second/edit', client)
+      fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Renamed' } })
+
+      stored = { ...stored, dailyRateCents: 22000, available: false }
+      if (refetch) {
+        await act(async () => {
+          await client.invalidateQueries({ queryKey: ['car', car.id] })
+        })
+      }
+      fireEvent.click(screen.getByRole('button', { name: 'Save car' }))
+
+      expect(await screen.findByRole('heading', { name: 'Renamed' })).toBeVisible()
+      expect(api.updateCar).toHaveBeenCalledExactlyOnceWith(car.id, { name: 'Renamed' })
+      expect(stored).toMatchObject({ name: 'Renamed', dailyRateCents: 22000, available: false })
+      expect(screen.getByText('R$ 220,00')).toBeVisible()
+      expect(screen.getByText('Unavailable')).toBeVisible()
+    },
+  )
+
   scenario(
     'Given an edit draft, when the server rejects it and the user retries, then the draft survives and the updated record appears',
     async () => {
@@ -71,8 +104,7 @@ describe('CarFormPage', () => {
       expect(screen.getByLabelText('Name')).toHaveValue('Renamed')
       fireEvent.click(screen.getByText('Save car'))
       expect(await screen.findByRole('heading', { name: 'Renamed' })).toBeVisible()
-      const { id, licensePlate: _plate, ...expected } = updated
-      expect(api.updateCar).toHaveBeenLastCalledWith(id, expected)
+      expect(api.updateCar).toHaveBeenLastCalledWith(car.id, { name: 'Renamed' })
       expect(history.location.pathname).toBe('/cars/second')
     },
   )
