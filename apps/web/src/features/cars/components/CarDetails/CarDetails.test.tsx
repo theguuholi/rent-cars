@@ -16,6 +16,8 @@ describe('CarDetails', () => {
       openCatalogRoute('/cars/second', undefined, null)
       expect(await screen.findByText('GPS')).toBeVisible()
       expect(screen.getByText('Sedan')).toBeVisible()
+      expect(screen.queryByRole('link', { name: 'Edit car' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Delete car' })).not.toBeInTheDocument()
       expect(getCar).toHaveBeenCalledExactlyOnceWith('second', expect.any(AbortSignal))
       expect(listCategories).not.toHaveBeenCalled()
       expect(listSpecifications).not.toHaveBeenCalled()

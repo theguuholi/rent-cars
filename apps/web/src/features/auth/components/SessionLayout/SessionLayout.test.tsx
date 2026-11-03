@@ -1,11 +1,34 @@
-import { QueryClient } from '@tanstack/react-query'
-import { act, fireEvent, screen, waitFor } from '@testing-library/react'
+import { RouterProvider, createMemoryHistory } from '@tanstack/react-router'
+import { createAppRouter } from '../../../../router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, fireEvent, screen, waitFor, render } from '@testing-library/react'
 import { describe, expect, test as scenario, vi } from 'vitest'
 import { openCatalogRoute, adminSession } from '../../../../test/open-catalog-route'
 import { session } from '../../session'
 import { signIn } from '../../auth-api'
 vi.mock('../../auth-api')
 describe('Session transitions and navigation', () => {
+  scenario(
+    'Given a replacement Query client, when identity changes, then remove data from the current provider and release the old subscription',
+    async () => {
+      const oldClient = new QueryClient(),
+        nextClient = new QueryClient()
+      const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }))
+      const app = (client: QueryClient) => (
+        <QueryClientProvider client={client}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      )
+      const view = render(app(oldClient))
+      await screen.findByRole('navigation')
+      view.rerender(app(nextClient))
+      oldClient.setQueryData(['private'], 'old')
+      nextClient.setQueryData(['private'], 'new')
+      await act(async () => session.set(adminSession))
+      expect(oldClient.getQueryData(['private'])).toBe('old')
+      expect(nextClient.getQueryData(['private'])).toBeUndefined()
+    },
+  )
   scenario.each(['/categories', '/specifications', '/cars/new'])(
     'Given an account with stale permissions, when the API refuses %s, then show access denial without signing out',
     async (path) => {
