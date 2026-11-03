@@ -23,3 +23,15 @@ web-dev:
 
 db-stop:
 	docker compose stop postgres
+
+.PHONY: check-api check-web check
+check-api:
+	cd api && ./mvnw -B verify
+
+check-web:
+	npm --prefix web run format:check
+	npm --prefix web run lint
+	npm --prefix web run test:coverage
+	npm --prefix web run build
+
+check: check-api check-web
