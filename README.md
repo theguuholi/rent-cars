@@ -94,3 +94,7 @@ For trusted branches, the Java verification job uploads the JaCoCo XML to Sonar 
 From `web/`, use the Node version in `.node-version` and install dependencies with `npm ci`. Run `npm run format:check`, `npm run lint`, `npm run test:coverage` and `npm run build` to reproduce **Web verification**. Use `npm run format` to apply Oxfmt fixes or `npm run lint:fix` for automatic Oxlint fixes.
 
 Vitest requires at least **95% each** for global line, statement, function and branch coverage across application TypeScript under `src/`. Tests, test helpers and declarations are excluded. Open `web/coverage/index.html` for the HTML report; `web/coverage/lcov.info` is available for tooling. Download **web-coverage** from the Web quality workflow to inspect a PR, including one that failed its coverage threshold.
+
+## Contributor and agent workflow
+
+Start with [AGENTS.md](AGENTS.md) for scope, local checks and how to propose an exception. Use `make check-api` for backend changes, `make check-web` for frontend changes, or `make check` for both. Start Docker for backend tests and run `make setup` to install web dependencies on a fresh checkout. The Java and web CI jobs call the same Make targets.
