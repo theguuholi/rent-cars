@@ -62,6 +62,77 @@ class SessionControllerTest {
   }
 
   @Nested
+  class CatalogAuthorization {
+    @ParameterizedTest(
+        name =
+            "Given a catalog route {0} {1}, when called anonymously or by a driver, then it returns 401 or 403 respectively")
+    @CsvSource({
+      "POST,/cars",
+      "PATCH,/cars/{id}",
+      "DELETE,/cars/{id}",
+      "GET,/categories",
+      "GET,/specifications",
+      "GET,/specifications/{id}",
+      "POST,/specifications",
+      "PUT,/specifications/{id}",
+      "PATCH,/specifications/{id}",
+      "DELETE,/specifications/{id}"
+    })
+    void adminOnly(String method, String path) throws Exception {
+      var verb = org.springframework.http.HttpMethod.valueOf(method);
+      var url = java.net.URI.create(path.replace("{id}", UUID.randomUUID().toString()));
+      mvc.perform(request(verb, url)).andExpect(status().isUnauthorized());
+      register();
+      mvc.perform(request(verb, url).header("Authorization", "Bearer " + login()))
+          .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName(
+        "Given an admin account, when it signs in and creates a car, then an anonymous visitor can list it and read its details")
+    void browseFleet() throws Exception {
+      register();
+      jdbc.update("update accounts set role='ADMIN' where email=?", email);
+      var category =
+          jdbc.queryForObject(
+              "select id::text from categories order by name limit 1", String.class);
+      var body =
+          json.writeValueAsString(
+              Map.of(
+                  "name",
+                  "Public fleet car",
+                  "brand",
+                  "Example",
+                  "description",
+                  "Test car",
+                  "licensePlate",
+                  "JWT1234",
+                  "dailyRateCents",
+                  100,
+                  "fineAmountCents",
+                  0,
+                  "categoryId",
+                  category));
+      var location =
+          mvc.perform(
+                  post("/cars")
+                      .header("Authorization", "Bearer " + login())
+                      .contentType(MediaType.APPLICATION_JSON)
+                      .content(body))
+              .andExpect(status().isCreated())
+              .andReturn()
+              .getResponse()
+              .getHeader("Location");
+      mvc.perform(get("/cars"))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$[*].licensePlate").value(Matchers.hasItem("JWT1234")));
+      mvc.perform(get(location))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.licensePlate").value("JWT1234"));
+    }
+  }
+
+  @Nested
   class Register {
     @Test
     @DisplayName(
@@ -220,6 +291,13 @@ class SessionControllerTest {
       mvc.perform(get("/v3/api-docs"))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
+          .andExpect(jsonPath("$.paths['/cars'].get.security").doesNotExist())
+          .andExpect(jsonPath("$.paths['/cars/{id}'].get.security").doesNotExist())
+          .andExpect(jsonPath("$.paths['/cars'].post.security[0].bearerAuth").isArray())
+          .andExpect(jsonPath("$.paths['/cars/{id}'].patch.security[0].bearerAuth").isArray())
+          .andExpect(jsonPath("$.paths['/cars/{id}'].delete.security[0].bearerAuth").isArray())
+          .andExpect(jsonPath("$.paths['/categories'].get.security[0].bearerAuth").isArray())
+          .andExpect(jsonPath("$.paths['/specifications'].get.security[0].bearerAuth").isArray())
           .andExpect(jsonPath("$.paths['/sessions/me'].get.security[0].bearerAuth").isArray())
           .andExpect(jsonPath("$.paths['/sessions'].post.security").doesNotExist())
           .andExpect(

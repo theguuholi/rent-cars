@@ -1,5 +1,6 @@
 package com.github.theguuholi.rentcars.auth;
 
+import jakarta.servlet.DispatcherType;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
@@ -14,11 +15,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.converter.RsaKeyConverters;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -31,6 +33,8 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration(proxyBeanMethods = false)
@@ -98,10 +102,47 @@ class SecurityConfiguration {
 
   @Bean
   SecurityFilterChain sessionSecurity(HttpSecurity http) throws Exception {
-    return http.securityMatcher("/sessions/me")
+    var roles = new JwtGrantedAuthoritiesConverter();
+    roles.setAuthoritiesClaimName("roles");
+    roles.setAuthorityPrefix("ROLE_");
+    var authentication = new JwtAuthenticationConverter();
+    authentication.setJwtGrantedAuthoritiesConverter(roles);
+
+    return http.csrf(
+            AbstractHttpConfigurer::disable) // Stateless API using explicit Bearer headers only.
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(a -> a.anyRequest().authenticated())
-        .oauth2ResourceServer(r -> r.jwt(Customizer.withDefaults()))
+        .authorizeHttpRequests(
+            a ->
+                a.dispatcherTypeMatchers(DispatcherType.ERROR)
+                    .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/users", "/sessions")
+                    .permitAll()
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/cars",
+                        "/cars/{id:[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}}")
+                    .permitAll()
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/v3/api-docs",
+                        "/v3/api-docs/**",
+                        "/v3/api-docs.yaml")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/sessions/me")
+                    .authenticated()
+                    .requestMatchers(
+                        "/cars",
+                        "/cars/**",
+                        "/categories",
+                        "/categories/**",
+                        "/specifications",
+                        "/specifications/**")
+                    .hasRole("ADMIN")
+                    .anyRequest()
+                    .denyAll())
+        .oauth2ResourceServer(r -> r.jwt(j -> j.jwtAuthenticationConverter(authentication)))
         .build();
   }
 }

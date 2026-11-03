@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
 import java.util.List;
@@ -55,6 +56,7 @@ public class CarController {
     return cars.get(id);
   }
 
+  @SecurityRequirement(name = "bearerAuth")
   @PostMapping
   @Operation(
       summary = "Add a car",
@@ -87,6 +89,7 @@ public class CarController {
     return ResponseEntity.created(URI.create("/cars/" + car.id())).body(car);
   }
 
+  @SecurityRequirement(name = "bearerAuth")
   @PatchMapping("/{id}")
   @Operation(
       summary = "Update selected car attributes",
@@ -122,6 +125,7 @@ public class CarController {
     return cars.update(id, request);
   }
 
+  @SecurityRequirement(name = "bearerAuth")
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(summary = "Remove a car")

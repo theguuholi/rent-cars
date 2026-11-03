@@ -2,4 +2,5 @@
 
 ### List categories alphabetically
 GET {{baseUrl}}/categories
+Authorization: Bearer {{$processEnv RENT_CARS_ADMIN_TOKEN}}
 Accept: application/json

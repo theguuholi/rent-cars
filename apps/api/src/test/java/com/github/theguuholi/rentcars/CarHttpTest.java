@@ -33,7 +33,10 @@ import tools.jackson.databind.node.ObjectNode;
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({
+  TestcontainersConfiguration.class,
+  com.github.theguuholi.rentcars.auth.AdminRequests.class
+})
 class CarHttpTest {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
