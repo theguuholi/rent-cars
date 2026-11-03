@@ -17,10 +17,17 @@ export function Layout() {
               Rent<span className="text-orange-600">Cars</span>
             </Link>
           </h1>
-          <nav className="catalog-nav flex gap-5" aria-label="Vehicle catalogs">
+          <nav
+            className="catalog-nav flex flex-wrap items-center gap-x-5"
+            aria-label="Vehicle catalogs"
+          >
             <Link to="/cars">Cars</Link>
-            <Link to="/categories">Categories</Link>
-            <Link to="/specifications">Specifications</Link>
+            {identity?.user.role === 'ADMIN' && (
+              <>
+                <Link to="/categories">Categories</Link>
+                <Link to="/specifications">Specifications</Link>
+              </>
+            )}
             {identity ? (
               <button type="button" onClick={() => session.set(null)}>
                 Sign out {identity.user.email}

@@ -12,6 +12,7 @@ describe('Categories routes', () => {
       expect(await screen.findByText('No vehicle categories available.')).toBeVisible()
       expect(fetch).toHaveBeenCalledExactlyOnceWith('/api/categories', {
         signal: expect.any(AbortSignal),
+        headers: { Authorization: 'Bearer test-admin' },
       })
     },
   )

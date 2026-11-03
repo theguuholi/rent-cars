@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useLocation } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { signIn } from '../../auth-api'
 import { session } from '../../session'
 
+import { loginDestination } from '../../access'
 export function LoginPage() {
+  const afterLogin = useLocation({ select: (location) => location.state.afterLogin })
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const form = useForm({
@@ -15,7 +17,7 @@ export function LoginPage() {
       try {
         const identity = await signIn(value.email, value.password)
         session.set(identity)
-        await navigate({ to: '/cars', replace: true })
+        await navigate({ to: loginDestination(afterLogin, identity.user.role), replace: true })
       } catch (failure) {
         setError(failure instanceof Error ? failure.message : 'Could not sign in.')
       }

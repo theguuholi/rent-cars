@@ -26,7 +26,7 @@ describe('LoginPage', () => {
               finish = resolve
             }),
         )
-      const history = openCatalogRoute('/')
+      const history = openCatalogRoute('/', undefined, null)
       fireEvent.click(await screen.findByRole('link', { name: 'Sign in' }))
       const email = await screen.findByLabelText('Email'),
         password = screen.getByLabelText('Password')
@@ -66,7 +66,7 @@ describe('LoginPage', () => {
     'Given a non-Error rejection, when submitting credentials, then the form shows the fallback',
     async () => {
       vi.mocked(signIn).mockRejectedValue('offline')
-      openCatalogRoute('/login')
+      openCatalogRoute('/login', undefined, null)
       const button = await screen.findByRole('button', { name: 'Sign in' })
       expect(fireEvent.submit(button.closest('form')!)).toBe(false)
       await waitFor(() => expect(signIn).toHaveBeenCalledExactlyOnceWith('', ''))
