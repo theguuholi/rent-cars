@@ -409,6 +409,32 @@ class CarHttpTest {
   @Nested
   @DisplayName("GET /v3/api-docs")
   class ApiDocumentation {
+    @Test
+    @DisplayName(
+        "Given a persisted car, when comparing its JSON and schema, then every public field has documentation and audit timestamps stay internal")
+    void documentsPublicFieldsOfTheCarResponse() throws Exception {
+      var response =
+          mvc.perform(get(givenCar())).andExpect(status().isOk()).andReturn().getResponse();
+      var car = json.readTree(response.getContentAsString());
+      var docs =
+          mvc.perform(get("/v3/api-docs")).andExpect(status().isOk()).andReturn().getResponse();
+      var schema = json.readTree(docs.getContentAsString()).at("/components/schemas/Car");
+      var properties = schema.get("properties");
+
+      assertThat(schema.get("description").asString()).contains("Brazilian centavos");
+      assertThat(properties.propertyNames())
+          .containsExactlyInAnyOrderElementsOf(car.propertyNames())
+          .doesNotContain("insertedAt", "updatedAt");
+      for (var field : car.propertyNames()) {
+        assertThat(properties.get(field).path("description").asString("")).as(field).isNotBlank();
+      }
+      for (var charge : List.of("dailyRateCents", "fineAmountCents")) {
+        assertThat(properties.get(charge).get("minimum").asInt()).isZero();
+        assertThat(properties.get(charge).has("example")).isTrue();
+      }
+      assertThat(properties.get("licensePlate").get("example").asString()).isEqualTo("ABC1D23");
+    }
+
     @DisplayName(
         "Given the fleet API, when reading OpenAPI, then the operations and car schemas are published")
     @Test
