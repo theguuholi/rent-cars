@@ -1,7 +1,7 @@
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { Link, useMatchRoute, useNavigate, useLocation } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { SpecificationEditor } from '../../components/SpecificationEditor/SpecificationEditor'
+import { SpecificationPanel } from '../../components/SpecificationPanel/SpecificationPanel'
 import {
   deleteSpecification,
   listSpecifications,
@@ -90,47 +90,17 @@ export function SpecificationsPage() {
         }
       >
         {panelOpen && (
-          <aside
-            aria-label="Specification details"
-            className="rounded-lg border border-slate-200 p-5 lg:col-start-2 lg:row-start-1"
-          >
-            {selected && !item ? (
-              <div>
-                {catalog.isSuccess && <p role="alert">Specification not found.</p>}
-                <Link to="/specifications">Back to specifications</Link>
-              </div>
-            ) : deleting && item ? (
-              <div>
-                <h3 className="wrap-anywhere text-xl font-bold">Delete {item.name}?</h3>
-                <p>This removes the specification from the catalog.</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    className="btn-danger"
-                    disabled={change.isPending}
-                    onClick={() => change.mutate({ type: 'delete', id: item.id })}
-                  >
-                    Confirm deletion
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    autoFocus
-                    disabled={change.isPending}
-                    onClick={close}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <SpecificationEditor
-                item={item}
-                key={id}
-                busy={change.isPending}
-                onCancel={close}
-                onSave={(input) => change.mutate({ type: 'save', input, id })}
-              />
-            )}
-          </aside>
+          <SpecificationPanel
+            key={id}
+            id={id}
+            item={item}
+            deleting={!!deleting}
+            catalogLoaded={catalog.isSuccess}
+            busy={change.isPending}
+            onCancel={close}
+            onDelete={(id) => change.mutate({ type: 'delete', id })}
+            onSave={(input) => change.mutate({ type: 'save', input, id })}
+          />
         )}
         <div className="min-w-0 lg:col-start-1 lg:row-start-1">
           {catalog.isPending ? (
