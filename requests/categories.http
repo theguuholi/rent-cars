@@ -1,6 +1,0 @@
-@baseUrl = http://localhost:8080
-
-### List categories alphabetically
-GET {{baseUrl}}/categories
-Authorization: Bearer {{$processEnv RENT_CARS_ADMIN_TOKEN}}
-Accept: application/json

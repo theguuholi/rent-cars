@@ -15,9 +15,16 @@ make dev
 
 Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. Press Ctrl+C to stop the applications and run `make db-stop` to stop PostgreSQL.
 
-### Development admin
+### Explore the API in VS Code
 
-The `dev` profile seeds an `ADMIN` account with email `test@test` and password `test@tesT@dev`. Start the API, then run the CSRF, admin login and profile requests in [sessions.http](requests/sessions.http). The profile returns `"role": "ADMIN"`.
+1. Start Docker and run `make api-dev` from the repository root. If `make dev` is already running, use that API.
+2. Install the **REST Client** extension by Huachao Mao and open [the API walkthrough](requests/rent-cars.http). Click **Send Request** above each numbered request.
+3. Run **1–2** to browse cars without signing in. Step 2 reads the first ID from step 1. Skip it if the fleet is empty.
+4. Run **3–5** to get a CSRF cookie and header, sign in with the seeded dev admin (`test@test` / `test@tesT@dev`) and verify that your profile shows `ADMIN`. The empty `204` response in step 3 is expected.
+5. Run **6–8** to explore categories and specifications. Each protected example reads the JWT from the named login response in this file. You only sign in once per token.
+6. To practice writes, follow either optional CRUD exercise in order. The update and delete requests target the record returned by that exercise’s create request. The car exercise also uses the category and specification lists from steps 6–7.
+
+If a protected request returns **401**, rerun steps 3–5 in the same file. Tokens expire after 15 minutes and restarting the dev API invalidates them. For **403** during login, rerun step 3 before signing in. For **403** on a catalog request, check the role in step 5.
 
 ## Repository layout
 
