@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import tools.jackson.databind.JsonNode;
 
 @Tag(name = "Cars", description = "Manage rental vehicles, charges and assigned catalog features.")
 @RestController
@@ -24,42 +23,35 @@ public class CarController {
 
   @GetMapping
   @Operation(summary = "List all cars alphabetically")
-  public List<Car> list() {
-    return cars.list();
+  public List<CarResponse> list() {
+    return cars.list().stream().map(Car::toResponse).toList();
   }
 
   @GetMapping("/{id}")
   @Operation(summary = "Fetch a car by UUID")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
   @ApiResponse(responseCode = "404", description = "Car does not exist", content = @Content)
-  public Car get(@PathVariable UUID id) {
-    return cars.get(id);
+  public CarResponse get(@PathVariable UUID id) {
+    return cars.get(id).toResponse();
   }
 
   @PostMapping
   @Operation(
       summary = "Add a car",
-      description =
-          "Name, description, brand, license plate, both integer-cent charges and category ID are required. Availability defaults to true and specifications to an empty list.")
+      description = "Availability defaults to true and specifications to an empty list.")
   @io.swagger.v3.oas.annotations.parameters.RequestBody(
       required = true,
-      content =
-          @Content(
-              mediaType = "application/json",
-              schema = @Schema(implementation = CarRequest.CreateSchema.class)))
+      content = @Content(schema = @Schema(implementation = CarRequest.CreateSchema.class)))
   @ApiResponse(responseCode = "201", description = "Car created", useReturnTypeSchema = true)
   @ApiResponse(
       responseCode = "400",
-      description = "Malformed request or missing catalog reference",
+      description = "Invalid request or reference",
       content = @Content)
   @ApiResponse(responseCode = "422", description = "Invalid car attributes", content = @Content)
-  @ApiResponse(
-      responseCode = "409",
-      description = "License plate already registered",
-      content = @Content)
-  public ResponseEntity<Car> create(@RequestBody JsonNode body) {
-    Car car = cars.create(CarRequest.parse(body));
-    return ResponseEntity.created(URI.create("/cars/" + car.getId())).body(car);
+  @ApiResponse(responseCode = "409", description = "Duplicate license plate", content = @Content)
+  public ResponseEntity<CarResponse> create(@RequestBody CarRequest request) {
+    CarResponse car = cars.create(request).toResponse();
+    return ResponseEntity.created(URI.create("/cars/" + car.id())).body(car);
   }
 
   @PatchMapping("/{id}")
@@ -67,24 +59,18 @@ public class CarController {
       summary = "Update selected car attributes",
       description =
           "Omitted fields retain their values. License plate is immutable. Supplying specificationIds replaces the full selection.")
-  @io.swagger.v3.oas.annotations.parameters.RequestBody(
-      required = true,
-      content =
-          @Content(
-              mediaType = "application/json",
-              schema = @Schema(implementation = CarRequest.class)))
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
   @ApiResponse(
       responseCode = "400",
-      description = "Malformed request or missing catalog reference",
+      description = "Invalid request or reference",
       content = @Content)
   @ApiResponse(
       responseCode = "422",
-      description = "Invalid attributes or changed plate",
+      description = "Invalid attributes or new plate",
       content = @Content)
   @ApiResponse(responseCode = "404", description = "Car does not exist", content = @Content)
-  public Car update(@PathVariable UUID id, @RequestBody JsonNode body) {
-    return cars.update(id, CarRequest.parse(body));
+  public CarResponse update(@PathVariable UUID id, @RequestBody CarRequest request) {
+    return cars.update(id, request).toResponse();
   }
 
   @DeleteMapping("/{id}")

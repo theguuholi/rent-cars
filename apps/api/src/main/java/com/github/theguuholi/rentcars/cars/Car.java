@@ -1,6 +1,5 @@
 package com.github.theguuholi.rentcars.cars;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.Instant;
@@ -14,7 +13,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Entity
 @Table(name = "cars")
-@Schema(description = "A catalog vehicle with rental charges expressed in Brazilian centavos.")
 public class Car {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -95,62 +93,17 @@ public class Car {
     licensePlate = normalized;
   }
 
-  @Schema(description = "Identifier of this vehicle.", accessMode = Schema.AccessMode.READ_ONLY)
-  public UUID getId() {
-    return id;
-  }
-
-  @Schema(description = "Model name.", example = "Argo", maxLength = 100)
-  public String getName() {
-    return name;
-  }
-
-  @Schema(
-      description = "Description of this vehicle.",
-      example = "Five-door hatchback.",
-      maxLength = 255)
-  public String getDescription() {
-    return description;
-  }
-
-  @Schema(description = "Vehicle manufacturer.", example = "Fiat", maxLength = 80)
-  public String getBrand() {
-    return brand;
-  }
-
-  @Schema(
-      description = "Unique, immutable uppercase license plate.",
-      example = "ABC1D23",
-      maxLength = 20)
-  public String getLicensePlate() {
-    return licensePlate;
-  }
-
-  @Schema(description = "Whether this car can be rented.")
-  public boolean isAvailable() {
-    return available;
-  }
-
-  @Schema(
-      description = "Daily rental price in Brazilian centavos.",
-      minimum = "0",
-      example = "15050")
-  public int getDailyRateCents() {
-    return dailyRateCents.cents();
-  }
-
-  @Schema(description = "Fine in Brazilian centavos.", minimum = "0", example = "0")
-  public int getFineAmountCents() {
-    return fineAmountCents.cents();
-  }
-
-  @Schema(description = "Identifier of the assigned body style.")
-  public UUID getCategoryId() {
-    return categoryId;
-  }
-
-  @Schema(description = "Identifiers of the features assigned to this vehicle.")
-  public Set<UUID> getSpecificationIds() {
-    return Set.copyOf(specificationIds);
+  CarResponse toResponse() {
+    return new CarResponse(
+        id,
+        name,
+        description,
+        brand,
+        licensePlate,
+        available,
+        dailyRateCents.cents(),
+        fineAmountCents.cents(),
+        categoryId,
+        specificationIds);
   }
 }

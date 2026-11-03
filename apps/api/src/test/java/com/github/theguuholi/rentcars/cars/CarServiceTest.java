@@ -91,9 +91,10 @@ class CarServiceTest {
       when(repository.saveAndFlush(any(Car.class))).thenAnswer(call -> call.getArgument(0));
       var created = service.create(valid);
       verify(repository).saveAndFlush(created);
-      assertThat(created.getLicensePlate()).isEqualTo("ABC1234");
-      assertThat(created.getCategoryId()).isEqualTo(valid.categoryId());
-      assertThat(created.getSpecificationIds()).isEqualTo(valid.specificationIds());
+      var response = created.toResponse();
+      assertThat(response.licensePlate()).isEqualTo("ABC1234");
+      assertThat(response.categoryId()).isEqualTo(valid.categoryId());
+      assertThat(response.specificationIds()).isEqualTo(valid.specificationIds());
     }
 
     @DisplayName("Given an incomplete request, creating reports all missing fields before saving")
@@ -114,6 +115,31 @@ class CarServiceTest {
                           "categoryId",
                           "dailyRateCents",
                           "fineAmountCents"));
+      verifyNoInteractions(repository);
+    }
+
+    @DisplayName(
+        "Given a plate that expands beyond 20 characters in uppercase, creating rejects the normalized plate")
+    @Test
+    void givenExpandingPlateWhenCreatingThenRejectsNormalizedLength() {
+      var request =
+          new CarRequest(
+              "Civic",
+              "Sedan",
+              "Honda",
+              "a".repeat(19) + "ß",
+              true,
+              100,
+              0,
+              valid.categoryId(),
+              Set.of());
+      assertThatExceptionOfType(ConstraintViolationException.class)
+          .isThrownBy(() -> service.create(request))
+          .satisfies(
+              ex ->
+                  assertThat(ex.getConstraintViolations())
+                      .extracting(v -> v.getPropertyPath().toString())
+                      .containsExactly("licensePlate"));
       verifyNoInteractions(repository);
     }
 
@@ -144,9 +170,10 @@ class CarServiceTest {
       when(repository.findForUpdate(id)).thenReturn(Optional.of(car));
       when(repository.saveAndFlush(car)).thenReturn(car);
       assertThat(service.update(id, patchName("Accord"))).isSameAs(car);
-      assertThat(car.getName()).isEqualTo("Accord");
-      assertThat(car.getCategoryId()).isEqualTo(valid.categoryId());
-      assertThat(car.getSpecificationIds()).isEqualTo(valid.specificationIds());
+      var response = car.toResponse();
+      assertThat(response.name()).isEqualTo("Accord");
+      assertThat(response.categoryId()).isEqualTo(valid.categoryId());
+      assertThat(response.specificationIds()).isEqualTo(valid.specificationIds());
     }
 
     @DisplayName(

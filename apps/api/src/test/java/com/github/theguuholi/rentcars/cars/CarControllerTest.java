@@ -5,20 +5,27 @@ import static org.mockito.Mockito.*;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-import tools.jackson.databind.json.JsonMapper;
 
 class CarControllerTest {
   private final CarService service = mock();
   private final CarController controller = new CarController(service);
   private final UUID id = UUID.randomUUID();
-  private final JsonMapper json = JsonMapper.builder().build();
+
+  private Car car(UUID id) {
+    var entity = mock(Car.class);
+    when(entity.toResponse())
+        .thenReturn(
+            new CarResponse(
+                id, "Argo", "Five doors", "Fiat", "ABC1234", true, 100, 0, null, Set.of()));
+    return entity;
+  }
 
   @Nested
   @DisplayName("list()")
@@ -34,10 +41,10 @@ class CarControllerTest {
     @Test
     @DisplayName("Given ordered cars, when listing, then the service order is preserved")
     void populatedFleet() {
-      var first = new Car();
-      var second = new Car();
+      var first = car(UUID.randomUUID());
+      var second = car(UUID.randomUUID());
       when(service.list()).thenReturn(List.of(second, first));
-      assertThat(controller.list()).containsExactly(second, first);
+      assertThat(controller.list()).containsExactly(second.toResponse(), first.toResponse());
     }
   }
 
@@ -47,9 +54,9 @@ class CarControllerTest {
     @Test
     @DisplayName("Given a known ID, when fetching, then the matching car is returned")
     void knownCar() {
-      var car = new Car();
+      var car = car(UUID.randomUUID());
       when(service.get(id)).thenReturn(car);
-      assertThat(controller.get(id)).isSameAs(car);
+      assertThat(controller.get(id)).isEqualTo(car.toResponse());
     }
 
     @Test
@@ -68,30 +75,16 @@ class CarControllerTest {
     @DisplayName(
         "Given accepted attributes, when creating, then the new car and its location are returned")
     void createdCar() {
-      var saved = mock(Car.class);
-      when(saved.getId()).thenReturn(id);
+      var saved = car(id);
       when(service.create(any())).thenReturn(saved);
 
-      var response = controller.create(json.readTree("{\"licensePlate\":\"ABC1234\"}"));
+      var request = new CarRequest(null, null, null, "ABC1234", null, null, null, null, null);
+      var response = controller.create(request);
 
-      var captured = ArgumentCaptor.forClass(CarRequest.class);
-      verify(service).create(captured.capture());
-      assertThat(captured.getValue().licensePlate()).isEqualTo("ABC1234");
+      verify(service).create(request);
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
       assertThat(response.getHeaders().getLocation()).isEqualTo(URI.create("/cars/" + id));
-      assertThat(response.getBody()).isSameAs(saved);
-    }
-
-    @Test
-    @DisplayName(
-        "Given malformed attributes, when creating, then parsing rejects them before the service is called")
-    void malformedAttributes() {
-      var body = json.readTree("{\"available\":null}");
-      assertThatThrownBy(() -> controller.create(body))
-          .isInstanceOfSatisfying(
-              ResponseStatusException.class,
-              error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
-      verifyNoInteractions(service);
+      assertThat(response.getBody()).isEqualTo(saved.toResponse());
     }
 
     @Test
@@ -99,7 +92,7 @@ class CarControllerTest {
     void rejectedCreation() {
       var conflict = new org.springframework.dao.DataIntegrityViolationException("duplicate plate");
       when(service.create(any())).thenThrow(conflict);
-      var body = json.readTree("{}");
+      var body = new CarRequest(null, null, null, null, null, null, null, null, null);
       assertThatThrownBy(() -> controller.create(body)).isSameAs(conflict);
     }
   }
@@ -111,27 +104,12 @@ class CarControllerTest {
     @DisplayName(
         "Given partial attributes, when updating, then only supplied values reach the service for that ID")
     void partialUpdate() {
-      var updated = new Car();
+      var updated = car(UUID.randomUUID());
       when(service.update(eq(id), any())).thenReturn(updated);
 
-      assertThat(controller.update(id, json.readTree("{\"available\":false}"))).isSameAs(updated);
-
-      var captured = ArgumentCaptor.forClass(CarRequest.class);
-      verify(service).update(eq(id), captured.capture());
-      assertThat(captured.getValue().available()).isFalse();
-      assertThat(captured.getValue().name()).isNull();
-    }
-
-    @Test
-    @DisplayName(
-        "Given malformed attributes, when updating, then parsing rejects them before the service is called")
-    void malformedAttributes() {
-      var body = json.readTree("{\"unknown\":1}");
-      assertThatThrownBy(() -> controller.update(id, body))
-          .isInstanceOfSatisfying(
-              ResponseStatusException.class,
-              error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
-      verifyNoInteractions(service);
+      var request = new CarRequest(null, null, null, null, false, null, null, null, null);
+      assertThat(controller.update(id, request)).isEqualTo(updated.toResponse());
+      verify(service).update(id, request);
     }
 
     @Test
@@ -139,7 +117,7 @@ class CarControllerTest {
     void missingCar() {
       var missing = new ResponseStatusException(HttpStatus.NOT_FOUND);
       when(service.update(eq(id), any())).thenThrow(missing);
-      var body = json.readTree("{}");
+      var body = new CarRequest(null, null, null, null, null, null, null, null, null);
       assertThatThrownBy(() -> controller.update(id, body)).isSameAs(missing);
     }
   }

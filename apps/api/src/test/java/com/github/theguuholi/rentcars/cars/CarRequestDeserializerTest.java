@@ -2,46 +2,31 @@ package com.github.theguuholi.rentcars.cars;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
 
-class CarRequestTest {
-  private final JsonMapper json = JsonMapper.builder().build();
-
-  @Nested
-  @DisplayName("CarRequest")
-  class Constructor {
-    @Test
-    @DisplayName(
-        "Given a mutable specification set, when constructing a request, then it retains an immutable snapshot")
-    void givenMutableSpecificationIdsWhenConstructingThenCopiesTheSelection() {
-      var specification = UUID.randomUUID();
-      var selection = new HashSet<>(Set.of(specification));
-      var request = new CarRequest(null, null, null, null, null, null, null, null, selection);
-      selection.clear();
-      assertThat(request.specificationIds()).containsExactly(specification);
-      var returnedSpecs = request.specificationIds();
-      assertThatThrownBy(returnedSpecs::clear).isInstanceOf(UnsupportedOperationException.class);
-    }
-  }
+class CarRequestDeserializerTest {
+  private final JsonMapper json =
+      JsonMapper.builder()
+          .addModule(
+              new SimpleModule().addDeserializer(CarRequest.class, new CarRequestDeserializer()))
+          .build();
 
   @Nested
-  @DisplayName("parse()")
-  class Parse {
+  @DisplayName("deserialize()")
+  class Deserialize {
     @Test
     @DisplayName(
         "Given omitted attributes, when parsing, then they remain absent while false and zero are retained")
     void partialPatch() {
-      var change = CarRequest.parse(json.readTree("{\"available\":false,\"fineAmountCents\":0}"));
+      var change = json.readValue("{\"available\":false,\"fineAmountCents\":0}", CarRequest.class);
       assertThat(change.available()).isFalse();
       assertThat(change.fineAmountCents()).isZero();
       assertThat(change.name()).isNull();
@@ -67,7 +52,7 @@ class CarRequestTest {
            "categoryId":"%s","specificationIds":["%s","%s"]}
           """
                   .formatted(category, specification, specification));
-      var car = CarRequest.parse(body);
+      var car = json.treeToValue(body, CarRequest.class);
       assertThat(car.name()).isEqualTo("Civic");
       assertThat(car.description()).isEqualTo("Family car");
       assertThat(car.brand()).isEqualTo("Honda");
@@ -76,14 +61,16 @@ class CarRequestTest {
       assertThat(car.fineAmountCents()).isZero();
       assertThat(car.available()).isTrue();
       assertThat(car.categoryId()).isEqualTo(category);
-      assertThat(car.specificationIds()).containsExactly(specification);
+      var selected = car.specificationIds();
+      assertThat(selected).containsExactly(specification);
+      assertThatThrownBy(selected::clear).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
     @DisplayName(
         "Given an empty specification list, when parsing, then the request explicitly clears assignments")
     void emptySelection() {
-      var request = CarRequest.parse(json.readTree("{\"specificationIds\":[]}"));
+      var request = json.readValue("{\"specificationIds\":[]}", CarRequest.class);
       assertThat(request.specificationIds()).isEmpty();
     }
 
@@ -102,14 +89,13 @@ class CarRequestTest {
         })
     @DisplayName("Given an explicit null, when parsing, then every supplied attribute rejects it")
     void explicitNull(String field) {
-      expectBadRequest("{\"" + field + "\":null}");
+      expectInvalidJson("{\"" + field + "\":null}");
     }
 
     @ParameterizedTest
     @ValueSource(
         strings = {
           "[]",
-          "null",
           "42",
           "true",
           "\"car\"",
@@ -132,17 +118,14 @@ class CarRequestTest {
           "{\"fineAmountCents\":false}"
         })
     @DisplayName(
-        "Given an invalid shape, type or identifier, when parsing, then the request fails with 400")
+        "Given an invalid shape, type or identifier, when parsing, then the car request is rejected")
     void malformedAttributes(String body) {
-      expectBadRequest(body);
+      expectInvalidJson(body);
     }
 
-    private void expectBadRequest(String body) {
-      var tree = json.readTree(body);
-      assertThatThrownBy(() -> CarRequest.parse(tree))
-          .isInstanceOfSatisfying(
-              ResponseStatusException.class,
-              error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+    private void expectInvalidJson(String body) {
+      assertThatThrownBy(() -> json.readValue(body, CarRequest.class))
+          .isInstanceOf(JacksonException.class);
     }
   }
 }

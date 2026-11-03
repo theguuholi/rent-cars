@@ -139,6 +139,15 @@ class CarHttpTest {
       assertThat(location).endsWith("/cars/" + UUID.fromString(id));
     }
 
+    @DisplayName("Given a non-object body, when creating, then the API rejects it before saving")
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "[]", "42"})
+    void malformedBody(String body) throws Exception {
+      mvc.perform(post("/cars").contentType("application/json").content(body))
+          .andExpect(status().isBadRequest());
+      mvc.perform(get("/cars")).andExpect(jsonPath("$").isEmpty());
+    }
+
     @DisplayName("Given a missing required field, when creating, then the fleet stays empty")
     @ParameterizedTest
     @ValueSource(
@@ -416,6 +425,19 @@ class CarHttpTest {
             jsonPath("$.paths['/cars/{id}']." + op.getKey() + ".responses['" + op.getValue() + "']")
                 .exists());
       }
+      for (String status : List.of("400", "409", "422")) {
+        docs.andExpect(jsonPath("$.paths['/cars'].post.responses['" + status + "']").exists());
+      }
+      for (String status : List.of("400", "404", "422")) {
+        docs.andExpect(
+            jsonPath("$.paths['/cars/{id}'].patch.responses['" + status + "']").exists());
+      }
+      docs.andExpect(
+              jsonPath("$.paths['/cars'].post.responses['201'].content.*.schema['$ref']")
+                  .value(org.hamcrest.Matchers.contains("#/components/schemas/Car")))
+          .andExpect(
+              jsonPath("$.paths['/cars'].get.responses['200'].content.*.schema.items['$ref']")
+                  .value(org.hamcrest.Matchers.contains("#/components/schemas/Car")));
       String postBody = "$.paths['/cars'].post.requestBody.content['application/json'].schema";
       String patchBody =
           "$.paths['/cars/{id}'].patch.requestBody.content['application/json'].schema";
