@@ -2,6 +2,20 @@
 
 The Spring Boot API manages cars, vehicle categories and equipment specifications. Start the stack with the [local setup guide](../../README.md#run-the-full-stack-locally). Browse the running API in [Swagger UI](http://localhost:8080/swagger-ui.html) or open a [REST Client request](../../requests/).
 
+## Accounts and JWT sessions
+
+Run the three requests in [the sessions REST Client](../../requests/sessions.http) in order. Register with a unique email and a password of at least 12 characters and at most 72 UTF-8 bytes. Registration returns the public profile with role `USER`. Email comparisons ignore case and surrounding whitespace.
+
+Sign in with the same credentials. The login response contains an `accessToken` valid for 15 minutes. The profile request automatically uses that token. In Swagger UI, copy the token from the login response, select **Authorize**, paste the token without the Bearer prefix and execute `GET /sessions/me`. Sign in again after expiration.
+
+Development and test profiles generate an ephemeral RSA key pair at startup. Restarting invalidates local tokens. For deployment, activate `prod`, serve the API over HTTPS and supply the same key files to every replica. Mount a PKCS#8 RSA private key and its X.509 public key from your secret store. Configure their Spring resource locations, for example:
+
+```sh
+export SPRING_PROFILES_ACTIVE=prod
+export RENT_AUTH_PRIVATE_KEY=file:/run/secrets/rent-cars-private.pem
+export RENT_AUTH_PUBLIC_KEY=file:/run/secrets/rent-cars-public.pem
+```
+
 ## Development database
 
 The `dev` profile includes ten sample vehicle specifications. Start the API with `make api-dev` or `make dev`, then send `GET /specifications` from [the specifications REST Client](../../requests/specifications.http). Flyway runs the development seed after the schema migrations and preserves existing specifications with matching names. Other explicit profiles use only the shared migrations; set `SPRING_PROFILES_ACTIVE=prod` in production because the project's default profile is `dev`.

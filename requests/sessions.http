@@ -1,0 +1,20 @@
+@baseUrl = http://localhost:8080
+@email = driver@example.com
+@password = local-example-only-123
+
+### Register a local driver (run once per email)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{"email":"{{email}}","password":"{{password}}"}
+
+### Sign in
+# @name login
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+
+{"email":"{{email}}","password":"{{password}}"}
+
+### Read the account that owns the token from the login request
+GET {{baseUrl}}/sessions/me
+Authorization: Bearer {{login.response.body.$.accessToken}}
