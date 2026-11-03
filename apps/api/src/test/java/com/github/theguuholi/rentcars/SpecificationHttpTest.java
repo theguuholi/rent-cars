@@ -22,7 +22,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({
+  TestcontainersConfiguration.class,
+  com.github.theguuholi.rentcars.auth.AdminRequests.class
+})
 class SpecificationHttpTest {
   private static final String PATH = "/specifications";
   private static final String GPS =

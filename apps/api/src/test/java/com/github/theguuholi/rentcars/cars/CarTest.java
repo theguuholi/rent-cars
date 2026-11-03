@@ -2,6 +2,7 @@ package com.github.theguuholi.rentcars.cars;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.github.theguuholi.rentcars.shared.http.JsonViews;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -38,7 +39,8 @@ class CarTest {
     @Test
     void givenCompleteCarWhenApplyingThenSetsDetailsAndDefaultAvailability() {
       car.apply(civic(" abc1234 "));
-      JsonNode response = json.valueToTree(car);
+      JsonNode response =
+          json.readTree(json.writerWithView(JsonViews.Summary.class).writeValueAsString(car));
       assertThat(response)
           .isEqualTo(
               json.readTree(

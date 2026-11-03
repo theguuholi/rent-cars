@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,8 +27,9 @@ class CarService {
     return cars.findAll(Sort.by("name", "id"));
   }
 
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
   Car get(UUID id) {
-    return cars.findById(id).orElseThrow(CarService::notFound);
+    return cars.findDetailedById(id).orElseThrow(CarService::notFound);
   }
 
   @Transactional

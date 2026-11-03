@@ -6,6 +6,11 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.*;
 
 interface CarRepository extends JpaRepository<Car, UUID> {
+  @EntityGraph(
+      type = EntityGraph.EntityGraphType.LOAD,
+      attributePaths = {"category", "specifications"})
+  Optional<Car> findDetailedById(UUID id);
+
   // PostgreSQL locks this car until commit. A competing PATCH or DELETE waits so it
   // sees the first write before changing the car or replacing its specifications.
   @Lock(LockModeType.PESSIMISTIC_WRITE)

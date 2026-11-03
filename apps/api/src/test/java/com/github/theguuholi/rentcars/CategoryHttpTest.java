@@ -15,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({
+  TestcontainersConfiguration.class,
+  com.github.theguuholi.rentcars.auth.AdminRequests.class
+})
 @Transactional
 class CategoryHttpTest {
   @Autowired MockMvc mvc;

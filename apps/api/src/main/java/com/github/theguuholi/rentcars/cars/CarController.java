@@ -1,10 +1,13 @@
 package com.github.theguuholi.rentcars.cars;
 
+import com.fasterxml.jackson.annotation.JsonView;
 import com.github.theguuholi.rentcars.shared.http.GlobalExceptionHandler.Errors;
+import com.github.theguuholi.rentcars.shared.http.JsonViews;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
 import java.util.List;
@@ -27,6 +30,7 @@ public class CarController {
     this.cars = cars;
   }
 
+  @JsonView(JsonViews.Summary.class)
   @GetMapping
   @Operation(summary = "List all cars alphabetically")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
@@ -34,8 +38,12 @@ public class CarController {
     return cars.list();
   }
 
+  @JsonView(JsonViews.Detail.class)
   @GetMapping("/{id}")
-  @Operation(summary = "Fetch a car by UUID")
+  @Operation(
+      summary = "Fetch a car by UUID",
+      description =
+          "Includes the assigned category and specifications with their IDs, names and descriptions.")
   @ApiResponse(
       responseCode = "400",
       description = "Invalid car UUID",
@@ -55,6 +63,8 @@ public class CarController {
     return cars.get(id);
   }
 
+  @SecurityRequirement(name = "bearerAuth")
+  @JsonView(JsonViews.Summary.class)
   @PostMapping
   @Operation(
       summary = "Add a car",
@@ -87,6 +97,8 @@ public class CarController {
     return ResponseEntity.created(URI.create("/cars/" + car.id())).body(car);
   }
 
+  @SecurityRequirement(name = "bearerAuth")
+  @JsonView(JsonViews.Summary.class)
   @PatchMapping("/{id}")
   @Operation(
       summary = "Update selected car attributes",
@@ -122,6 +134,7 @@ public class CarController {
     return cars.update(id, request);
   }
 
+  @SecurityRequirement(name = "bearerAuth")
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(summary = "Remove a car")

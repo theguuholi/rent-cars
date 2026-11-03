@@ -2,6 +2,26 @@
 
 The Spring Boot API manages cars, vehicle categories and equipment specifications. Start the stack with the [local setup guide](../../README.md#run-the-full-stack-locally). Browse the running API in [Swagger UI](http://localhost:8080/swagger-ui.html) or open a [REST Client request](../../requests/).
 
+## Accounts and JWT sessions
+
+In [the sessions REST Client](../../requests/sessions.http), use the CSRF, admin login and profile requests to verify the seeded development account. The separate driver registration example is optional. First call `GET /csrf` and use its `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` response header on the registration and login POSTs. The REST Client examples carry both forward, and Swagger UI sends the CSRF header automatically. A missing or mismatched cookie/header pair returns 403.
+
+Register with a unique email and a password of at least 12 characters and at most 72 UTF-8 bytes. Registration returns the public profile with role `USER`. Email comparisons ignore case and surrounding whitespace.
+
+For the seeded development admin, sign in with `test@test` and `test@tesT@dev`. The login response contains an `accessToken` valid for 15 minutes. The profile request automatically uses that token. In Swagger UI, copy the token from the login response, select **Authorize**, paste the token without the Bearer prefix and execute `GET /sessions/me`. Sign in again after expiration.
+
+Fleet browsing is public through `GET /cars` and `GET /cars/{id}`. The detail includes a `category` object and an alphabetical `specifications` array. Each catalog entry exposes its ID, name and description. The car also retains `categoryId` and `specificationIds`. Clients can display these names directly. Creating, editing or deleting a car and all category and specification endpoints require an `ADMIN` token. An anonymous request to those endpoints receives 401. A signed-in driver receives 403. Signup and login remain public, as does the Swagger documentation.
+
+Flyway creates this admin only when the `dev` migrations are enabled. If that email already exists, the seed preserves its password and role. To use the protected catalog examples, set `RENT_CARS_ADMIN_TOKEN` in the REST Client environment to the access token from admin login.
+
+Development and test profiles generate an ephemeral RSA key pair at startup. Restarting invalidates local tokens. For deployment, activate `prod`, serve the API over HTTPS and supply the same key files to every replica. Mount a PKCS#8 RSA private key and its X.509 public key from your secret store. Configure their Spring resource locations, for example:
+
+```sh
+export SPRING_PROFILES_ACTIVE=prod
+export RENT_AUTH_PRIVATE_KEY=file:/run/secrets/rent-cars-private.pem
+export RENT_AUTH_PUBLIC_KEY=file:/run/secrets/rent-cars-public.pem
+```
+
 ## Development database
 
 The `dev` profile includes ten sample vehicle specifications. Start the API with `make api-dev` or `make dev`, then send `GET /specifications` from [the specifications REST Client](../../requests/specifications.http). Flyway runs the development seed after the schema migrations and preserves existing specifications with matching names. Other explicit profiles use only the shared migrations; set `SPRING_PROFILES_ACTIVE=prod` in production because the project's default profile is `dev`.

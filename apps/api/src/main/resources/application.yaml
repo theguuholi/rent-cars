@@ -8,3 +8,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+rent:
+  auth:
+    private-key: ${RENT_AUTH_PRIVATE_KEY}
+    public-key: ${RENT_AUTH_PUBLIC_KEY}
+
+springdoc:
+  swagger-ui:
+    csrf:
+      enabled: true

@@ -1,5 +1,7 @@
 package com.github.theguuholi.rentcars.categories;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import com.github.theguuholi.rentcars.shared.http.JsonViews;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,6 +20,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 @Schema(
     description = "A vehicle body style in the rental catalog, shared by cars of the same type.")
+@JsonView(JsonViews.Summary.class)
 @Entity
 @Table(name = "categories")
 public class Category {

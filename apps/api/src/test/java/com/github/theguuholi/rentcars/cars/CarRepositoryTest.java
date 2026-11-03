@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.github.theguuholi.rentcars.TestcontainersConfiguration;
+import jakarta.persistence.EntityManagerFactory;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.DisplayName;
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
@@ -22,6 +25,47 @@ class CarRepositoryTest {
   @Autowired CarRepository cars;
   @Autowired JdbcTemplate jdbc;
   @Autowired TransactionTemplate tx;
+
+  private UUID sedan(String plate) {
+    return jdbc.queryForObject(
+        """
+        insert into cars (name,description,brand,license_plate,category_id,daily_rate_cents,fine_amount_cents)
+        select 'Test','Sedan','Honda',?,id,100,0 from categories where name='SEDAN' returning id
+        """,
+        UUID.class,
+        plate);
+  }
+
+  @Autowired EntityManagerFactory entityManagerFactory;
+
+  @Nested
+  class FindDetailedById {
+    @Test
+    @Transactional
+    @DisplayName(
+        "Given a stored car, when using the regular repository lookup, then the expanded catalog associations remain unloaded")
+    void ordinaryLookupKeepsCatalogLazy() {
+      var car = cars.findById(sedan("CAT1235")).orElseThrow();
+      var persistence = entityManagerFactory.getPersistenceUnitUtil();
+      assertThat(persistence.isLoaded(car, "category")).isFalse();
+      assertThat(persistence.isLoaded(car, "specifications")).isFalse();
+    }
+
+    @Test
+    @Transactional
+    @DisplayName(
+        "Given a persisted car, when fetching its detail graph, then its category, assigned specifications and IDs are already loaded")
+    void loadsGraph() {
+      var id = sedan("CAT1234");
+      var car = cars.findDetailedById(id).orElseThrow();
+      assertThat(car.id()).isEqualTo(id);
+      var persistence = entityManagerFactory.getPersistenceUnitUtil();
+      for (var attribute : List.of("category", "specifications", "specificationIds")) {
+        assertThat(persistence.isLoaded(car, attribute)).as(attribute).isTrue();
+      }
+      assertThat(cars.findDetailedById(UUID.randomUUID())).isEmpty();
+    }
+  }
 
   @Nested
   @DisplayName("findForUpdate")

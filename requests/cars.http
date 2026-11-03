@@ -4,21 +4,24 @@
 # @name listCars
 GET {{baseUrl}}/cars
 
-### Inspect the first car (optional; run listCars first and skip if empty)
+### Inspect the first car with the IDs, names and descriptions of its category and assigned specifications (optional; run listCars first and skip if empty)
 GET {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}
 
 ### Start the registration example by choosing a body style
 # @name categories
 GET {{baseUrl}}/categories
+Authorization: Bearer {{$processEnv RENT_CARS_ADMIN_TOKEN}}
 
 ### Choose a feature for the example (the dev catalog is seeded)
 # @name specifications
 GET {{baseUrl}}/specifications
+Authorization: Bearer {{$processEnv RENT_CARS_ADMIN_TOKEN}}
 
 ### Register the example car; continue after receiving 201 Created
 # Use an unused license plate. Use [] to register without specifications.
 # @name createCar
 POST {{baseUrl}}/cars
+Authorization: Bearer {{$processEnv RENT_CARS_ADMIN_TOKEN}}
 Content-Type: application/json
 
 {
@@ -37,9 +40,11 @@ GET {{baseUrl}}/cars/{{createCar.response.body.$.id}}
 
 ### Mark that car unavailable and clear its specifications
 PATCH {{baseUrl}}/cars/{{createCar.response.body.$.id}}
+Authorization: Bearer {{$processEnv RENT_CARS_ADMIN_TOKEN}}
 Content-Type: application/json
 
 {"available":false,"specificationIds":[]}
 
 ### Delete the car registered above
 DELETE {{baseUrl}}/cars/{{createCar.response.body.$.id}}
+Authorization: Bearer {{$processEnv RENT_CARS_ADMIN_TOKEN}}

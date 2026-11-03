@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
 import java.util.List;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
             schema = @Schema(implementation = Errors.class),
             examples =
                 @ExampleObject(value = "{\"errors\":{\"server\":[\"Unexpected server error\"]}}")))
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/specifications")
 public class SpecificationController {

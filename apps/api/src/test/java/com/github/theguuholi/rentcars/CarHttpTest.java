@@ -33,7 +33,10 @@ import tools.jackson.databind.node.ObjectNode;
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({
+  TestcontainersConfiguration.class,
+  com.github.theguuholi.rentcars.auth.AdminRequests.class
+})
 class CarHttpTest {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
@@ -170,6 +173,8 @@ class CarHttpTest {
       mvc.perform(get("/cars"))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$[*].name").value(org.hamcrest.Matchers.contains("Accord", "Civic")))
+          .andExpect(jsonPath("$[*].category").doesNotHaveJsonPath())
+          .andExpect(jsonPath("$[*].specifications").doesNotHaveJsonPath())
           .andExpect(jsonPath("$[0].specificationIds").value(containsInAnyOrder(gps)));
     }
   }
@@ -308,13 +313,74 @@ class CarHttpTest {
   @DisplayName("GET /cars/{id}")
   class GetCar {
     @DisplayName(
-        "Given an existing car, when fetching its location, then its representation matches the creation response")
+        "Given an existing car, when fetching its location, then its detail retains the creation fields and shows the category with no assigned features")
     @Test
     void persistedCar() throws Exception {
       var created = create(input()).andExpect(status().isCreated()).andReturn().getResponse();
+      var summary = json.readTree(created.getContentAsString());
+      assertThat(summary.has("category")).isFalse();
+      assertThat(summary.has("specifications")).isFalse();
       mvc.perform(get(created.getHeader("Location")))
           .andExpect(status().isOk())
-          .andExpect(content().json(created.getContentAsString()));
+          .andExpect(content().json(created.getContentAsString()))
+          .andExpect(jsonPath("$.category.name").value("SEDAN"))
+          .andExpect(jsonPath("$.specifications").isEmpty());
+    }
+
+    @Test
+    @DisplayName(
+        "Given a car whose category and equipment change, when fetching its detail, then only its current assignments and their latest names appear")
+    void currentCatalogLabels() throws Exception {
+      var car = input();
+      car.putArray("specificationIds").add(gps);
+      var location =
+          create(car)
+              .andExpect(status().isCreated())
+              .andReturn()
+              .getResponse()
+              .getHeader("Location");
+      var patch = json.createObjectNode().put("categoryId", suv);
+      patch.putArray("specificationIds").add(abs);
+      edit(location, patch.toString())
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.category").doesNotHaveJsonPath())
+          .andExpect(jsonPath("$.specifications").doesNotHaveJsonPath())
+          .andExpect(jsonPath("$.categoryId").value(suv))
+          .andExpect(jsonPath("$.specificationIds").value(containsInAnyOrder(abs)));
+      jdbc.update("update specifications set name=? where id=?::uuid", "ANTI-LOCK BRAKES", abs);
+      mvc.perform(get(location))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.category.name").value("SUV"))
+          .andExpect(jsonPath("$.specificationIds").value(org.hamcrest.Matchers.contains(abs)))
+          .andExpect(jsonPath("$.specifications[*].id").value(org.hamcrest.Matchers.contains(abs)))
+          .andExpect(
+              jsonPath("$.specifications[*].name")
+                  .value(org.hamcrest.Matchers.contains("ANTI-LOCK BRAKES")));
+    }
+
+    @Test
+    @DisplayName(
+        "Given a category with no description, when fetching the car, then the public category includes its ID, name and null description")
+    void nullableCategoryDescription() throws Exception {
+      var id =
+          jdbc.queryForObject(
+              "insert into categories (name) values ('ROADSTER') returning id::text", String.class);
+      try {
+        var location =
+            create(input().put("categoryId", id))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getHeader("Location");
+        mvc.perform(get(location))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.category.id").value(id))
+            .andExpect(jsonPath("$.category.name").value("ROADSTER"))
+            .andExpect(jsonPath("$.category.description").hasJsonPath())
+            .andExpect(jsonPath("$.category.description").value(org.hamcrest.Matchers.nullValue()));
+      } finally {
+        jdbc.update("delete from categories where id=?::uuid", id);
+      }
     }
 
     @DisplayName("Given an unknown car, when fetching it, then the API returns 404")
@@ -503,7 +569,7 @@ class CarHttpTest {
       var car = json.readTree(response.getContentAsString());
       var docs =
           mvc.perform(get("/v3/api-docs")).andExpect(status().isOk()).andReturn().getResponse();
-      var schema = json.readTree(docs.getContentAsString()).at("/components/schemas/Car");
+      var schema = json.readTree(docs.getContentAsString()).at("/components/schemas/Car_Detail");
       var properties = schema.get("properties");
 
       assertThat(car.propertyNames())
@@ -517,7 +583,9 @@ class CarHttpTest {
               "dailyRateCents",
               "fineAmountCents",
               "categoryId",
-              "specificationIds");
+              "specificationIds",
+              "category",
+              "specifications");
       assertThat(car.get("dailyRateCents").isIntegralNumber()).isTrue();
       assertThat(car.get("dailyRateCents").asInt()).isEqualTo(12345);
       assertThat(car.get("fineAmountCents").isIntegralNumber()).isTrue();
@@ -556,40 +624,53 @@ class CarHttpTest {
         for (String code : List.of("400", "422", "500")) {
           docs.andExpect(
               jsonPath(responses + "['" + code + "'].content['application/json'].schema['$ref']")
-                  .value("#/components/schemas/Errors"));
+                  .value("#/components/schemas/Errors_Summary"));
         }
         docs.andExpect(
             jsonPath(responses + "['400'].content['application/problem+json'].schema['$ref']")
-                .value("#/components/schemas/ProblemDetail"));
+                .value("#/components/schemas/ProblemDetail_Summary"));
       }
       docs.andExpect(
           jsonPath(
                   "$.paths['/cars'].post.responses['409'].content['application/json'].schema['$ref']")
-              .value("#/components/schemas/Errors"));
+              .value("#/components/schemas/Errors_Summary"));
       docs.andExpect(
           jsonPath(
                   "$.paths['/cars/{id}'].patch.responses['422'].content['application/problem+json'].schema['$ref']")
-              .value("#/components/schemas/ProblemDetail"));
-      for (String op : List.of("get", "patch", "delete")) {
+              .value("#/components/schemas/ProblemDetail_Summary"));
+      for (var responseSchema :
+          Map.of(
+                  "get",
+                  "ProblemDetail_Detail",
+                  "patch",
+                  "ProblemDetail_Summary",
+                  "delete",
+                  "ProblemDetail")
+              .entrySet()) {
         docs.andExpect(
             jsonPath(
                     "$.paths['/cars/{id}']."
-                        + op
+                        + responseSchema.getKey()
                         + ".responses['404'].content['application/problem+json'].schema['$ref']")
-                .value("#/components/schemas/ProblemDetail"));
+                .value("#/components/schemas/" + responseSchema.getValue()));
       }
       docs.andExpect(
               jsonPath("$.paths['/cars'].post.responses['201'].content.*.schema['$ref']")
-                  .value(org.hamcrest.Matchers.contains("#/components/schemas/Car")))
+                  .value(org.hamcrest.Matchers.contains("#/components/schemas/Car_Summary")))
           .andExpect(
               jsonPath("$.paths['/cars'].get.responses['200'].content.*.schema.items['$ref']")
-                  .value(org.hamcrest.Matchers.contains("#/components/schemas/Car")));
+                  .value(org.hamcrest.Matchers.contains("#/components/schemas/Car_Summary")));
+      docs.andExpect(
+          jsonPath("$.paths['/cars/{id}'].get.responses['200'].content.*.schema['$ref']")
+              .value(org.hamcrest.Matchers.contains("#/components/schemas/Car_Detail")));
       String postBody = "$.paths['/cars'].post.requestBody.content['application/json'].schema";
       String patchBody =
           "$.paths['/cars/{id}'].patch.requestBody.content['application/json'].schema";
-      docs.andExpect(jsonPath(postBody + "['$ref']").value("#/components/schemas/CarCreateRequest"))
+      docs.andExpect(
+              jsonPath(postBody + "['$ref']")
+                  .value("#/components/schemas/CarCreateRequest_Summary"))
           .andExpect(
-              jsonPath("$.components.schemas.CarCreateRequest.required")
+              jsonPath("$.components.schemas.CarCreateRequest_Summary.required")
                   .value(
                       containsInAnyOrder(
                           "name",
@@ -600,12 +681,14 @@ class CarHttpTest {
                           "fineAmountCents",
                           "categoryId")))
           .andExpect(
-              jsonPath("$.components.schemas.CarCreateRequest.allOf[0]['$ref']")
-                  .value("#/components/schemas/CarRequest"))
-          .andExpect(jsonPath(patchBody + "['$ref']").value("#/components/schemas/CarRequest"))
-          .andExpect(jsonPath("$.components.schemas.CarRequest.required").doesNotExist());
-      docs.andExpect(jsonPath("$.components.schemas.Car.properties.id.readOnly").value(true));
-      for (var schema : List.of("Car", "CarRequest")) {
+              jsonPath("$.components.schemas.CarCreateRequest_Summary.allOf[0]['$ref']")
+                  .value("#/components/schemas/CarRequest_Summary"))
+          .andExpect(
+              jsonPath(patchBody + "['$ref']").value("#/components/schemas/CarRequest_Summary"))
+          .andExpect(jsonPath("$.components.schemas.CarRequest_Summary.required").doesNotExist());
+      docs.andExpect(
+          jsonPath("$.components.schemas.Car_Summary.properties.id.readOnly").value(true));
+      for (var schema : List.of("Car_Summary", "CarRequest_Summary")) {
         String properties = "$.components.schemas." + schema + ".properties.";
         for (var bound :
             Map.of("name", 100, "brand", 80, "licensePlate", 20, "description", 255).entrySet()) {
@@ -616,14 +699,16 @@ class CarHttpTest {
       }
       for (String field : List.of("id", "categoryId")) {
         docs.andExpect(
-            jsonPath("$.components.schemas.Car.properties." + field + ".format").value("uuid"));
+            jsonPath("$.components.schemas.Car_Summary.properties." + field + ".format")
+                .value("uuid"));
       }
       for (String field : List.of("dailyRateCents", "fineAmountCents")) {
         docs.andExpect(
-            jsonPath("$.components.schemas.Car.properties." + field + ".type").value("integer"));
+            jsonPath("$.components.schemas.Car_Summary.properties." + field + ".type")
+                .value("integer"));
       }
       docs.andExpect(
-          jsonPath("$.components.schemas.Car.properties.specificationIds.items.format")
+          jsonPath("$.components.schemas.Car_Summary.properties.specificationIds.items.format")
               .value("uuid"));
     }
   }
