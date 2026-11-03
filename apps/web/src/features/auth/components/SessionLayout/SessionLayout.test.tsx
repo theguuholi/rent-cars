@@ -6,6 +6,28 @@ import { session } from '../../session'
 import { signIn } from '../../auth-api'
 vi.mock('../../auth-api')
 describe('Session transitions and navigation', () => {
+  scenario.each(['/categories', '/specifications', '/cars/new'])(
+    'Given an account with stale permissions, when the API refuses %s, then show access denial without signing out',
+    async (path) => {
+      const history = openCatalogRoute(path)
+      vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 403 }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Your account cannot perform this action.',
+      )
+      expect(session.read()).toBe(adminSession)
+      expect(history.location.pathname).toBe(path)
+    },
+  )
+  scenario(
+    'Given an expired token, when a protected read returns 401, then clear the session and reopen login for that route',
+    async () => {
+      const history = openCatalogRoute('/categories')
+      vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 401 }))
+      expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeVisible()
+      expect(history.location.state.afterLogin).toBe('/categories')
+      expect(session.read()).toBeNull()
+    },
+  )
   scenario.each([
     '/categories',
     '/specifications',

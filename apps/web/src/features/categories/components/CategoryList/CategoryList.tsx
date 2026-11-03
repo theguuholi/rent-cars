@@ -1,3 +1,4 @@
+import { AccessError } from '../../../auth/protected-fetch'
 import { useQuery } from '@tanstack/react-query'
 import { listCategories } from '../../categories-api'
 
@@ -14,7 +15,11 @@ export function CategoryList() {
   if (categories.isError) {
     return (
       <div role="alert">
-        <p>Could not load vehicle categories.</p>
+        <p>
+          {categories.error instanceof AccessError
+            ? categories.error.message
+            : 'Could not load vehicle categories.'}
+        </p>
         <button className="btn-secondary" onClick={() => void categories.refetch()}>
           Try again
         </button>
