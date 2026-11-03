@@ -1,6 +1,8 @@
 package com.github.theguuholi.rentcars.cars;
 
+import com.fasterxml.jackson.annotation.JsonView;
 import com.github.theguuholi.rentcars.shared.http.GlobalExceptionHandler.Errors;
+import com.github.theguuholi.rentcars.shared.http.JsonViews;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,6 +30,7 @@ public class CarController {
     this.cars = cars;
   }
 
+  @JsonView(JsonViews.Summary.class)
   @GetMapping
   @Operation(summary = "List all cars alphabetically")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
@@ -35,11 +38,12 @@ public class CarController {
     return cars.list();
   }
 
+  @JsonView(JsonViews.Detail.class)
   @GetMapping("/{id}")
   @Operation(
       summary = "Fetch a car by UUID",
       description =
-          "Includes the current category name and assigned specification IDs and names for public display.")
+          "Includes the assigned category and specifications with their IDs, names and descriptions.")
   @ApiResponse(
       responseCode = "400",
       description = "Invalid car UUID",
@@ -55,11 +59,12 @@ public class CarController {
           @Content(
               mediaType = "application/problem+json",
               schema = @Schema(implementation = ProblemDetail.class)))
-  public CarDetail get(@PathVariable UUID id) {
+  public Car get(@PathVariable UUID id) {
     return cars.get(id);
   }
 
   @SecurityRequirement(name = "bearerAuth")
+  @JsonView(JsonViews.Summary.class)
   @PostMapping
   @Operation(
       summary = "Add a car",
@@ -93,6 +98,7 @@ public class CarController {
   }
 
   @SecurityRequirement(name = "bearerAuth")
+  @JsonView(JsonViews.Summary.class)
   @PatchMapping("/{id}")
   @Operation(
       summary = "Update selected car attributes",

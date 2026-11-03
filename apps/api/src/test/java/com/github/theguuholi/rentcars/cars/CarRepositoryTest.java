@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.github.theguuholi.rentcars.TestcontainersConfiguration;
+import jakarta.persistence.EntityManagerFactory;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.DisplayName;
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
@@ -33,39 +36,34 @@ class CarRepositoryTest {
         plate);
   }
 
-  @Nested
-  class FindWithCategory {
-    @Test
-    @org.springframework.transaction.annotation.Transactional
-    @DisplayName(
-        "Given a sedan, when fetching its category with the car, then its own ID and category name are returned")
-    void selectedCategory() {
-      var id = sedan("CAT1234");
-      var row = cars.findWithCategory(id).orElseThrow();
-      assertThat(row.car().id()).isEqualTo(id);
-      assertThat(row.categoryName()).isEqualTo("SEDAN");
-      assertThat(cars.findWithCategory(UUID.randomUUID())).isEmpty();
-    }
-  }
+  @Autowired EntityManagerFactory entityManagerFactory;
 
   @Nested
-  class FindAssignedSpecifications {
+  class FindDetailedById {
     @Test
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     @DisplayName(
-        "Given two cars and a feature assigned to only one, when looking up specifications, then only that car returns its ID and name")
-    void separatesCars() {
-      var first = sedan("EQP1234");
-      var second = sedan("EQP1235");
-      var feature =
-          jdbc.queryForObject(
-              "insert into specifications(name,description) values ('TEST CAMERA','Rear view') returning id",
-              UUID.class);
-      jdbc.update(
-          "insert into cars_specifications(car_id,specification_id) values (?,?)", first, feature);
-      assertThat(cars.findAssignedSpecifications(first))
-          .containsExactly(new CarDetail.AssignedSpecification(feature, "TEST CAMERA"));
-      assertThat(cars.findAssignedSpecifications(second)).isEmpty();
+        "Given a stored car, when using the regular repository lookup, then the expanded catalog associations remain unloaded")
+    void ordinaryLookupKeepsCatalogLazy() {
+      var car = cars.findById(sedan("CAT1235")).orElseThrow();
+      var persistence = entityManagerFactory.getPersistenceUnitUtil();
+      assertThat(persistence.isLoaded(car, "category")).isFalse();
+      assertThat(persistence.isLoaded(car, "specifications")).isFalse();
+    }
+
+    @Test
+    @Transactional
+    @DisplayName(
+        "Given a persisted car, when fetching its detail graph, then its category, assigned specifications and IDs are already loaded")
+    void loadsGraph() {
+      var id = sedan("CAT1234");
+      var car = cars.findDetailedById(id).orElseThrow();
+      assertThat(car.id()).isEqualTo(id);
+      var persistence = entityManagerFactory.getPersistenceUnitUtil();
+      for (var attribute : List.of("category", "specifications", "specificationIds")) {
+        assertThat(persistence.isLoaded(car, attribute)).as(attribute).isTrue();
+      }
+      assertThat(cars.findDetailedById(UUID.randomUUID())).isEmpty();
     }
   }
 

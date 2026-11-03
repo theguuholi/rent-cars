@@ -44,7 +44,7 @@ class CarControllerTest {
     @Test
     @DisplayName("Given a known ID, when fetching, then the matching car is returned")
     void knownCar() {
-      var car = new CarDetail(new Car(), "SEDAN", List.of());
+      var car = new Car();
       when(service.get(id)).thenReturn(car);
       assertThat(controller.get(id)).isEqualTo(car);
     }

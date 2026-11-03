@@ -2,6 +2,10 @@ package com.github.theguuholi.rentcars.cars;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.github.theguuholi.rentcars.categories.Category;
+import com.github.theguuholi.rentcars.shared.http.JsonViews;
+import com.github.theguuholi.rentcars.specifications.Specification;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -12,6 +16,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,6 +32,7 @@ import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -33,6 +42,7 @@ import org.springframework.web.server.ResponseStatusException;
     fieldVisibility = JsonAutoDetect.Visibility.NONE,
     getterVisibility = JsonAutoDetect.Visibility.NONE,
     isGetterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonView(JsonViews.Summary.class)
 @Entity
 @Table(name = "cars")
 public class Car {
@@ -120,6 +130,31 @@ public class Car {
   @Column(name = "specification_id", nullable = false)
   @Fetch(FetchMode.SUBSELECT)
   private Set<UUID> specificationIds = new HashSet<>();
+
+  // Writes use the IDs above. The detail graph reads the related catalog rows.
+  @JsonProperty
+  @JsonView(JsonViews.Detail.class)
+  @Schema(
+      description = "Assigned vehicle category, including its description.",
+      accessMode = Schema.AccessMode.READ_ONLY)
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "category_id", insertable = false, updatable = false)
+  private Category category;
+
+  @JsonProperty
+  @JsonView(JsonViews.Detail.class)
+  @Schema(
+      description = "Assigned specifications in catalog name order, including their descriptions.",
+      accessMode = Schema.AccessMode.READ_ONLY)
+  @ManyToMany(fetch = FetchType.LAZY)
+  @JoinTable(
+      name = "cars_specifications",
+      joinColumns = @JoinColumn(name = "car_id", insertable = false, updatable = false),
+      inverseJoinColumns =
+          @JoinColumn(name = "specification_id", insertable = false, updatable = false))
+  @Immutable
+  @OrderBy("name ASC, id ASC")
+  private Set<Specification> specifications;
 
   @CreationTimestamp
   @Column(name = "inserted_at", nullable = false, updatable = false)

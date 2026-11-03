@@ -28,9 +28,8 @@ class CarService {
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-  CarDetail get(UUID id) {
-    var row = cars.findWithCategory(id).orElseThrow(CarService::notFound);
-    return new CarDetail(row.car(), row.categoryName(), cars.findAssignedSpecifications(id));
+  Car get(UUID id) {
+    return cars.findDetailedById(id).orElseThrow(CarService::notFound);
   }
 
   @Transactional

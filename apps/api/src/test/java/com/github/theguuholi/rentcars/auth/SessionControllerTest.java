@@ -97,11 +97,11 @@ class SessionControllerTest {
           jdbc.queryForObject("select id::text from categories where name='SEDAN'", String.class);
       var gps =
           jdbc.queryForObject(
-              "insert into specifications(name,description) values ('TEST GPS','Internal description') returning id::text",
+              "insert into specifications(name,description) values ('TEST GPS','Turn-by-turn directions') returning id::text",
               String.class);
       var abs =
           jdbc.queryForObject(
-              "insert into specifications(name,description) values ('TEST ABS','Internal description') returning id::text",
+              "insert into specifications(name,description) values ('TEST ABS','Anti-lock braking') returning id::text",
               String.class);
       var body =
           json.writeValueAsString(
@@ -138,14 +138,20 @@ class SessionControllerTest {
       mvc.perform(get(location))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.licensePlate").value("JWT1234"))
-          .andExpect(jsonPath("$.categoryName").value("SEDAN"))
+          .andExpect(jsonPath("$.category.name").value("SEDAN"))
           .andExpect(jsonPath("$.categoryId").value(category))
+          .andExpect(jsonPath("$.category.id").value(category))
+          .andExpect(
+              jsonPath("$.category.description")
+                  .value("Car with a trunk separate from the passenger compartment."))
           .andExpect(jsonPath("$.specifications.length()").value(2))
           .andExpect(jsonPath("$.specifications[0].id").value(abs))
           .andExpect(jsonPath("$.specifications[0].name").value("TEST ABS"))
           .andExpect(jsonPath("$.specifications[1].id").value(gps))
           .andExpect(jsonPath("$.specifications[1].name").value("TEST GPS"))
-          .andExpect(jsonPath("$.specifications[*].description").doesNotExist());
+          .andExpect(
+              jsonPath("$.specifications[*].description")
+                  .value(Matchers.contains("Anti-lock braking", "Turn-by-turn directions")));
       mvc.perform(get("/categories")).andExpect(status().isUnauthorized());
       mvc.perform(get("/specifications")).andExpect(status().isUnauthorized());
     }

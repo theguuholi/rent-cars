@@ -1,5 +1,7 @@
 package com.github.theguuholi.rentcars.specifications;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import com.github.theguuholi.rentcars.shared.http.JsonViews;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -13,6 +15,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Schema(
     description =
         "A feature or piece of equipment that a rental vehicle can offer, such as satellite navigation.")
+@JsonView(JsonViews.Summary.class)
 @Entity
 @Table(name = "specifications")
 public class Specification {
