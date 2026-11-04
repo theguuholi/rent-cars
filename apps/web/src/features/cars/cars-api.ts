@@ -1,3 +1,4 @@
+import { checkEditConflict } from '../../edit-conflict'
 export interface CarInput {
   name: string
   description: string
@@ -11,7 +12,7 @@ export interface CarInput {
 }
 
 export type CarPatch = Partial<Omit<CarInput, 'licensePlate'>>
-export type Car = CarInput & { id: string }
+export type Car = CarInput & { id: string; version: number }
 
 export type CarWithCatalog = Car & {
   category: import('../categories/categories-api').Category
@@ -66,6 +67,7 @@ async function carError(response: Response): Promise<string> {
 async function request(url: string, options: RequestInit): Promise<Response> {
   const response = await fetch(url, options)
   if (!response.ok) {
+    checkEditConflict(response)
     throw new Error(await carError(response))
   }
   return response
@@ -96,7 +98,7 @@ export function createCar(input: CarInput): Promise<Car> {
   return writeCar(collection, 'POST', input)
 }
 
-export function updateCar(id: string, input: CarPatch): Promise<Car> {
+export function updateCar(id: string, input: CarPatch & { expectedVersion: number }): Promise<Car> {
   return writeCar(itemUrl(id), 'PATCH', input)
 }
 

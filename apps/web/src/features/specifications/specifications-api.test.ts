@@ -19,7 +19,7 @@ describe('Specifications API client', () => {
 
   scenario.each([
     [undefined, 'POST', '/api/specifications'],
-    [item.id, 'PUT', '/api/specifications/test-id'],
+    [item.id, 'PATCH', '/api/specifications/test-id'],
   ] as const)(
     'Given specification ID %s, when the client saves, then it sends a flat JSON body using %s at %s',
     async (id, method, url) => {

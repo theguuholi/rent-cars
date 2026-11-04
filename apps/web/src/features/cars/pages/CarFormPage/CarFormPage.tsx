@@ -1,3 +1,5 @@
+import { StaleEdit } from '../../../../edit-conflict'
+import { useCurrentAction } from '../../../../routes/use-current-action'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -20,17 +22,24 @@ export function CarFormPage({
   const catalogs = useCatalogs()
   const client = useQueryClient()
   const navigate = useNavigate()
+  const begin = useCurrentAction()
   const save = useMutation({
+    onMutate: begin,
     mutationFn: async (input: CarInput) => {
       if (!car) return createCar(input)
-      return updateCar(car.id, changedCarFields(car, input))
+      const changes = changedCarFields(car, input)
+      return updateCar(car.id, { ...changes, expectedVersion: car.version })
     },
-    onSuccess: async (saved) => {
+    onError: async (error) => {
+      if (error instanceof StaleEdit)
+        await client.invalidateQueries({ queryKey: ['car', car!.id], exact: true })
+    },
+    onSuccess: async (saved, _input, current) => {
       await client.invalidateQueries({
         queryKey: ['car', saved.id],
       })
       await client.invalidateQueries({ queryKey: ['cars'] })
-      await navigate({ to: '/cars/$id', params: { id: saved.id }, replace: true })
+      if (current()) await navigate({ to: '/cars/$id', params: { id: saved.id }, replace: true })
     },
   })
   return (

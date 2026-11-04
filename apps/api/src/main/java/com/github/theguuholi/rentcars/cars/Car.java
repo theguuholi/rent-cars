@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.github.theguuholi.rentcars.categories.Category;
 import com.github.theguuholi.rentcars.shared.http.JsonViews;
+import com.github.theguuholi.rentcars.shared.persistence.VersionedEntity;
 import com.github.theguuholi.rentcars.specifications.Specification;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.CollectionTable;
@@ -45,7 +46,7 @@ import org.springframework.web.server.ResponseStatusException;
 @JsonView(JsonViews.Summary.class)
 @Entity
 @Table(name = "cars")
-public class Car {
+public class Car extends VersionedEntity {
 
   @JsonProperty
   @Schema(

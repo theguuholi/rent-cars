@@ -99,11 +99,17 @@ public class CarController {
 
   @SecurityRequirement(name = "bearerAuth")
   @JsonView(JsonViews.Summary.class)
+  @io.swagger.v3.oas.annotations.parameters.RequestBody(
+      required = true,
+      content =
+          @Content(
+              mediaType = "application/json",
+              schema = @Schema(implementation = CarRequest.UpdateSchema.class)))
   @PatchMapping("/{id}")
   @Operation(
       summary = "Update selected car attributes",
       description =
-          "Omitted fields retain their values. License plate is immutable. Supplying specificationIds replaces the full selection.")
+          "Send the version read when the form opened as expectedVersion. Omitted fields retain their values. License plate is immutable. Supplying specificationIds replaces the full selection.")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
   @ApiResponse(
       responseCode = "400",
@@ -123,6 +129,13 @@ public class CarController {
             mediaType = "application/problem+json",
             schema = @Schema(implementation = ProblemDetail.class))
       })
+  @ApiResponse(
+      responseCode = "409",
+      description = "Stale revision. Reopen the editor and retry with the current version.",
+      content =
+          @Content(
+              mediaType = "application/problem+json",
+              schema = @Schema(implementation = ProblemDetail.class)))
   @ApiResponse(
       responseCode = "404",
       description = "Car does not exist",

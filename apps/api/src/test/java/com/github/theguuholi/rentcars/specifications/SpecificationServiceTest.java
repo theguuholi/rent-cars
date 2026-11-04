@@ -61,7 +61,7 @@ class SpecificationServiceTest {
   }
 
   @Test
-  void locksExistingRecordForUpdateAndDeletion() {
+  void checksVersionForUpdateAndLocksForDeletion() {
     var id = UUID.randomUUID();
     var item = new Specification();
     var attrs = new SpecificationRequest();
@@ -71,12 +71,14 @@ class SpecificationServiceTest {
     when(repository.findForUpdate(id)).thenReturn(Optional.of(item));
     when(repository.saveAndFlush(item)).thenReturn(item);
     var patch = new SpecificationRequest();
+    when(repository.findById(id)).thenReturn(Optional.of(item));
+    patch.expectedVersion = 0L;
     patch.description = "Updated";
     assertThat(service.update(id, patch)).isSameAs(item);
     assertThat(item.getName()).isEqualTo("GPS");
     assertThat(item.getDescription()).isEqualTo("Updated");
     service.delete(id);
-    verify(repository, times(2)).findForUpdate(id);
+    verify(repository).findForUpdate(id);
     verify(repository).delete(item);
   }
 

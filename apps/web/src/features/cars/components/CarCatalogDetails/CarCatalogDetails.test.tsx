@@ -6,7 +6,7 @@ describe('CarCatalogDetails', () => {
   scenario.each([
     [specifications, 'GPS'],
     [[], 'None'],
-    [[...specifications, { id: '2', name: 'ABS', description: 'Brakes' }], 'GPS, ABS'],
+    [[...specifications, { id: '2', version: 0, name: 'ABS', description: 'Brakes' }], 'GPS, ABS'],
   ] as const)(
     'Given equipment %j, when rendering the car, then the selection reads %s',
     (items, expected) => {

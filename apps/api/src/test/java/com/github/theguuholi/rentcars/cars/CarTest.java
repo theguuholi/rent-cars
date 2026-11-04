@@ -46,7 +46,7 @@ class CarTest {
               json.readTree(
                   """
               {
-                "id": null, "name": "Civic", "description": "Automatic sedan", "brand": "Honda",
+                "id": null, "version": 0, "name": "Civic", "description": "Automatic sedan", "brand": "Honda",
                 "licensePlate": "ABC1234", "available": true, "dailyRateCents": 100,
                 "fineAmountCents": 0, "categoryId": "%s", "specificationIds": ["%s"]
               }

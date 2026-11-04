@@ -2,6 +2,7 @@ package com.github.theguuholi.rentcars.specifications;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.github.theguuholi.rentcars.shared.http.JsonViews;
+import com.github.theguuholi.rentcars.shared.persistence.VersionedEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -18,7 +19,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 @JsonView(JsonViews.Summary.class)
 @Entity
 @Table(name = "specifications")
-public class Specification {
+public class Specification extends VersionedEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;

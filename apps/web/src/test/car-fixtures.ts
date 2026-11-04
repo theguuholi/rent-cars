@@ -1,10 +1,11 @@
 export const categories = [{ id: 'cat', name: 'Sedan', description: null }]
-export const specifications = [{ id: 'gps', name: 'GPS', description: 'Navigation' }]
+export const specifications = [{ id: 'gps', version: 0, name: 'GPS', description: 'Navigation' }]
 import type { CarWithCatalog } from '../features/cars/cars-api'
 
 export const car: CarWithCatalog = {
   category: categories[0],
   specifications,
+  version: 0,
   id: 'second',
   name: 'Corolla',
   description: 'Family sedan',

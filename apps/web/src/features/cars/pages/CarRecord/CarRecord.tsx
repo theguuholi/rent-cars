@@ -1,3 +1,4 @@
+import { useCurrentAction } from '../../../../routes/use-current-action'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageSection } from '../../../../components/PageSection/PageSection'
@@ -9,12 +10,14 @@ export function CarRecord({ id, mode }: { id: string; mode: 'detail' | 'edit' | 
   const record = useQuery({ queryKey: ['car', id], queryFn: ({ signal }) => getCar(id, signal) })
   const client = useQueryClient()
   const navigate = useNavigate()
+  const begin = useCurrentAction()
   const remove = useMutation({
-    mutationFn: () => deleteCar(id),
-    onSuccess: async () => {
+    onMutate: begin,
+    mutationFn: (carId: string) => deleteCar(carId),
+    onSuccess: async (_, deletedId, current) => {
       await client.invalidateQueries({ queryKey: ['cars'] })
-      await navigate({ to: '/cars', replace: true })
-      client.removeQueries({ queryKey: ['car', id], exact: true })
+      if (current()) await navigate({ to: '/cars', replace: true })
+      client.removeQueries({ queryKey: ['car', deletedId], exact: true })
     },
   })
   const error = record.isError && (
@@ -47,7 +50,7 @@ export function CarRecord({ id, mode }: { id: string; mode: 'detail' | 'edit' | 
           <button
             className="btn-danger"
             disabled={remove.isPending}
-            onClick={() => remove.mutate()}
+            onClick={() => remove.mutate(id)}
           >
             Confirm deletion
           </button>

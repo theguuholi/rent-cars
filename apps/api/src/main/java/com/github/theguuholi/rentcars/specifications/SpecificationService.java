@@ -1,5 +1,6 @@
 package com.github.theguuholi.rentcars.specifications;
 
+import com.github.theguuholi.rentcars.shared.http.EditVersion;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import java.util.List;
@@ -36,13 +37,16 @@ class SpecificationService {
 
   @Transactional
   Specification update(UUID id, SpecificationRequest attributes) {
-    return save(
-        repository.findForUpdate(id).orElseThrow(SpecificationService::notFound), attributes);
+    var specification = repository.findById(id).orElseThrow(SpecificationService::notFound);
+    EditVersion.requireCurrent(attributes.expectedVersion, specification.getVersion());
+    return save(specification, attributes);
   }
 
   @Transactional
   void delete(UUID id) {
-    repository.delete(repository.findForUpdate(id).orElseThrow(SpecificationService::notFound));
+    var item = repository.findForUpdate(id).orElseThrow(SpecificationService::notFound);
+    repository.advanceLinkedCarVersions(id);
+    repository.delete(item);
   }
 
   private Specification save(Specification specification, SpecificationRequest attributes) {

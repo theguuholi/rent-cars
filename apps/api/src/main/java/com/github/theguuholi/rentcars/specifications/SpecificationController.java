@@ -128,25 +128,31 @@ public class SpecificationController {
       requestBody =
           @io.swagger.v3.oas.annotations.parameters.RequestBody(
               required = true,
-              description = "Supply only the fields to change. Explicit nulls are invalid.",
+              description =
+                  "Supply expectedVersion and the fields to change. Explicit nulls are invalid.",
               content =
                   @Content(
                       mediaType = "application/json",
-                      schema = @Schema(implementation = SpecificationRequest.class),
+                      schema = @Schema(implementation = SpecificationRequest.UpdateSchema.class),
                       examples =
                           @ExampleObject(
-                              value = "{\"description\":\"Offline navigation maps.\"}"))))
+                              value =
+                                  "{\"expectedVersion\":0,\"description\":\"Offline navigation maps.\"}"))))
   @ApiResponse(
       responseCode = "409",
-      description = "Another specification already uses this name.",
-      content =
-          @Content(
-              mediaType = "application/json",
-              schema = @Schema(implementation = Errors.class),
-              examples =
-                  @ExampleObject(
-                      value =
-                          "{\"errors\":{\"conflict\":[\"A record with the same unique value already exists\"]}}")))
+      description = "Duplicate name or stale version. Reopen the editor after a version conflict.",
+      content = {
+        @Content(
+            mediaType = "application/json",
+            schema = @Schema(implementation = Errors.class),
+            examples =
+                @ExampleObject(
+                    value =
+                        "{\"errors\":{\"conflict\":[\"A record with the same unique value already exists\"]}}")),
+        @Content(
+            mediaType = "application/problem+json",
+            schema = @Schema(implementation = ProblemDetail.class))
+      })
   @ApiResponse(
       responseCode = "422",
       description = "One or more fields failed validation.",

@@ -1,3 +1,4 @@
+import { useCurrentAction } from '../../../../routes/use-current-action'
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useNavigate } from '@tanstack/react-router'
@@ -7,17 +8,20 @@ import { session } from '../../session'
 
 export function LoginPage() {
   const [error, setError] = useState('')
+  const begin = useCurrentAction()
   const navigate = useNavigate()
   const form = useForm({
     defaultValues: { email: '', password: '' },
     onSubmit: async ({ value }) => {
+      const current = begin()
       setError('')
       try {
         const identity = await signIn(value.email, value.password)
+        if (!current()) return
         session.set(identity)
         await navigate({ to: '/cars', replace: true })
       } catch (failure) {
-        setError(failure instanceof Error ? failure.message : 'Could not sign in.')
+        if (current()) setError(failure instanceof Error ? failure.message : 'Could not sign in.')
       }
     },
   })

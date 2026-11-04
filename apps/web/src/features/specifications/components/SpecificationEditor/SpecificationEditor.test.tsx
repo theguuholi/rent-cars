@@ -42,6 +42,28 @@ describe('SpecificationEditor', () => {
     },
   )
 
+  scenario(
+    'Given a padded original name and a remote description refresh, when saving a local description edit, then the patch sends the changed field and the version from when editing began',
+    async () => {
+      const original = { id: 'gps', version: 0, name: '  GPS  ', description: 'Maps' }
+      const onSave = vi.fn(),
+        onCancel = vi.fn()
+      const editor = (item: typeof original) => (
+        <SpecificationEditor item={item} busy={false} onSave={onSave} onCancel={onCancel} />
+      )
+      const view = render(editor(original))
+      fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Local maps' } })
+      view.rerender(editor({ ...original, version: 1, description: 'Remote maps' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save specification' }))
+      await waitFor(() =>
+        expect(onSave).toHaveBeenCalledExactlyOnceWith({
+          description: 'Local maps',
+          expectedVersion: 0,
+        }),
+      )
+    },
+  )
+
   describe('Editor modes', () => {
     scenario(
       'Given no existing record, when the editor opens, then both required fields are empty and Name has focus',
@@ -62,7 +84,7 @@ describe('SpecificationEditor', () => {
       'Given an existing record, when only its description is edited and saved, then the original name is preserved',
       async () => {
         const onSave = vi.fn()
-        const item = { id: 'gps-id', name: 'GPS', description: 'Maps' }
+        const item = { id: 'gps-id', version: 0, name: 'GPS', description: 'Maps' }
         render(<SpecificationEditor item={item} busy={false} onSave={onSave} onCancel={vi.fn()} />)
         expect(screen.getByRole('group', { name: 'Edit specification' })).toBeVisible()
         expect(screen.getByLabelText('Name')).toHaveValue('GPS')
@@ -73,8 +95,8 @@ describe('SpecificationEditor', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save specification' }))
         await waitFor(() =>
           expect(onSave).toHaveBeenCalledExactlyOnceWith({
-            name: 'GPS',
             description: 'Updated maps',
+            expectedVersion: 0,
           }),
         )
       },
@@ -106,7 +128,7 @@ describe('SpecificationEditor', () => {
       const onSave = vi.fn()
       render(
         <SpecificationEditor
-          item={{ id: 'gps-id', name: 'GPS', description: 'Navigation' }}
+          item={{ id: 'gps-id', version: 0, name: 'GPS', description: 'Navigation' }}
           busy={false}
           onSave={onSave}
           onCancel={vi.fn()}
@@ -123,9 +145,7 @@ describe('SpecificationEditor', () => {
       expect(field).not.toHaveAttribute('aria-describedby')
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
       fireEvent.click(screen.getByRole('button', { name: 'Save specification' }))
-      await waitFor(() =>
-        expect(onSave).toHaveBeenCalledExactlyOnceWith({ name: 'GPS', description: 'Navigation' }),
-      )
+      await waitFor(() => expect(onSave).toHaveBeenCalledExactlyOnceWith({ expectedVersion: 0 }))
     },
   )
 })

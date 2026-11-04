@@ -33,6 +33,7 @@ class CarServiceTest {
 
   private static CarRequest patchName(String name) {
     var request = new CarRequest();
+    request.expectedVersion = 0L;
     request.name = name;
     return request;
   }
@@ -153,12 +154,12 @@ class CarServiceTest {
   @DisplayName("update")
   class Update {
     @DisplayName(
-        "Given a partial patch, when updating the fleet, then the service saves and returns the locked car")
+        "Given a partial patch with the current version, when updating the fleet, then the service returns the saved car")
     @Test
-    void givenPartialPatchWhenUpdatingThenSavesLockedCar() {
+    void givenCurrentVersionWhenUpdatingThenSavesCar() {
       var car = new Car();
       car.apply(validCar());
-      when(repository.findForUpdate(id)).thenReturn(Optional.of(car));
+      when(repository.findById(id)).thenReturn(Optional.of(car));
       when(repository.saveAndFlush(car)).thenReturn(car);
       assertThat(service.update(id, patchName("Accord"))).isSameAs(car);
       verify(repository).saveAndFlush(car);
@@ -170,7 +171,7 @@ class CarServiceTest {
     void givenInvalidPatchWhenUpdatingThenRejectsWithoutSaving() {
       var car = new Car();
       car.apply(validCar());
-      when(repository.findForUpdate(id)).thenReturn(Optional.of(car));
+      when(repository.findById(id)).thenReturn(Optional.of(car));
       var blankName = patchName(" ");
       assertThatExceptionOfType(ConstraintViolationException.class)
           .isThrownBy(() -> service.update(id, blankName))
@@ -186,7 +187,7 @@ class CarServiceTest {
         "Given an unknown ID, when updating a car, then the service reports not found before validating the patch")
     @Test
     void givenUnknownIdWhenUpdatingThenReportsNotFoundBeforeValidation() {
-      when(repository.findForUpdate(id)).thenReturn(Optional.empty());
+      when(repository.findById(id)).thenReturn(Optional.empty());
       var invalid = new CarRequest();
       invalid.dailyRateCents = -1;
       assertThatExceptionOfType(ResponseStatusException.class)

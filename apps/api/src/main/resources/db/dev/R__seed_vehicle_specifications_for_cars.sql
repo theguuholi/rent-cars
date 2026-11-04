@@ -1,22 +1,26 @@
--- Populate the demo fleet after the specification catalog is seeded.
--- Keep selections already made in the local application.
-WITH equipment (license_plate, brand, model, features) AS (
+-- Create each demo car and its equipment atomically. Only rows inserted by
+-- this statement can receive demo assignments, even when a manual edit races it.
+WITH fleet (name, brand, description, license_plate, daily_rate_cents, fine_amount_cents, category_name, features) AS (
     VALUES
-        ('DEV1A01', 'Fiat',       'Argo',    ARRAY['BLUETOOTH AUDIO']),
-        ('DEV1A02', 'Chevrolet',  'Onix',    ARRAY['ANDROID AUTO', 'REARVIEW CAMERA']),
-        ('DEV1A03', 'Volkswagen', 'Polo',    ARRAY['APPLE CARPLAY', 'USB-C CHARGING']),
-        ('DEV1A04', 'Toyota',     'Corolla', ARRAY['ADAPTIVE CRUISE CONTROL', 'AUTOMATIC TRANSMISSION', 'ISOFIX ANCHORS']),
-        ('DEV1A05', 'Honda',      'City',    ARRAY['REARVIEW CAMERA', 'APPLE CARPLAY']),
-        ('DEV1A06', 'Fiat',       'Cronos',  ARRAY['PARKING SENSORS']),
-        ('DEV1A07', 'Nissan',     'Kicks',   ARRAY['ANDROID AUTO', 'ISOFIX ANCHORS', 'REARVIEW CAMERA']),
-        ('DEV1A08', 'Jeep',       'Compass', ARRAY['HEATED FRONT SEATS', 'PARKING SENSORS', 'AUTOMATIC TRANSMISSION']),
-        ('DEV1A09', 'Fiat',       'Strada',  ARRAY['USB-C CHARGING']),
-        ('DEV1A10', 'Toyota',     'Hilux',   ARRAY['BLUETOOTH AUDIO', 'PARKING SENSORS', 'REARVIEW CAMERA'])
+        ('Argo',    'Fiat',       'Compact hatchback for city trips.',    'DEV1A01', 12000, 3000, 'HATCHBACK', ARRAY['BLUETOOTH AUDIO']),
+        ('Onix',    'Chevrolet',  'Five-door urban hatchback.',          'DEV1A02', 13500, 3500, 'HATCHBACK', ARRAY['ANDROID AUTO', 'REARVIEW CAMERA']),
+        ('Polo',    'Volkswagen', 'Compact hatchback for daily travel.', 'DEV1A03', 14500, 3500, 'HATCHBACK', ARRAY['APPLE CARPLAY', 'USB-C CHARGING']),
+        ('Corolla', 'Toyota',     'Comfortable midsize sedan.',          'DEV1A04', 21000, 5000, 'SEDAN', ARRAY['ADAPTIVE CRUISE CONTROL', 'AUTOMATIC TRANSMISSION', 'ISOFIX ANCHORS']),
+        ('City',    'Honda',      'Compact sedan with a roomy trunk.',   'DEV1A05', 17500, 4000, 'SEDAN', ARRAY['REARVIEW CAMERA', 'APPLE CARPLAY']),
+        ('Cronos',  'Fiat',       'Family sedan for weekend trips.',     'DEV1A06', 15050, 4000, 'SEDAN', ARRAY['PARKING SENSORS']),
+        ('Kicks',   'Nissan',     'Compact SUV for family travel.',      'DEV1A07', 20500, 5000, 'SUV', ARRAY['ANDROID AUTO', 'ISOFIX ANCHORS', 'REARVIEW CAMERA']),
+        ('Compass', 'Jeep',       'Midsize SUV for longer trips.',       'DEV1A08', 26000, 6500, 'SUV', ARRAY['HEATED FRONT SEATS', 'PARKING SENSORS', 'AUTOMATIC TRANSMISSION']),
+        ('Strada',  'Fiat',       'Compact pickup with an open bed.',    'DEV1A09', 19500, 5000, 'PICKUP', ARRAY['USB-C CHARGING']),
+        ('Hilux',   'Toyota',     'Large pickup for hauling cargo.',     'DEV1A10', 35000, 8000, 'PICKUP', ARRAY['BLUETOOTH AUDIO', 'PARKING SENSORS', 'REARVIEW CAMERA'])
+), inserted AS (
+    INSERT INTO cars (name, brand, description, license_plate, daily_rate_cents, fine_amount_cents, category_id)
+    SELECT f.name, f.brand, f.description, f.license_plate, f.daily_rate_cents, f.fine_amount_cents, c.id
+    FROM fleet f JOIN categories c ON c.name = f.category_name
+    ON CONFLICT (license_plate) DO NOTHING
+    RETURNING id, license_plate
 )
 INSERT INTO cars_specifications (car_id, specification_id)
-SELECT c.id, s.id
-FROM equipment e
-JOIN cars c ON c.license_plate = e.license_plate AND c.brand = e.brand AND c.name = e.model
-JOIN specifications s ON s.name = ANY(e.features)
-WHERE NOT EXISTS (SELECT 1 FROM cars_specifications cs WHERE cs.car_id = c.id)
-ON CONFLICT (car_id, specification_id) DO NOTHING;
+SELECT i.id, s.id
+FROM inserted i
+JOIN fleet f ON f.license_plate = i.license_plate
+JOIN specifications s ON s.name = ANY(f.features);

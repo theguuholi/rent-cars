@@ -58,7 +58,7 @@ describe('Cars HTTP client', () => {
   scenario(
     'Given a cleared selection, when patching, then only the provided fields are sent',
     async () => {
-      const patch = { specificationIds: [] }
+      const patch = { specificationIds: [], expectedVersion: 0 }
       const updated = { ...car, ...patch }
       const fetch = mockResponse(Response.json(updated))
       await expect(updateCar(car.id, patch)).resolves.toEqual(updated)

@@ -12,7 +12,7 @@ vi.mock('../../specifications-api', () => ({
   saveSpecification: vi.fn(),
 }))
 
-const cached = { id: 'gps-id', name: 'GPS', description: 'Navigation' }
+const cached = { id: 'gps-id', version: 0, name: 'GPS', description: 'Navigation' }
 
 async function openConfirmation() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })

@@ -11,8 +11,7 @@ interface CarRepository extends JpaRepository<Car, UUID> {
       attributePaths = {"category", "specifications"})
   Optional<Car> findDetailedById(UUID id);
 
-  // PostgreSQL locks this car until commit. A competing PATCH or DELETE waits so it
-  // sees the first write before changing the car or replacing its specifications.
+  // Serialize deletion; PATCH uses the optimistic version from the editor.
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select c from Car c where c.id = :id")
   Optional<Car> findForUpdate(UUID id);

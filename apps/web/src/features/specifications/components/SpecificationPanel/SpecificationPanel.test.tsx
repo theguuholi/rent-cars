@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, test as scenario, vi } from 'vitest'
 import { SpecificationPanel } from './SpecificationPanel'
 
-const item = { id: 'gps-id', name: 'GPS', description: 'Navigation' }
+const item = { id: 'gps-id', version: 0, name: 'GPS', description: 'Navigation' }
 const callbacks = () => ({ onSave: vi.fn(), onCancel: vi.fn(), onDelete: vi.fn() })
 
 describe('SpecificationPanel', () => {

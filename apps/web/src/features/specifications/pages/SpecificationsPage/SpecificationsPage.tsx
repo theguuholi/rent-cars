@@ -1,3 +1,5 @@
+import { StaleEdit } from '../../../../edit-conflict'
+import { useCurrentAction } from '../../../../routes/use-current-action'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { Link, useMatchRoute, useNavigate, useLocation } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -7,7 +9,7 @@ import {
   listSpecifications,
   saveSpecification,
 } from '../../specifications-api'
-import type { SpecificationInput } from '../../specifications-api'
+import type { SpecificationEdit } from '../../specifications-api'
 
 declare module '@tanstack/react-router' {
   interface HistoryState {
@@ -15,7 +17,7 @@ declare module '@tanstack/react-router' {
   }
 }
 type Change =
-  | { type: 'save'; input: SpecificationInput; id?: string }
+  | { type: 'save'; input: SpecificationEdit; id?: string }
   | { type: 'delete'; id: string }
 const queryKey = ['specifications']
 
@@ -36,7 +38,9 @@ export function SpecificationsPage() {
     staleTime: 30_000,
   })
   const item = catalog.data?.find((entry) => entry.id === id)
+  const begin = useCurrentAction()
   const change = useMutation({
+    onMutate: begin,
     mutationFn: async (command: Change) => {
       switch (command.type) {
         case 'save':
@@ -47,15 +51,19 @@ export function SpecificationsPage() {
           break
       }
     },
-    onSuccess: async (_, command) => {
-      await navigate({
-        to: '/specifications',
-        replace: true,
-        state: {
-          specificationNotice:
-            command.type === 'delete' ? 'Specification deleted.' : 'Specification saved.',
-        },
-      })
+    onError: async (error) => {
+      if (error instanceof StaleEdit) await client.invalidateQueries({ queryKey })
+    },
+    onSuccess: async (_, command, current) => {
+      if (current())
+        await navigate({
+          to: '/specifications',
+          replace: true,
+          state: {
+            specificationNotice:
+              command.type === 'delete' ? 'Specification deleted.' : 'Specification saved.',
+          },
+        })
       await client.invalidateQueries({ queryKey })
     },
   })

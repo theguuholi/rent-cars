@@ -18,6 +18,29 @@ describe('CarFormPage', () => {
     vi.mocked(listCategories).mockResolvedValue(categories)
     vi.mocked(listSpecifications).mockResolvedValue(specifications)
   })
+  scenario(
+    'Given a pending car edit, when the user leaves before it commits, then refresh the cache without reopening the saved car',
+    async () => {
+      let done!: (v: api.Car) => void
+      vi.mocked(api.updateCar).mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            done = r
+          }),
+      )
+      const client = new QueryClient()
+      client.setQueryData(['cars'], [car])
+      const history = openCatalogRoute('/cars/second/edit', client)
+      fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Saved' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Save car' }))
+      await waitFor(() => expect(api.updateCar).toHaveBeenCalled())
+      fireEvent.click(screen.getByRole('link', { name: 'Rent Cars home' }))
+      await waitFor(() => expect(history.location.pathname).toBe('/'))
+      await act(async () => done(car))
+      expect(history.location.pathname).toBe('/')
+      expect(client.getQueryState(['cars'])?.isInvalidated).toBe(true)
+    },
+  )
   afterEach(() => vi.unstubAllGlobals())
 
   scenario(
@@ -52,7 +75,13 @@ describe('CarFormPage', () => {
       fireEvent.click(screen.getByText('Save car'))
       await screen.findByRole('heading', { name: 'Corolla' })
       expect(history.location.pathname).toBe('/cars/second')
-      const { id: _id, category: _category, specifications: _specifications, ...expected } = car
+      const {
+        id: _id,
+        version: _version,
+        category: _category,
+        specifications: _specifications,
+        ...expected
+      } = car
       expect(api.createCar).toHaveBeenCalledExactlyOnceWith(expected)
     },
   )
@@ -94,7 +123,10 @@ describe('CarFormPage', () => {
       expect(screen.getByLabelText('Name')).toBe(name)
       fireEvent.click(screen.getByRole('button', { name: 'Save car' }))
       expect(await screen.findByRole('heading', { name: 'My draft' })).toBeVisible()
-      expect(api.updateCar).toHaveBeenCalledExactlyOnceWith(car.id, { name: 'My draft' })
+      expect(api.updateCar).toHaveBeenCalledExactlyOnceWith(car.id, {
+        name: 'My draft',
+        expectedVersion: car.version,
+      })
       expect(screen.getByText('R$ 420,00')).toBeVisible()
     },
   )
@@ -103,34 +135,41 @@ describe('CarFormPage', () => {
     { cache: 'unchanged', refetch: false },
     { cache: 'refreshed', refetch: true },
   ])(
-    'Given an open editor with a $cache cache, when another user changes the daily rate and availability and I save only the name, then my PATCH preserves their changes',
+    'Given an open editor with a $cache cache, when another writer changes a different field, then the original version is rejected and the draft survives',
     async ({ refetch }) => {
-      let stored = { ...car, available: true }
+      let stored = { ...car, version: 4 }
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
       vi.mocked(api.getCar).mockImplementation(async () => stored)
-      vi.mocked(api.updateCar).mockImplementation(async (_id, patch) => {
-        stored = { ...stored, ...patch }
-        return stored
-      })
+      const real = await vi.importActual<typeof api>('../../cars-api')
+      vi.mocked(api.updateCar).mockImplementation(real.updateCar)
       openCatalogRoute('/cars/second/edit', client)
       fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Renamed' } })
-
-      stored = { ...stored, dailyRateCents: 22000, available: false }
-      if (refetch) {
+      stored = { ...stored, version: 5, dailyRateCents: 22000 }
+      if (refetch)
         await act(async () => {
           await client.invalidateQueries({ queryKey: ['car', car.id] })
         })
-      }
+      const unrelated = ['car', car.id, 'history']
+      client.setQueryData(unrelated, ['earlier'])
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(null, {
+          status: 409,
+          headers: { 'Content-Type': 'application/problem+json' },
+        }),
+      )
       fireEvent.click(screen.getByRole('button', { name: 'Save car' }))
-
-      expect(await screen.findByRole('heading', { name: 'Renamed' })).toBeVisible()
-      expect(api.updateCar).toHaveBeenCalledExactlyOnceWith(car.id, { name: 'Renamed' })
-      expect(stored).toMatchObject({ name: 'Renamed', dailyRateCents: 22000, available: false })
-      expect(screen.getByText('R$ 220,00')).toBeVisible()
-      expect(screen.getByText('Unavailable')).toBeVisible()
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'The record changed. Reopen the editor',
+      )
+      expect(screen.getByLabelText('Name')).toHaveValue('Renamed')
+      expect(api.updateCar).toHaveBeenCalledExactlyOnceWith(car.id, {
+        name: 'Renamed',
+        expectedVersion: 4,
+      })
+      await waitFor(() => expect(client.getQueryData(['car', car.id])).toEqual(stored))
+      expect(client.getQueryState(unrelated)?.isInvalidated).toBe(false)
     },
   )
-
   scenario(
     'Given an edit draft, when the server rejects it and the user retries, then the draft survives and the updated record appears',
     async () => {
@@ -151,10 +190,14 @@ describe('CarFormPage', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'Daily rate (BRL): must be greater than or equal to 0',
       )
+      expect(api.getCar).toHaveBeenCalledTimes(1)
       expect(screen.getByLabelText('Name')).toHaveValue('Renamed')
       fireEvent.click(screen.getByText('Save car'))
       expect(await screen.findByRole('heading', { name: 'Renamed' })).toBeVisible()
-      expect(api.updateCar).toHaveBeenLastCalledWith(car.id, { name: 'Renamed' })
+      expect(api.updateCar).toHaveBeenLastCalledWith(car.id, {
+        name: 'Renamed',
+        expectedVersion: car.version,
+      })
       expect(history.location.pathname).toBe('/cars/second')
     },
   )
