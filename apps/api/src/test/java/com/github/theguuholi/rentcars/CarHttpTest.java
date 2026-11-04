@@ -5,11 +5,13 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.stream.Stream;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,10 +25,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -90,6 +95,127 @@ class CarHttpTest {
 
   private ResultActions edit(String location, String patchBody) throws Exception {
     return mvc.perform(patch(location).contentType("application/json").content(patchBody));
+  }
+
+  @Test
+  @DisplayName(
+      "Given two editors of the same rate, when both submit the same original value, then exactly one commits and the other receives 409")
+  void concurrentRateChanges() throws Exception {
+    String location = givenCar();
+    var start = new CyclicBarrier(2);
+    try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
+      Callable<Integer> submit =
+          () -> {
+            start.await(10, TimeUnit.SECONDS);
+            return edit(location, "{\"dailyRateCents\":20000,\"expectedVersion\":0}")
+                .andReturn()
+                .getResponse()
+                .getStatus();
+          };
+      var first = pool.submit(submit);
+      var second = pool.submit(submit);
+      assertThat(List.of(first.get(15, TimeUnit.SECONDS), second.get(15, TimeUnit.SECONDS)))
+          .containsExactlyInAnyOrder(200, 409);
+    }
+    mvc.perform(get(location)).andExpect(jsonPath("$.dailyRateCents").value(20000));
+  }
+
+  @Test
+  @DisplayName(
+      "Given a changed equipment selection, when an older form replaces it, then all changes are rejected and reopening permits a fresh edit")
+  void guardedEquipment() throws Exception {
+    String location = givenCar();
+    var patch = json.createObjectNode();
+    patch.putArray("specificationIds").add(gps);
+    patch.put("expectedVersion", 0);
+    edit(location, patch.toString()).andExpect(status().isOk());
+    patch.putArray("specificationIds").add(abs);
+    patch.put("name", "Stale");
+    edit(location, patch.toString()).andExpect(status().isConflict());
+    edit(location, "{\"name\":\"Updated\",\"expectedVersion\":1}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.specificationIds").value(containsInAnyOrder(gps)));
+  }
+
+  @Test
+  @DisplayName(
+      "Given a car, when a client edits without its version, then the API rejects the update")
+  void missingEditVersion() throws Exception {
+    edit(givenCar(), "{}").andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @DisplayName(
+      "Given a car with assigned equipment, when the specification is deleted, then only linked cars receive a new version")
+  void cascadingUnassignmentChangesVersion() throws Exception {
+    String unlinked = givenCar();
+    var body = input().put("licensePlate", "REV1234");
+    body.putArray("specificationIds").add(gps);
+    String linked =
+        create(body)
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getHeader("Location");
+    mvc.perform(delete("/specifications/" + gps)).andExpect(status().isNoContent());
+    mvc.perform(get(linked))
+        .andExpect(jsonPath("$.version").value(1))
+        .andExpect(jsonPath("$.specificationIds").isEmpty());
+    mvc.perform(get(unlinked)).andExpect(jsonPath("$.version").value(0));
+    edit(linked, "{\"name\":\"Old edit\",\"expectedVersion\":0}").andExpect(status().isConflict());
+  }
+
+  @Autowired TransactionTemplate transactions;
+
+  @Test
+  @DisplayName(
+      "Given a manual equipment edit in progress, when the development seed runs, then it waits and preserves the committed selection")
+  void seedWaitsForManualSelection() throws Exception {
+    specification("BLUETOOTH AUDIO");
+    var car = input().put("name", "Argo").put("brand", "Fiat").put("licensePlate", "DEV1A01");
+    car.putArray("specificationIds").add(gps);
+    try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
+      var seeded =
+          transactions.execute(
+              status -> {
+                try {
+                  create(car).andExpect(status().isCreated());
+                } catch (Exception failure) {
+                  throw new AssertionError(failure);
+                }
+                int owner = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
+                var worker =
+                    pool.submit(
+                        () ->
+                            transactions.executeWithoutResult(
+                                tx ->
+                                    new ResourceDatabasePopulator(
+                                            new ClassPathResource(
+                                                "db/dev/R__seed_vehicle_specifications_for_cars.sql"))
+                                        .execute(jdbc.getDataSource())));
+                Awaitility.await()
+                    .atMost(Duration.ofSeconds(10))
+                    .until(
+                        () ->
+                            jdbc.queryForObject(
+                                "select exists(select from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
+                                Boolean.class,
+                                owner));
+                return worker;
+              });
+      seeded.get(15, TimeUnit.SECONDS);
+    }
+    String location =
+        "/cars/"
+            + jdbc.queryForObject(
+                "select id::text from cars where license_plate='DEV1A01'", String.class);
+    mvc.perform(get(location))
+        .andExpect(jsonPath("$.specificationIds").value(containsInAnyOrder(gps)));
+    edit(location, "{\"expectedVersion\":0,\"specificationIds\":[]}").andExpect(status().isOk());
+    new ResourceDatabasePopulator(
+            new ClassPathResource("db/dev/R__seed_vehicle_specifications_for_cars.sql"))
+        .execute(jdbc.getDataSource());
+    mvc.perform(get(location)).andExpect(jsonPath("$.specificationIds").isEmpty());
   }
 
   // Use the same wire examples for POST and PATCH. A complete POST isolates each invalid field.
@@ -339,7 +465,7 @@ class CarHttpTest {
               .andReturn()
               .getResponse()
               .getHeader("Location");
-      var patch = json.createObjectNode().put("categoryId", suv);
+      var patch = json.createObjectNode().put("expectedVersion", 0).put("categoryId", suv);
       patch.putArray("specificationIds").add(abs);
       edit(location, patch.toString())
           .andExpect(status().isOk())
@@ -401,6 +527,7 @@ class CarHttpTest {
       String id = location.substring(location.lastIndexOf('/') + 1);
       var patch =
           input()
+              .put("expectedVersion", 0)
               .put("name", "Corolla")
               .put("brand", "Toyota")
               .put("description", "Automatic")
@@ -438,10 +565,10 @@ class CarHttpTest {
               .andReturn()
               .getResponse();
       String location = created.getHeader("Location");
-      edit(location, "{}")
+      edit(location, "{\"expectedVersion\":0}")
           .andExpect(status().isOk())
           .andExpect(content().json(created.getContentAsString()));
-      edit(location, "{\"specificationIds\":[]}")
+      edit(location, "{\"expectedVersion\":0,\"specificationIds\":[]}")
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.specificationIds").isEmpty());
       mvc.perform(get(location)).andExpect(jsonPath("$.specificationIds").isEmpty());
@@ -464,7 +591,10 @@ class CarHttpTest {
     void appliesTheSameContractToVendorJson() throws Exception {
       var location = givenCar();
       var mediaType = "application/vnd.rent+json";
-      mvc.perform(patch(location).contentType(mediaType).content("{\"dailyRateCents\":15050}"))
+      mvc.perform(
+              patch(location)
+                  .contentType(mediaType)
+                  .content("{\"expectedVersion\":0,\"dailyRateCents\":15050}"))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.dailyRateCents").value(15050));
       mvc.perform(patch(location).contentType(mediaType).content("{\"dailyRateCents\":150.9}"))
@@ -477,7 +607,8 @@ class CarHttpTest {
     @ValueSource(strings = {"dailyRateCents", "fineAmountCents"})
     void rejectsNegativeCents(String field) throws Exception {
       String location = givenCar();
-      edit(location, json.createObjectNode().put(field, -1).toString()).andExpect(status().is(422));
+      edit(location, json.createObjectNode().put("expectedVersion", 0).put(field, -1).toString())
+          .andExpect(status().is(422));
       mvc.perform(get(location))
           .andExpect(jsonPath("$.dailyRateCents").value(12345))
           .andExpect(jsonPath("$.fineAmountCents").value(0));
@@ -488,7 +619,7 @@ class CarHttpTest {
     void givenExistingPlateWhenPatchingWithDifferentPlateThenRejectsTheWholePatch()
         throws Exception {
       String location = givenCar();
-      edit(location, "{\"name\":\"New name\",\"licensePlate\":\"XYZ9876\"}")
+      edit(location, "{\"expectedVersion\":0,\"name\":\"New name\",\"licensePlate\":\"XYZ9876\"}")
           .andExpect(status().is(422))
           .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
           .andExpect(jsonPath("$.detail").value("License plate cannot be changed"));
@@ -506,8 +637,9 @@ class CarHttpTest {
       var created = create(car).andExpect(status().isCreated()).andReturn().getResponse();
       String location = created.getHeader("Location");
       String missing = UUID.randomUUID().toString();
-      var badCategory = json.createObjectNode().put("categoryId", missing);
-      var badSpecs = json.createObjectNode();
+      var badCategory =
+          json.createObjectNode().put("expectedVersion", 0).put("categoryId", missing);
+      var badSpecs = json.createObjectNode().put("expectedVersion", 0);
       badSpecs.putArray("specificationIds").add(gps).add(missing);
       for (var changes : List.of(badCategory, badSpecs)) {
         edit(location, changes.put("name", "Changed").toString())
@@ -523,7 +655,11 @@ class CarHttpTest {
     void overlongText(String field, int max) throws Exception {
       String location = givenCar();
       String before = mvc.perform(get(location)).andReturn().getResponse().getContentAsString();
-      var changes = json.createObjectNode().put("available", false).put(field, "x".repeat(max + 1));
+      var changes =
+          json.createObjectNode()
+              .put("expectedVersion", 0)
+              .put("available", false)
+              .put(field, "x".repeat(max + 1));
       changes.putArray("specificationIds").add(gps);
       edit(location, changes.toString()).andExpect(status().is(422));
       mvc.perform(get(location)).andExpect(content().json(before));
@@ -583,6 +719,7 @@ class CarHttpTest {
               "dailyRateCents",
               "fineAmountCents",
               "categoryId",
+              "version",
               "specificationIds",
               "category",
               "specifications");
@@ -684,8 +821,11 @@ class CarHttpTest {
               jsonPath("$.components.schemas.CarCreateRequest_Summary.allOf[0]['$ref']")
                   .value("#/components/schemas/CarRequest_Summary"))
           .andExpect(
-              jsonPath(patchBody + "['$ref']").value("#/components/schemas/CarRequest_Summary"))
-          .andExpect(jsonPath("$.components.schemas.CarRequest_Summary.required").doesNotExist());
+              jsonPath(patchBody + "['$ref']")
+                  .value("#/components/schemas/CarUpdateRequest_Summary"))
+          .andExpect(
+              jsonPath("$.components.schemas.CarUpdateRequest_Summary.required")
+                  .value(org.hamcrest.Matchers.contains("expectedVersion")));
       docs.andExpect(
           jsonPath("$.components.schemas.Car_Summary.properties.id.readOnly").value(true));
       for (var schema : List.of("Car_Summary", "CarRequest_Summary")) {

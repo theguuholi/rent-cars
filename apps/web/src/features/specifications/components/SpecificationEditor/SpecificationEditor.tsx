@@ -1,18 +1,29 @@
+import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import type { Specification, SpecificationInput } from '../../specifications-api'
+import type { Specification, SpecificationEdit } from '../../specifications-api'
 
 type Props = {
   item?: Specification
   busy: boolean
   onCancel: () => void
-  onSave: (input: SpecificationInput) => void
+  onSave: (input: SpecificationEdit) => void
 }
 
 export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
+  const [original] = useState(item)
   const form = useForm({
-    defaultValues: { name: item?.name ?? '', description: item?.description ?? '' },
-    onSubmit: ({ value }) =>
-      onSave({ name: value.name.trim(), description: value.description.trim() }),
+    defaultValues: { name: original?.name ?? '', description: original?.description ?? '' },
+    onSubmit: ({ value }) => {
+      const input = { name: value.name.trim(), description: value.description.trim() }
+      if (!original) return onSave(input)
+      const changes: SpecificationEdit = {}
+      for (const key of ['name', 'description'] as const) {
+        if (input[key] !== original[key].trim()) {
+          changes[key] = input[key]
+        }
+      }
+      onSave({ ...changes, expectedVersion: original.version })
+    },
   })
   return (
     <form

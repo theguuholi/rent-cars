@@ -74,3 +74,50 @@ describe('LoginPage', () => {
     },
   )
 })
+
+scenario(
+  'Given an older sign-in, when a later login finishes first, then its account and screen survive the old response',
+  async () => {
+    let done!: (s: Session) => void
+    vi.mocked(signIn)
+      .mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            done = r
+          }),
+      )
+      .mockResolvedValueOnce(identity)
+    const history = openCatalogRoute('/login')
+    const submit = async () =>
+      fireEvent.submit((await screen.findByRole('button', { name: 'Sign in' })).closest('form')!)
+    await submit()
+    await waitFor(() => expect(signIn).toHaveBeenCalled())
+    fireEvent.click(screen.getByRole('link', { name: 'Cars' }))
+    await waitFor(() => expect(history.location.pathname).toBe('/cars'))
+    fireEvent.click(screen.getByRole('link', { name: 'Sign in' }))
+    await submit()
+    await waitFor(() => expect(session.read()).toBe(identity))
+    fireEvent.click(screen.getByRole('link', { name: 'Rent Cars home' }))
+    await waitFor(() => expect(history.location.pathname).toBe('/'))
+    await act(async () => done({ ...identity, accessToken: 'old' }))
+    expect(session.read()).toBe(identity)
+    expect(history.location.pathname).toBe('/')
+  },
+)
+
+scenario(
+  'Given a pending login on the same page, when the session is cleared, then a late error cannot overwrite the current form',
+  async () => {
+    let reject!: (error: Error) => void
+    const promise = new Promise<Session>((_, fail) => {
+      reject = fail
+    })
+    vi.mocked(signIn).mockImplementationOnce(() => promise)
+    openCatalogRoute('/login')
+    fireEvent.submit((await screen.findByRole('button', { name: 'Sign in' })).closest('form')!)
+    await waitFor(() => expect(signIn).toHaveBeenCalled())
+    act(() => session.set(null))
+    await act(async () => reject(new Error('Obsolete attempt')))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  },
+)

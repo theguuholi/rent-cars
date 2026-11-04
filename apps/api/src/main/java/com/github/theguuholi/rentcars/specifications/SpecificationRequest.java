@@ -27,6 +27,18 @@ public class SpecificationRequest {
       example = "Turn-by-turn satellite navigation.")
   String description;
 
+  @JsonProperty
+  @Schema(
+      description = "Required on update. Use the version returned when opening the editor.",
+      minimum = "0")
+  Long expectedVersion;
+
+  @Schema(
+      name = "SpecificationUpdateRequest",
+      allOf = SpecificationRequest.class,
+      requiredProperties = {"expectedVersion"})
+  interface UpdateSchema {}
+
   @Schema(
       name = "SpecificationCreateRequest",
       allOf = SpecificationRequest.class,

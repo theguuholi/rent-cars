@@ -1,10 +1,15 @@
+import { checkEditConflict } from '../../edit-conflict'
 export type SpecificationInput = { name: string; description: string }
-export type Specification = SpecificationInput & { id: string }
+export type Specification = SpecificationInput & { id: string; version: number }
+export type SpecificationEdit = Partial<SpecificationInput> & {
+  expectedVersion?: number
+}
 const path = '/api/specifications'
 
 async function request(url: string, options: RequestInit) {
   const response = await fetch(url, options)
   if (!response.ok) {
+    checkEditConflict(response)
     throw new Error(
       (
         {
@@ -23,11 +28,11 @@ export async function listSpecifications(signal: AbortSignal): Promise<Specifica
 }
 
 export async function saveSpecification(
-  input: SpecificationInput,
+  input: SpecificationEdit,
   id?: string,
 ): Promise<Specification> {
   const response = await request(id ? `${path}/${encodeURIComponent(id)}` : path, {
-    method: id ? 'PUT' : 'POST',
+    method: id ? 'PATCH' : 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })

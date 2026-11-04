@@ -45,6 +45,17 @@ public class CarRequest {
   Set<UUID> specificationIds;
 
   @Schema(
+      description = "Required on update. Use the version returned when opening the editor.",
+      minimum = "0")
+  Long expectedVersion;
+
+  @Schema(
+      name = "CarUpdateRequest",
+      allOf = CarRequest.class,
+      requiredProperties = {"expectedVersion"})
+  interface UpdateSchema {}
+
+  @Schema(
       name = "CarCreateRequest",
       allOf = CarRequest.class,
       requiredProperties = {

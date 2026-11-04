@@ -7,6 +7,7 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
@@ -56,6 +57,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                     .computeIfAbsent(e.getField(), key -> new ArrayList<>())
                     .add(e.getDefaultMessage()));
     return ResponseEntity.unprocessableContent().headers(headers).body(new Errors(errors));
+  }
+
+  @ExceptionHandler(OptimisticLockingFailureException.class)
+  ProblemDetail staleEdit() {
+    return ProblemDetail.forStatusAndDetail(
+        HttpStatus.CONFLICT,
+        "The record changed. Reopen the editor and review the current values.");
   }
 
   @ExceptionHandler(DataIntegrityViolationException.class)

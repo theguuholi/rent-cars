@@ -82,7 +82,13 @@ describe('CarEditor', () => {
       fireEvent.click(screen.getByLabelText('Available'))
       fireEvent.click(screen.getByLabelText('GPS'))
       fireEvent.click(screen.getByText('Save car'))
-      const { id: _id, category: _category, specifications: _specifications, ...expected } = car
+      const {
+        id: _id,
+        version: _version,
+        category: _category,
+        specifications: _specifications,
+        ...expected
+      } = car
       await waitFor(() => expect(onSave).toHaveBeenCalledExactlyOnceWith(expected))
     },
   )
@@ -150,7 +156,7 @@ describe('CarEditor', () => {
           categories={categories}
           specifications={[
             ...specifications,
-            { id: 'bluetooth', name: 'Bluetooth', description: 'Wireless audio' },
+            { id: 'bluetooth', version: 0, name: 'Bluetooth', description: 'Wireless audio' },
           ]}
           busy={false}
           onSave={onSave}

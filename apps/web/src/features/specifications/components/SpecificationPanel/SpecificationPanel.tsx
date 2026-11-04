@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import type { Specification, SpecificationInput } from '../../specifications-api'
+import type { Specification, SpecificationEdit } from '../../specifications-api'
 import { SpecificationEditor } from '../SpecificationEditor/SpecificationEditor'
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
   busy: boolean
   onCancel: () => void
   onDelete: (id: string) => void
-  onSave: (input: SpecificationInput) => void
+  onSave: (input: SpecificationEdit) => void
 }
 
 export function SpecificationPanel({

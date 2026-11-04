@@ -21,6 +21,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -155,6 +156,18 @@ public class Car {
   @Immutable
   @OrderBy("name ASC, id ASC")
   private Set<Specification> specifications;
+
+  @Version
+  @Column(nullable = false)
+  private long version;
+
+  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+  @Schema(
+      description = "Revision to send as expectedVersion when editing.",
+      accessMode = Schema.AccessMode.READ_ONLY)
+  public long getVersion() {
+    return version;
+  }
 
   @CreationTimestamp
   @Column(name = "inserted_at", nullable = false, updatable = false)

@@ -1,3 +1,4 @@
+import { QueryClient } from '@tanstack/react-query'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, expect, describe, test as scenario, vi } from 'vitest'
 import { renderWithQuery } from '../../../../test/render-with-query'
@@ -18,17 +19,17 @@ vi.mock('../../specifications-api', () => ({
 const list = vi.mocked(listSpecifications)
 const save = vi.mocked(saveSpecification)
 const remove = vi.mocked(deleteSpecification)
-const item = { id: 'gps-id', name: 'GPS', description: 'Navigation' }
+const item = { id: 'gps-id', version: 0, name: 'GPS', description: 'Navigation' }
 async function click(name: string) {
   await act(async () =>
     fireEvent.click(screen.queryByRole('button', { name }) ?? screen.getByRole('link', { name })),
   )
 }
-async function open(path = '/specifications') {
+async function open(path = '/specifications', client?: QueryClient) {
   const history = createMemoryHistory({ initialEntries: [path] })
   const router = createAppRouter(history)
   await act(async () => {
-    renderWithQuery(<RouterProvider router={router} />)
+    renderWithQuery(<RouterProvider router={router} />, client)
     await router.load()
   })
   return history
@@ -74,7 +75,7 @@ describe('SpecificationsPage', () => {
         await click('Save specification')
         expect(await screen.findByText('SAT NAV')).toBeVisible()
         expect(save).toHaveBeenLastCalledWith(
-          { name: 'sat nav', description: 'Navigation' },
+          { name: 'sat nav', expectedVersion: item.version },
           item.id,
         )
       },
@@ -236,6 +237,7 @@ describe('SpecificationsPage', () => {
       async (action) => {
         const second = {
           id: '9bb13a38-2b2e-4082-8bc7-8ad60af49b8c',
+          version: 0,
           name: 'ABS',
           description: 'Anti-lock braking.',
         }
@@ -304,7 +306,7 @@ describe('SpecificationsPage', () => {
     scenario(
       'Given two specifications, when the catalog renders, then each table row links its own name and description to the correct edit and delete URLs',
       async () => {
-        const records = [{ id: 'abs-id', name: 'ABS', description: 'Braking' }, item]
+        const records = [{ id: 'abs-id', version: 0, name: 'ABS', description: 'Braking' }, item]
         list.mockResolvedValue(records)
         await open()
         const table = within(await screen.findByRole('table', { name: 'Specifications' }))
@@ -402,3 +404,70 @@ describe('SpecificationsPage', () => {
     )
   })
 })
+
+scenario(
+  'Given an open specification, when another writer changes its description, then stale rename is rejected and reopening uses the new version',
+  async () => {
+    const stored = { ...item, version: 2 }
+    list.mockImplementation(async () => [{ ...stored }])
+    const real = await vi.importActual<typeof import('../../specifications-api')>(
+      '../../specifications-api',
+    )
+    save.mockImplementationOnce(real.saveSpecification).mockResolvedValue(item)
+    const client = new QueryClient()
+    client.setQueryData(['categories'], [])
+    await open('/specifications/gps-id/edit', client)
+    await screen.findByLabelText('Name')
+    stored.version = 3
+    stored.description = 'Current maps'
+    fill('Name', 'Edited')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(null, {
+          status: 409,
+          headers: { 'Content-Type': 'application/problem+json; charset=utf-8' },
+        }),
+      ),
+    )
+    try {
+      await click('Save specification')
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'The record changed. Reopen the editor',
+      )
+      expect(save).toHaveBeenCalledWith({ name: 'Edited', expectedVersion: 2 }, item.id)
+      expect(screen.getByLabelText('Name')).toHaveValue('Edited')
+      expect(await screen.findByRole('cell', { name: 'Current maps' })).toBeVisible()
+      expect(client.getQueryState(['categories'])?.isInvalidated).toBe(false)
+      await click('Cancel')
+      await click('Edit GPS')
+      expect(await screen.findByLabelText('Description')).toHaveValue('Current maps')
+      fill('Name', 'Reviewed')
+      await click('Save specification')
+      expect(save).toHaveBeenLastCalledWith({ name: 'Reviewed', expectedVersion: 3 }, item.id)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  },
+)
+scenario(
+  'Given a pending save, when leaving the specification editor before completion, then the original operation does not redirect the new page',
+  async () => {
+    list.mockResolvedValue([item])
+    let done!: (v: typeof item) => void
+    save.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          done = resolve
+        }),
+    )
+    const history = await open('/specifications/gps-id/edit')
+    await screen.findByLabelText('Name')
+    fill('Name', 'Changed')
+    await click('Save specification')
+    await click('Cars')
+    await waitFor(() => expect(history.location.pathname).toBe('/cars'))
+    await act(async () => done(item))
+    expect(history.location.pathname).toBe('/cars')
+  },
+)

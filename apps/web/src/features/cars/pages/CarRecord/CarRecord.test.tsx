@@ -1,3 +1,4 @@
+import { QueryClient } from '@tanstack/react-query'
 import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test as scenario, vi } from 'vitest'
 import { openCatalogRoute } from '../../../../test/open-catalog-route'
@@ -18,6 +19,29 @@ describe('CarRecord', () => {
     vi.mocked(listCategories).mockResolvedValue(categories)
     vi.mocked(listSpecifications).mockResolvedValue(specifications)
   })
+  scenario(
+    'Given a pending car deletion, when leaving before completion, then the current page stays open',
+    async () => {
+      let done!: () => void
+      vi.mocked(api.deleteCar).mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            done = r
+          }),
+      )
+      const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
+      client.setQueryData(['car', 'first'], { ...car, id: 'first', name: 'Camry' })
+      const history = openCatalogRoute('/cars/second/delete', client)
+      fireEvent.click(await screen.findByRole('button', { name: 'Confirm deletion' }))
+      await waitFor(() => expect(api.deleteCar).toHaveBeenCalled())
+      await act(async () => history.push('/cars/first/delete'))
+      await screen.findByRole('heading', { name: 'Delete Camry?' })
+      await act(async () => done())
+      expect(history.location.pathname).toBe('/cars/first/delete')
+      expect(client.getQueryData(['car', 'first'])).toMatchObject({ name: 'Camry' })
+      expect(client.getQueryData(['car', 'second'])).toBeUndefined()
+    },
+  )
   afterEach(() => vi.unstubAllGlobals())
 
   scenario(

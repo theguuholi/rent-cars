@@ -1,5 +1,6 @@
 package com.github.theguuholi.rentcars.cars;
 
+import com.github.theguuholi.rentcars.shared.http.EditVersion;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import java.util.List;
@@ -39,7 +40,9 @@ class CarService {
 
   @Transactional
   Car update(UUID id, CarRequest request) {
-    return save(cars.findForUpdate(id).orElseThrow(CarService::notFound), request);
+    var car = cars.findById(id).orElseThrow(CarService::notFound);
+    EditVersion.requireCurrent(request.expectedVersion, car.getVersion());
+    return save(car, request);
   }
 
   @Transactional

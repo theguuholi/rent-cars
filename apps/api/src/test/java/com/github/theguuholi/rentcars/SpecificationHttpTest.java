@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -76,7 +77,7 @@ class SpecificationHttpTest {
   }
 
   @Test
-  @org.junit.jupiter.api.DisplayName(
+  @DisplayName(
       "Given the specification operations, when reading OpenAPI, then write requirements and error responses match each operation")
   void documentsErrorMessagesAndWriteExamples() throws Exception {
     var docs = mvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
@@ -92,6 +93,9 @@ class SpecificationHttpTest {
             jsonPath("$.components.schemas.SpecificationCreateRequest.allOf[0]['$ref']")
                 .value("#/components/schemas/SpecificationRequest"))
         .andExpect(jsonPath("$.components.schemas.SpecificationRequest.required").doesNotExist());
+    docs.andExpect(
+        jsonPath("$.components.schemas.SpecificationUpdateRequest.required")
+            .value(org.hamcrest.Matchers.contains("expectedVersion")));
     for (String op : java.util.List.of("get", "put", "patch", "delete")) {
       docs.andExpect(
           jsonPath(
@@ -109,7 +113,7 @@ class SpecificationHttpTest {
                   .value(
                       op.equals("post")
                           ? "#/components/schemas/SpecificationCreateRequest"
-                          : "#/components/schemas/SpecificationRequest"))
+                          : "#/components/schemas/SpecificationUpdateRequest"))
           .andExpect(
               jsonPath(
                       path + ".responses['400'].content['application/problem+json'].schema['$ref']")
@@ -138,7 +142,7 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"name":"navigation","description":"Satellite navigation"}
+            {"expectedVersion":0,"name":"navigation","description":"Satellite navigation"}
             """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("NAVIGATION"));
@@ -148,7 +152,7 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"description":"%s"}
+            {"expectedVersion":1,"description":"%s"}
             """
                         .formatted(longDescription)))
         .andExpect(status().isOk())
@@ -174,7 +178,7 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"name":"abs"}
+            {"expectedVersion":0,"name":"abs"}
             """))
         .andExpect(status().isConflict());
     mvc.perform(get(location)).andExpect(jsonPath("$.name").value("GPS"));
@@ -196,14 +200,15 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"description":null}
+            {"expectedVersion":0,"description":null}
             """))
         .andExpect(status().is(422))
         .andExpect(jsonPath("$.errors.description").isArray());
     mvc.perform(
             put(location)
                 .contentType("application/json")
-                .content(GPS.replace("gps", "x".repeat(256))))
+                .content(
+                    GPS.replace("{", "{\"expectedVersion\":0,").replace("gps", "x".repeat(256))))
         .andExpect(status().is(422))
         .andExpect(jsonPath("$.errors.name").isArray());
     mvc.perform(get(location)).andExpect(jsonPath("$.description").value("Navigation"));
@@ -245,7 +250,7 @@ class SpecificationHttpTest {
   }
 
   @Test
-  void waitingPatchPreservesAnotherTransactionsRename() throws Exception {
+  void givenConcurrentEditsWhenTheFirstCommitsThenTheOtherConflicts() throws Exception {
     String location = createGps();
     try (var workers = Executors.newVirtualThreadPerTaskExecutor()) {
       // Hold the first HTTP update open until PostgreSQL confirms that the second request is
@@ -257,7 +262,7 @@ class SpecificationHttpTest {
                   mvc.perform(
                           patch(location)
                               .contentType("application/json")
-                              .content("{\"name\":\"sat nav\"}"))
+                              .content("{\"expectedVersion\":0,\"name\":\"sat nav\"}"))
                       .andExpect(status().isOk());
                   int owner = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
                   var next =
@@ -266,7 +271,8 @@ class SpecificationHttpTest {
                               mvc.perform(
                                       patch(location)
                                           .contentType("application/json")
-                                          .content("{\"description\":\"Updated maps\"}"))
+                                          .content(
+                                              "{\"expectedVersion\":0,\"description\":\"Updated maps\"}"))
                                   .andReturn()
                                   .getResponse()
                                   .getStatus());
@@ -283,11 +289,42 @@ class SpecificationHttpTest {
                   throw new AssertionError(ex);
                 }
               });
-      assertThat(waiting.get(15, TimeUnit.SECONDS)).isEqualTo(200);
+      assertThat(waiting.get(15, TimeUnit.SECONDS)).isEqualTo(409);
     }
     mvc.perform(get(location))
         .andExpect(jsonPath("$.name").value("SAT NAV"))
-        .andExpect(jsonPath("$.description").value("Updated maps"));
+        .andExpect(jsonPath("$.description").value("Navigation"));
+  }
+
+  @Test
+  @DisplayName(
+      "Given two open editors, when one changes the description, then the stale rename requires reopening")
+  void staleVersion() throws Exception {
+    var location = createGps();
+    mvc.perform(
+            patch(location)
+                .contentType("application/json")
+                .content("{\"description\":\"Live maps\",\"expectedVersion\":0}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.version").value(1));
+    mvc.perform(
+            patch(location)
+                .contentType("application/json")
+                .content("{\"name\":\"Other\",\"expectedVersion\":0}"))
+        .andExpect(status().isConflict())
+        .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    mvc.perform(
+            patch(location)
+                .contentType("application/json")
+                .content("{\"name\":\"Other\",\"expectedVersion\":1}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.version").value(2))
+        .andExpect(jsonPath("$.description").value("Live maps"));
+    mvc.perform(
+            patch(location)
+                .contentType("application/json")
+                .content("{\"description\":\"unversioned\"}"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
@@ -296,13 +333,16 @@ class SpecificationHttpTest {
     mvc.perform(
             patch(location)
                 .contentType("application/json")
-                .content("{\"name\":\"sat nav\",\"description\":null}"))
+                .content("{\"expectedVersion\":0,\"name\":\"sat nav\",\"description\":null}"))
         .andExpect(status().is(422))
         .andExpect(jsonPath("$.errors.description").isArray());
     mvc.perform(get(location))
         .andExpect(jsonPath("$.name").value("GPS"))
         .andExpect(jsonPath("$.description").value("Navigation"));
-    mvc.perform(patch(location).contentType("application/json").content("{\"name\":\"sat nav\"}"))
+    mvc.perform(
+            patch(location)
+                .contentType("application/json")
+                .content("{\"expectedVersion\":0,\"name\":\"sat nav\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("SAT NAV"));
   }
@@ -323,7 +363,7 @@ class SpecificationHttpTest {
   @Test
   void emptyPatchPreservesTheRecordAndEmptyRequestBodyIsRejected() throws Exception {
     String location = createGps();
-    mvc.perform(patch(location).contentType("application/json").content("{}"))
+    mvc.perform(patch(location).contentType("application/json").content("{\"expectedVersion\":0}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("GPS"))
         .andExpect(jsonPath("$.description").value("Navigation"));
