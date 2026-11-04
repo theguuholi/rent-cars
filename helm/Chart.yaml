@@ -1,0 +1,5 @@
+apiVersion: v2
+name: rent-cars
+description: Local Rent Cars stack with a React frontend, Spring API and PostgreSQL
+type: application
+version: 0.1.0
