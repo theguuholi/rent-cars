@@ -1,4 +1,5 @@
 import { checkEditConflict } from '../../edit-conflict'
+import { protectedFetch } from '../auth/protected-fetch'
 export interface CarInput {
   name: string
   description: string
@@ -64,8 +65,12 @@ async function carError(response: Response): Promise<string> {
   }
 }
 
-async function request(url: string, options: RequestInit): Promise<Response> {
-  const response = await fetch(url, options)
+async function request(
+  url: string,
+  options: RequestInit,
+  transport: typeof protectedFetch = fetch,
+): Promise<Response> {
+  const response = await transport(url, options)
   if (!response.ok) {
     checkEditConflict(response)
     throw new Error(await carError(response))
@@ -86,11 +91,15 @@ async function writeCar(
   method: 'POST' | 'PATCH',
   input: Partial<CarInput>,
 ): Promise<Car> {
-  const response = await request(url, {
-    method,
-    body: JSON.stringify(input),
-    headers: { 'Content-Type': 'application/json' },
-  })
+  const response = await request(
+    url,
+    {
+      method,
+      body: JSON.stringify(input),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    protectedFetch,
+  )
   return response.json()
 }
 
@@ -103,5 +112,5 @@ export function updateCar(id: string, input: CarPatch & { expectedVersion: numbe
 }
 
 export async function deleteCar(id: string): Promise<void> {
-  await request(itemUrl(id), { method: 'DELETE' })
+  await request(itemUrl(id), { method: 'DELETE' }, protectedFetch)
 }

@@ -1,3 +1,4 @@
+import { useSession } from '../../../auth/session'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { PageSection } from '../../../../components/PageSection/PageSection'
@@ -5,6 +6,7 @@ import { listCars } from '../../cars-api'
 import { formatBrl } from '../../brl'
 
 export function CarsPage() {
+  const isAdmin = useSession()?.user.role === 'ADMIN'
   const cars = useQuery({ queryKey: ['cars'], queryFn: ({ signal }) => listCars(signal) })
   return (
     <PageSection
@@ -12,9 +14,11 @@ export function CarsPage() {
       title="Cars"
       description="Browse the rental fleet and manage individual vehicles."
       action={
-        <Link className="btn-primary" to="/cars/new">
-          New car
-        </Link>
+        isAdmin && (
+          <Link className="btn-primary" to="/cars/new">
+            New car
+          </Link>
+        )
       }
     >
       {cars.isPending ? (

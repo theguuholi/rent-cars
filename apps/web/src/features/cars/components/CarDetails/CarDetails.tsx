@@ -1,3 +1,4 @@
+import { useSession } from '../../../auth/session'
 import { Link } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import type { CarWithCatalog } from '../../cars-api'
@@ -5,6 +6,7 @@ import { CarFacts } from '../CarFacts/CarFacts'
 import { CarCatalogDetails } from '../CarCatalogDetails/CarCatalogDetails'
 
 export function CarDetails({ car }: { car: CarWithCatalog }) {
+  const isAdmin = useSession()?.user.role === 'ADMIN'
   return (
     <PageSection
       eyebrow="Fleet · Car details"
@@ -18,14 +20,16 @@ export function CarDetails({ car }: { car: CarWithCatalog }) {
     >
       <CarFacts car={car} />
       <CarCatalogDetails car={car} />
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Link className="btn-primary" from="/cars/$id" to="./edit">
-          Edit car
-        </Link>
-        <Link className="btn-secondary" from="/cars/$id" to="./delete">
-          Delete car
-        </Link>
-      </div>
+      {isAdmin && (
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link className="btn-primary" from="/cars/$id" to="./edit">
+            Edit car
+          </Link>
+          <Link className="btn-secondary" from="/cars/$id" to="./delete">
+            Delete car
+          </Link>
+        </div>
+      )}
     </PageSection>
   )
 }

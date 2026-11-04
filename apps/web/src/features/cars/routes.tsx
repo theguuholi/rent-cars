@@ -1,3 +1,4 @@
+import { requireAdmin } from '../auth/access'
 import { createRoute } from '@tanstack/react-router'
 import { rootRoute } from '../../routes/root'
 import { CarsPage } from './pages/CarsPage/CarsPage'
@@ -13,6 +14,7 @@ const list = createRoute({
 const create = createRoute({
   getParentRoute: () => rootRoute,
   path: '/cars/new',
+  beforeLoad: requireAdmin,
   staticData: { title: 'New car' },
   component: () => <CarFormPage />,
 })
@@ -25,12 +27,14 @@ const detail = createRoute({
 const edit = createRoute({
   getParentRoute: () => rootRoute,
   path: '/cars/$id/edit',
+  beforeLoad: requireAdmin,
   staticData: { title: 'Edit car' },
   component: () => <CarRecord id={edit.useParams().id} mode="edit" />,
 })
 const remove = createRoute({
   getParentRoute: () => rootRoute,
   path: '/cars/$id/delete',
+  beforeLoad: requireAdmin,
   staticData: { title: 'Delete car' },
   component: () => <CarRecord id={remove.useParams().id} mode="delete" />,
 })

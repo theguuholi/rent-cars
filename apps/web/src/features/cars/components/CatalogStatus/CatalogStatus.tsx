@@ -1,10 +1,12 @@
+import { AccessError } from '../../../auth/protected-fetch'
 import type { useCatalogs } from '../../useCatalogs'
 
 export function CatalogStatus({ categories, specifications }: ReturnType<typeof useCatalogs>) {
+  const error = categories.error ?? specifications.error
   if (categories.isError || specifications.isError)
     return (
       <div role="alert">
-        Could not load vehicle catalogs.{' '}
+        {error instanceof AccessError ? error.message : 'Could not load vehicle catalogs.'}{' '}
         <button
           className="btn-secondary"
           onClick={() => {

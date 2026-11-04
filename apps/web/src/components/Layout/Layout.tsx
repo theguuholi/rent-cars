@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Outlet, useMatches } from '@tanstack/react-router'
 
-import { session, useSession } from '../../features/auth/session'
+import { signOut } from '../../features/auth/renewal'
+import { useSession } from '../../features/auth/session'
 export function Layout() {
+  const [logoutError, setLogoutError] = useState(false)
   const identity = useSession()
   const title = useMatches({ select: (matches) => matches.at(-1)!.staticData.title })
   useEffect(() => {
@@ -17,17 +19,31 @@ export function Layout() {
               Rent<span className="text-orange-600">Cars</span>
             </Link>
           </h1>
-          <nav className="catalog-nav flex gap-5" aria-label="Vehicle catalogs">
+          <nav
+            className="catalog-nav flex flex-wrap items-center gap-x-5"
+            aria-label="Vehicle catalogs"
+          >
             <Link to="/cars">Cars</Link>
-            <Link to="/categories">Categories</Link>
-            <Link to="/specifications">Specifications</Link>
+            {identity?.user.role === 'ADMIN' && (
+              <>
+                <Link to="/categories">Categories</Link>
+                <Link to="/specifications">Specifications</Link>
+              </>
+            )}
             {identity ? (
-              <button type="button" onClick={() => session.set(null)}>
+              <button
+                type="button"
+                onClick={() => {
+                  setLogoutError(false)
+                  void signOut().catch(() => setLogoutError(true))
+                }}
+              >
                 Sign out {identity.user.email}
               </button>
             ) : (
               <Link to="/login">Sign in</Link>
             )}
+            {logoutError && <span role="alert">Could not sign out. Try again.</span>}
           </nav>
         </div>
       </header>
