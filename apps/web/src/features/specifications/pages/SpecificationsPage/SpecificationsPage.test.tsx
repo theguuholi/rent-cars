@@ -1,3 +1,5 @@
+import { adminSession } from '../../../../test/open-catalog-route'
+import { session } from '../../../auth/session'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, expect, describe, test as scenario, vi } from 'vitest'
 import { renderWithQuery } from '../../../../test/render-with-query'
@@ -26,6 +28,7 @@ async function click(name: string) {
 }
 async function open(path = '/specifications') {
   const history = createMemoryHistory({ initialEntries: [path] })
+  session.set(adminSession)
   const router = createAppRouter(history)
   await act(async () => {
     renderWithQuery(<RouterProvider router={router} />)

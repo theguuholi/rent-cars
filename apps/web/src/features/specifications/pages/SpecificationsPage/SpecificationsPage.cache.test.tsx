@@ -1,3 +1,5 @@
+import { adminSession } from '../../../../test/open-catalog-route'
+import { session } from '../../../auth/session'
 import { QueryClient } from '@tanstack/react-query'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
 import { act, fireEvent, screen } from '@testing-library/react'
@@ -21,6 +23,7 @@ async function openConfirmation() {
   const history = createMemoryHistory({
     initialEntries: ['/', '/specifications/gps-id/delete'],
   })
+  session.set(adminSession)
   const router = createAppRouter(history)
   await act(async () => {
     renderWithQuery(<RouterProvider router={router} />, client)

@@ -18,6 +18,7 @@ describe('Specifications routes', () => {
       await screen.findByText('No specifications yet.')
       expect(fetch).toHaveBeenCalledExactlyOnceWith('/api/specifications', {
         signal: expect.any(AbortSignal),
+        headers: { Authorization: 'Bearer test-admin' },
       })
     },
   )

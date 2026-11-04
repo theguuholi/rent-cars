@@ -1,9 +1,10 @@
+import { protectedFetch } from '../auth/protected-fetch'
 export type SpecificationInput = { name: string; description: string }
 export type Specification = SpecificationInput & { id: string }
 const path = '/api/specifications'
 
 async function request(url: string, options: RequestInit) {
-  const response = await fetch(url, options)
+  const response = await protectedFetch(url, options)
   if (!response.ok) {
     throw new Error(
       (

@@ -1,3 +1,4 @@
+import { AccessError } from '../../../auth/protected-fetch'
 import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test as scenario, vi } from 'vitest'
 import { openCatalogRoute } from '../../../../test/open-catalog-route'
@@ -15,6 +16,17 @@ describe('CatalogStatus', () => {
     vi.mocked(listSpecifications).mockResolvedValue(specifications)
   })
   afterEach(() => vi.unstubAllGlobals())
+
+  scenario(
+    'Given available categories and forbidden equipment, when the admin editor opens, then it reports the permission error from specifications',
+    async () => {
+      vi.mocked(listSpecifications).mockRejectedValueOnce(
+        new AccessError(403, 'Equipment access denied.'),
+      )
+      openCatalogRoute('/cars/new')
+      expect(await screen.findByRole('alert')).toHaveTextContent('Equipment access denied.')
+    },
+  )
 
   scenario.each(['categories', 'specifications'])(
     'Given a failed %s lookup, when retrying, then the form offers current choices',
