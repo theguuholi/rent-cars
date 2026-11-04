@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -111,7 +112,7 @@ class RefreshSessions {
   }
 
   private static byte[] sha256(String secret) {
-    return org.apache.commons.codec.digest.DigestUtils.sha256(secret);
+    return DigestUtils.sha256(secret);
   }
 
   private Grant issue(Family family, Authentication principal) {

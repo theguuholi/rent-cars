@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.csrf.DeferredCsrfToken;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
@@ -144,29 +147,23 @@ class SessionController {
       description = "Replacement access token",
       useReturnTypeSchema = true)
   ResponseEntity<SessionToken> refresh(
-      @org.springframework.web.bind.annotation.CookieValue(
-              name = RefreshSessions.COOKIE,
-              defaultValue = "")
-          String secret) {
+      @CookieValue(name = RefreshSessions.COOKIE, defaultValue = "") String secret) {
     return tokens
         .rotate(secret)
         .map(this::granted)
         .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
   }
 
-  @org.springframework.web.bind.annotation.DeleteMapping("/sessions/current")
+  @DeleteMapping("/sessions/current")
   @Operation(
       summary = "Revoke this device session and clear the refresh cookie",
       description = "Requires the CSRF cookie and X-XSRF-TOKEN header.")
   @ApiResponse(responseCode = "204", description = "Session closed")
   ResponseEntity<Void> logout(
-      @org.springframework.web.bind.annotation.CookieValue(
-              name = RefreshSessions.COOKIE,
-              defaultValue = "")
-          String secret) {
+      @CookieValue(name = RefreshSessions.COOKIE, defaultValue = "") String secret) {
     tokens.revoke(secret);
     return ResponseEntity.noContent()
-        .header("Set-Cookie", tokens.cookie("", java.time.Duration.ZERO).toString())
+        .header("Set-Cookie", tokens.cookie("", Duration.ZERO).toString())
         .build();
   }
 

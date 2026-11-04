@@ -118,6 +118,26 @@ class SessionControllerTest {
 
     @Test
     @DisplayName(
+        "Given a refresh session near absolute expiry, when it rotates, then only the digest is persisted and the new cookie inherits the remaining lifetime")
+    void absoluteExpiry() throws Exception {
+      var id = UUID.fromString(register());
+      var first = signInCookie();
+      byte[] digest = org.apache.commons.codec.digest.DigestUtils.sha256(first.getValue());
+      assertThat(
+              jdbc.queryForObject(
+                  "select digest from refresh_tokens where session_id=(select id from refresh_sessions where account_id=?)",
+                  byte[].class,
+                  id))
+          .isEqualTo(digest);
+      jdbc.update(
+          "update refresh_sessions set expires_at=now()+interval '3 minutes' where account_id=?",
+          id);
+      var response = exchange(first, false).andExpect(status().isOk()).andReturn().getResponse();
+      assertThat(response.getCookie(RefreshSessions.COOKIE).getMaxAge()).isBetween(1, 180);
+    }
+
+    @Test
+    @DisplayName(
         "Given a role change, when a valid session rotates, then the JWT reflects the current account and logout disables renewal")
     void permissionsAndLogout() throws Exception {
       register();
