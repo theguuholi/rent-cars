@@ -7,12 +7,12 @@ COPY src/main src/main
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -Dmaven.test.skip=true package && \
     cp target/*.jar application.jar && java -Djarmode=tools -jar application.jar extract --layers --destination /layers
 
-FROM eclipse-temurin:25-jre-noble
+FROM gcr.io/distroless/java25-debian13:nonroot
 WORKDIR /app
 COPY --from=build /layers/dependencies/ ./
 COPY --from=build /layers/spring-boot-loader/ ./
 COPY --from=build /layers/snapshot-dependencies/ ./
 COPY --from=build /layers/application/ ./
-USER 10001:10001
+USER 65532:65532
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "application.jar"]
+ENTRYPOINT ["/usr/bin/java", "-jar", "application.jar"]
