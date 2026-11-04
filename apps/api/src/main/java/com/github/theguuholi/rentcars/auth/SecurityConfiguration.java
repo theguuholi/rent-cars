@@ -58,6 +58,13 @@ class SecurityConfiguration {
             paths.matcher("/cars/**"),
             paths.matcher("/categories/**"),
             paths.matcher("/specifications/**"));
+    var cookieEndpoints =
+        new OrRequestMatcher(
+            paths.matcher(HttpMethod.POST, "/sessions/refresh"),
+            paths.matcher(HttpMethod.DELETE, "/sessions/current"));
+    var bearer =
+        new org.springframework.security.oauth2.server.resource.web.authentication
+            .BearerTokenAuthenticationConverter();
     var forbidden = new BearerTokenAccessDeniedHandler();
     return http.csrf(CsrfConfigurer::spa)
         .exceptionHandling(
@@ -78,6 +85,8 @@ class SecurityConfiguration {
         .authorizeHttpRequests(
             a ->
                 a.dispatcherTypeMatchers(DispatcherType.ERROR)
+                    .permitAll()
+                    .requestMatchers(cookieEndpoints)
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/users", "/sessions")
                     .permitAll()
@@ -101,7 +110,12 @@ class SecurityConfiguration {
                     .hasRole("ADMIN")
                     .anyRequest()
                     .denyAll())
-        .oauth2ResourceServer(r -> r.jwt(j -> j.jwtAuthenticationConverter(authentication)))
+        .oauth2ResourceServer(
+            r ->
+                r.authenticationConverter(
+                        request ->
+                            cookieEndpoints.matches(request) ? null : bearer.convert(request))
+                    .jwt(j -> j.jwtAuthenticationConverter(authentication)))
         .build();
   }
 }

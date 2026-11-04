@@ -43,13 +43,13 @@ class SessionController {
   private final AccountRepository accounts;
   private final PasswordEncoder passwords;
   private final AuthenticationManager authentication;
-  private final AccessTokenService tokens;
+  private final RefreshSessions tokens;
 
   SessionController(
       AccountRepository accounts,
       PasswordEncoder passwords,
       AuthenticationManager authentication,
-      AccessTokenService tokens) {
+      RefreshSessions tokens) {
     this.accounts = accounts;
     this.passwords = passwords;
     this.authentication = authentication;
@@ -117,10 +117,57 @@ class SessionController {
       var principal =
           authentication.authenticate(
               UsernamePasswordAuthenticationToken.unauthenticated(input.email(), input.password()));
-      return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(tokens.issue(principal));
+      return granted(tokens.open(principal));
     } catch (BadCredentialsException _) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+  }
+
+  private ResponseEntity<SessionToken> granted(RefreshSessions.Grant grant) {
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .header("Set-Cookie", grant.cookie().toString())
+        .body(grant.access());
+  }
+
+  @PostMapping("/sessions/refresh")
+  @Operation(
+      summary = "Rotate the refresh cookie and obtain a fresh access token",
+      description =
+          "Requires the CSRF cookie and X-XSRF-TOKEN header. Reusing a rotated cookie revokes this device session.")
+  @ApiResponse(
+      responseCode = "401",
+      description = "Session missing, expired or revoked",
+      content = @Content)
+  @ApiResponse(
+      responseCode = "200",
+      description = "Replacement access token",
+      useReturnTypeSchema = true)
+  ResponseEntity<SessionToken> refresh(
+      @org.springframework.web.bind.annotation.CookieValue(
+              name = RefreshSessions.COOKIE,
+              defaultValue = "")
+          String secret) {
+    return tokens
+        .rotate(secret)
+        .map(this::granted)
+        .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+  }
+
+  @org.springframework.web.bind.annotation.DeleteMapping("/sessions/current")
+  @Operation(
+      summary = "Revoke this device session and clear the refresh cookie",
+      description = "Requires the CSRF cookie and X-XSRF-TOKEN header.")
+  @ApiResponse(responseCode = "204", description = "Session closed")
+  ResponseEntity<Void> logout(
+      @org.springframework.web.bind.annotation.CookieValue(
+              name = RefreshSessions.COOKIE,
+              defaultValue = "")
+          String secret) {
+    tokens.revoke(secret);
+    return ResponseEntity.noContent()
+        .header("Set-Cookie", tokens.cookie("", java.time.Duration.ZERO).toString())
+        .build();
   }
 
   @GetMapping(value = "/sessions/me", produces = MediaType.APPLICATION_JSON_VALUE)
