@@ -40,11 +40,12 @@ export function renew() {
 export async function signOut() {
   const login = localStorage.getItem(deviceKey)
   if (login) {
-    await withCookieLock(async () => {
+    return withCookieLock(async () => {
       if (login !== localStorage.getItem(deviceKey)) return
       const response = await exchange('current', 'DELETE')
       if (!response.ok) throw new Error('Could not sign out. Try again.')
       localStorage.removeItem(deviceKey)
+      session.set(null)
     })
   }
   session.set(null)

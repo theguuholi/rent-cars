@@ -147,6 +147,7 @@ describe('Delayed session operations', () => {
       })
       await (change === 'logout' ? signOut() : renew())
       expect(fetch).not.toHaveBeenCalled()
+      expect(session.read()).toBe(adminSession)
     },
   )
   scenario(
