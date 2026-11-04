@@ -26,6 +26,10 @@ Open the [web application](http://localhost:5173) or explore the endpoints in [S
 
 If a protected request returns **401**, rerun steps 3–5 in the same file. Tokens expire after 15 minutes and restarting the dev API invalidates them. For **403** during login, rerun step 3 before signing in. For **403** on a catalog request, check the role in step 5.
 
+## Explore the codebase
+
+Follow [the developer walkthrough](docs/project-walkthrough.md) to try visitor, driver and admin access, trace a browser request into Spring and locate the tests for each layer.
+
 ## Repository layout
 
 | Directory | Contents |

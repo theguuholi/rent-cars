@@ -26,7 +26,7 @@ describe('LoginPage', () => {
               finish = resolve
             }),
         )
-      const history = openCatalogRoute('/')
+      const history = openCatalogRoute('/', undefined, null)
       fireEvent.click(await screen.findByRole('link', { name: 'Sign in' }))
       const email = await screen.findByLabelText('Email'),
         password = screen.getByLabelText('Password')
@@ -66,7 +66,7 @@ describe('LoginPage', () => {
     'Given a non-Error rejection, when submitting credentials, then the form shows the fallback',
     async () => {
       vi.mocked(signIn).mockRejectedValue('offline')
-      openCatalogRoute('/login')
+      openCatalogRoute('/login', undefined, null)
       const button = await screen.findByRole('button', { name: 'Sign in' })
       expect(fireEvent.submit(button.closest('form')!)).toBe(false)
       await waitFor(() => expect(signIn).toHaveBeenCalledExactlyOnceWith('', ''))
@@ -87,11 +87,11 @@ scenario(
           }),
       )
       .mockResolvedValueOnce(identity)
-    const history = openCatalogRoute('/login')
+    const history = openCatalogRoute('/login', undefined, null)
     const submit = async () =>
       fireEvent.submit((await screen.findByRole('button', { name: 'Sign in' })).closest('form')!)
     await submit()
-    await waitFor(() => expect(signIn).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled())
     fireEvent.click(screen.getByRole('link', { name: 'Cars' }))
     await waitFor(() => expect(history.location.pathname).toBe('/cars'))
     fireEvent.click(screen.getByRole('link', { name: 'Sign in' }))
@@ -113,9 +113,9 @@ scenario(
       reject = fail
     })
     vi.mocked(signIn).mockImplementationOnce(() => promise)
-    openCatalogRoute('/login')
+    openCatalogRoute('/login', undefined, null)
     fireEvent.submit((await screen.findByRole('button', { name: 'Sign in' })).closest('form')!)
-    await waitFor(() => expect(signIn).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled())
     act(() => session.set(null))
     await act(async () => reject(new Error('Obsolete attempt')))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()

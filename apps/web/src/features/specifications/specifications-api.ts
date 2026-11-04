@@ -1,4 +1,5 @@
 import { checkEditConflict } from '../../edit-conflict'
+import { protectedFetch } from '../auth/protected-fetch'
 export type SpecificationInput = { name: string; description: string }
 export type Specification = SpecificationInput & { id: string; version: number }
 export type SpecificationEdit = Partial<SpecificationInput> & {
@@ -7,7 +8,7 @@ export type SpecificationEdit = Partial<SpecificationInput> & {
 const path = '/api/specifications'
 
 async function request(url: string, options: RequestInit) {
-  const response = await fetch(url, options)
+  const response = await protectedFetch(url, options)
   if (!response.ok) {
     checkEditConflict(response)
     throw new Error(

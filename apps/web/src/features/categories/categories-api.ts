@@ -1,3 +1,4 @@
+import { protectedFetch } from '../auth/protected-fetch'
 export type Category = {
   id: string
   name: string
@@ -5,7 +6,7 @@ export type Category = {
 }
 
 export async function listCategories(signal: AbortSignal): Promise<Category[]> {
-  const response = await fetch('/api/categories', { signal })
+  const response = await protectedFetch('/api/categories', { signal })
 
   if (!response.ok) {
     throw new Error(`Failed to fetch categories (${response.status})`)

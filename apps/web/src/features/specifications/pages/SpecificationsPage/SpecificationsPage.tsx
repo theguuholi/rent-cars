@@ -1,5 +1,6 @@
 import { StaleEdit } from '../../../../edit-conflict'
 import { useCurrentAction } from '../../../../routes/use-current-action'
+import { AccessError } from '../../../auth/protected-fetch'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { Link, useMatchRoute, useNavigate, useLocation } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -115,7 +116,11 @@ export function SpecificationsPage() {
             <p role="status">Loading specifications…</p>
           ) : catalog.isError ? (
             <div role="alert">
-              <p>Could not load specifications.</p>
+              <p>
+                {catalog.error instanceof AccessError
+                  ? catalog.error.message
+                  : 'Could not load specifications.'}
+              </p>
               <button className="btn-secondary" onClick={() => void catalog.refetch()}>
                 Try again
               </button>

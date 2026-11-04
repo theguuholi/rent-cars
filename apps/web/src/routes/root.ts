@@ -1,5 +1,6 @@
-import { createRootRoute, createRoute } from '@tanstack/react-router'
-import { Layout } from '../components/Layout/Layout'
+import { createRootRouteWithContext, createRoute } from '@tanstack/react-router'
+import { SessionLayout } from '../features/auth/components/SessionLayout/SessionLayout'
+import type { session } from '../features/auth/session'
 import { NotFoundPage } from '../pages/NotFoundPage/NotFoundPage'
 
 declare module '@tanstack/react-router' {
@@ -8,7 +9,10 @@ declare module '@tanstack/react-router' {
   }
 }
 
-export const rootRoute = createRootRoute({ component: Layout, notFoundComponent: NotFoundPage })
+export const rootRoute = createRootRouteWithContext<{ session: typeof session }>()({
+  component: SessionLayout,
+  notFoundComponent: NotFoundPage,
+})
 export const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',

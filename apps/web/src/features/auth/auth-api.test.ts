@@ -17,6 +17,7 @@ describe('signIn', () => {
         .mockResolvedValueOnce(Response.json(user))
       vi.stubGlobal('fetch', fetch)
       await expect(signIn(email, password)).resolves.toEqual({ accessToken: 'signed', user })
+      expect(localStorage.getItem('rent-cars.login')).toMatch(/^[a-f0-9-]{36}$/)
       expect(fetch.mock.calls).toEqual([
         ['/api/csrf'],
         [
