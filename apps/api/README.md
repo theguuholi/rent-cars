@@ -64,3 +64,9 @@ For trusted branches, the Java verification job uploads the JaCoCo XML to Sonar 
 ## Concurrent catalog edits
 
 Car and specification responses include a read-only numeric version. Send it as expectedVersion on every PATCH or PUT. Creation needs no version. Missing versions return 400. Stale forms and competing updates return 409 with an application/problem+json response. Reopen the editor to read the latest data before resubmitting, even if another user changed a different field. The REST Client examples use the version from the last response.
+
+### Renewing a session
+
+Sign-in sets the HTTP-only `rent_refresh` cookie. Keep the 15-minute access JWT in memory. Send the cookie and CSRF header to `POST /sessions/refresh` to rotate it and obtain a new JWT with current permissions. Fetch `GET /csrf` first and echo its `X-XSRF-TOKEN` header. The browser sends both cookies automatically on same-origin requests.
+
+Each login starts a separate device session with an absolute seven-day lifetime (`rent.auth.refresh-lifetime`). Reusing a consumed refresh token revokes that device session. Serialize refresh requests across tabs. Use `DELETE /sessions/current` with the same CSRF proof to revoke renewal and expire the cookie. An issued JWT stays valid until expiry. Use HTTPS in production and activate a production profile with secure cookies. Only the development profile permits the refresh cookie over HTTP.

@@ -7,3 +7,7 @@ spring:
     locations:
       - classpath:db/migration
       - classpath:db/dev
+
+rent:
+  auth:
+    secure-cookie: false

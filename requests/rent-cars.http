@@ -116,3 +116,16 @@ X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}
 Cookie: XSRF-TOKEN={{csrf.response.headers.X-XSRF-TOKEN}}
 
 {"email":"{{driverEmail}}","password":"{{driverPassword}}"}
+
+### Renew this device session (enable REST Client's cookie jar and run steps 3 and 4 first)
+# @name refresh
+POST {{baseUrl}}/sessions/refresh
+X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}
+
+### Verify the renewed access token
+GET {{baseUrl}}/sessions/me
+Authorization: Bearer {{refresh.response.body.$.accessToken}}
+
+### End this device session
+DELETE {{baseUrl}}/sessions/current
+X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}

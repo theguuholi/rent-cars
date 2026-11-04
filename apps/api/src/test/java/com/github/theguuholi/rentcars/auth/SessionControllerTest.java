@@ -73,6 +73,115 @@ class SessionControllerTest {
   }
 
   @Nested
+  class Refresh {
+    jakarta.servlet.http.Cookie signInCookie() throws Exception {
+      return send("/sessions", credentials(email, password))
+          .andExpect(status().isOk())
+          .andReturn()
+          .getResponse()
+          .getCookie(RefreshSessions.COOKIE);
+    }
+
+    ResultActions exchange(jakarta.servlet.http.Cookie cookie, boolean logout) throws Exception {
+      var csrf = mvc.perform(get("/csrf")).andReturn().getResponse();
+      return mvc.perform(
+          (logout ? delete("/sessions/current") : post("/sessions/refresh"))
+              .cookie(cookie, csrf.getCookie("XSRF-TOKEN"))
+              .header("X-XSRF-TOKEN", csrf.getHeader("X-XSRF-TOKEN")));
+    }
+
+    @Test
+    @DisplayName(
+        "Given two concurrent refreshes, when both submit the same cookie, then one rotates and replay revokes only that device")
+    void replay() throws Exception {
+      register();
+      var cookie = signInCookie();
+      var other = signInCookie();
+      var start = new java.util.concurrent.CyclicBarrier(2);
+      try (var workers = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        java.util.concurrent.Callable<org.springframework.mock.web.MockHttpServletResponse> call =
+            () -> {
+              start.await(10, java.util.concurrent.TimeUnit.SECONDS);
+              return exchange(cookie, false).andReturn().getResponse();
+            };
+        var first = workers.submit(call);
+        var second = workers.submit(call);
+        var a = first.get();
+        var b = second.get();
+        assertThat(List.of(a.getStatus(), b.getStatus())).containsExactlyInAnyOrder(200, 401);
+        var successor = (a.getStatus() == 200 ? a : b).getCookie(RefreshSessions.COOKIE);
+        assertThat(successor.getValue()).isNotEqualTo(cookie.getValue());
+        exchange(successor, false).andExpect(status().isUnauthorized());
+        exchange(other, false).andExpect(status().isOk());
+      }
+    }
+
+    @Test
+    @DisplayName(
+        "Given a refresh session near absolute expiry, when it rotates, then only the digest is persisted and the new cookie inherits the remaining lifetime")
+    void absoluteExpiry() throws Exception {
+      var id = UUID.fromString(register());
+      var first = signInCookie();
+      byte[] digest = org.apache.commons.codec.digest.DigestUtils.sha256(first.getValue());
+      assertThat(
+              jdbc.queryForObject(
+                  "select digest from refresh_tokens where session_id=(select id from refresh_sessions where account_id=?)",
+                  byte[].class,
+                  id))
+          .isEqualTo(digest);
+      jdbc.update(
+          "update refresh_sessions set expires_at=now()+interval '3 minutes' where account_id=?",
+          id);
+      var response = exchange(first, false).andExpect(status().isOk()).andReturn().getResponse();
+      assertThat(response.getCookie(RefreshSessions.COOKIE).getMaxAge()).isBetween(1, 180);
+    }
+
+    @Test
+    @DisplayName(
+        "Given a role change, when a valid session rotates, then the JWT reflects the current account and logout disables renewal")
+    void permissionsAndLogout() throws Exception {
+      register();
+      var cookie = signInCookie();
+      assertThat(cookie.isHttpOnly()).isTrue();
+      assertThat(cookie.getAttribute("SameSite")).isEqualTo("Lax");
+      jdbc.update("update accounts set role='ADMIN' where email=?", email);
+      var response = exchange(cookie, false).andExpect(status().isOk()).andReturn().getResponse();
+      var jwt =
+          decoder.decode(
+              json.readTree(response.getContentAsString()).get("accessToken").asString());
+      assertThat(jwt.getClaimAsStringList("roles")).containsExactly("ADMIN");
+      var next = response.getCookie(RefreshSessions.COOKIE);
+      exchange(next, true)
+          .andExpect(status().isNoContent())
+          .andExpect(cookie().maxAge(RefreshSessions.COOKIE, 0));
+      exchange(next, false).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Given an expired session, when its cookie is presented, then it cannot renew")
+    void expired() throws Exception {
+      var id = register();
+      var cookie = signInCookie();
+      jdbc.update(
+          "update refresh_sessions set expires_at=now() where account_id=?", UUID.fromString(id));
+      exchange(cookie, false).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName(
+        "Given a bearer header but no CSRF proof, when rotating or logging out, then both cookie operations are forbidden")
+    void csrfRequired() throws Exception {
+      register();
+      var bearer = "Bearer " + login();
+      var cookie = signInCookie();
+      mvc.perform(post("/sessions/refresh").cookie(cookie).header("Authorization", bearer))
+          .andExpect(status().isForbidden());
+      mvc.perform(delete("/sessions/current").cookie(cookie).header("Authorization", bearer))
+          .andExpect(status().isForbidden());
+    }
+  }
+
+  @Nested
   class CatalogAuthorization {
     @ParameterizedTest(
         name =
