@@ -1,7 +1,7 @@
 import { useCurrentAction } from '../../../../routes/use-current-action'
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { useNavigate, useLocation } from '@tanstack/react-router'
+import { Link, useNavigate, useLocation } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { signIn } from '../../auth-api'
 import { session } from '../../session'
@@ -75,6 +75,11 @@ export function LoginPage() {
           )}
         </form.Subscribe>
       </form>
+      <p className="mt-4">
+        <Link className="underline" to="/register">
+          Create an account
+        </Link>
+      </p>
     </PageSection>
   )
 }

@@ -1,0 +1,48 @@
+name: rent-cars-stack
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: rent_cars_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "rent_cars_dev"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: ./apps/api
+    image: ${API_IMAGE:-rent-cars-api:local}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/rent_cars_dev
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  web:
+    build: ./apps/web
+    image: ${WEB_IMAGE:-rent-cars-web:local}
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8081}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "3", "-O", "/dev/null", "http://127.0.0.1:8080/api/csrf"]
+      interval: 5s
+      timeout: 4s
+      start_period: 45s
+      retries: 12
+
+volumes:
+  postgres_data:

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test as scenario, vi } from 'vitest'
-import { signIn } from './auth-api'
+import { registerAccount, signIn } from './auth-api'
 const email = 'driver@example.test',
   password = 'local-dev-123',
   csrf = 'csrf-token'
@@ -40,7 +40,9 @@ describe('signIn', () => {
     async (response) => {
       const fetch = vi.fn().mockResolvedValue(response)
       vi.stubGlobal('fetch', fetch)
-      await expect(signIn(email, password)).rejects.toThrow('Could not start sign-in. Try again.')
+      await expect(signIn(email, password)).rejects.toThrow(
+        'Could not get a security token. Try again.',
+      )
       expect(fetch).toHaveBeenCalledTimes(1)
     },
   )
@@ -75,6 +77,50 @@ describe('signIn', () => {
       await expect(signIn(email, password)).rejects.toThrow(
         'Could not verify your profile. Try signing in again.',
       )
+    },
+  )
+})
+
+describe('Driver registration', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  scenario(
+    'Given a CSRF token, when registering, then POST only the credentials with the matching header and leave login to the driver',
+    async () => {
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce(bootstrap())
+        .mockResolvedValueOnce(new Response(null, { status: 201 }))
+      vi.stubGlobal('fetch', fetch)
+      await expect(registerAccount(email, password)).resolves.toBeUndefined()
+      expect(fetch.mock.calls).toEqual([
+        ['/api/csrf'],
+        [
+          '/api/users',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrf },
+            body: JSON.stringify({ email, password }),
+          },
+        ],
+      ])
+    },
+  )
+  scenario.each([
+    [409, 'This email is already registered.'],
+    [422, 'Check the email and password requirements.'],
+    [403, 'Could not create your account. Try again.'],
+    [500, 'Could not create your account. Try again.'],
+  ] as const)(
+    'Given registration returns %i, when the driver submits, then report %s',
+    async (status, message) => {
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockResolvedValueOnce(bootstrap())
+          .mockResolvedValueOnce(new Response(null, { status })),
+      )
+      await expect(registerAccount(email, password)).rejects.toThrow(message)
     },
   )
 })

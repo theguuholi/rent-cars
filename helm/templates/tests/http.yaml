@@ -20,7 +20,7 @@ spec:
       command: ["/bin/sh", "-ec"]
       args:
         - |
-          url=http://{{ .Release.Name }}-web:8080
+          url=http://{{ .Release.Name }}-web:{{ .Values.web.service.port }}
           page=$(wget -T 5 -qO- "$url/cars/review/edit")
           echo "$page" | grep -q 'id="root"'
           # Service endpoints can take a moment to converge after a rollout.
