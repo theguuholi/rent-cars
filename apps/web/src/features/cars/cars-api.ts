@@ -13,6 +13,11 @@ export interface CarInput {
 export type CarPatch = Partial<Omit<CarInput, 'licensePlate'>>
 export type Car = CarInput & { id: string }
 
+export type CarWithCatalog = Car & {
+  category: import('../categories/categories-api').Category
+  specifications: import('../specifications/specifications-api').Specification[]
+}
+
 const collection = '/api/cars'
 const itemUrl = (id: string) => `${collection}/${encodeURIComponent(id)}`
 const errors: Record<number, string> = {
@@ -70,7 +75,7 @@ export async function listCars(signal?: AbortSignal): Promise<Car[]> {
   return (await request(collection, { signal })).json()
 }
 
-export async function getCar(id: string, signal?: AbortSignal): Promise<Car> {
+export async function getCar(id: string, signal?: AbortSignal): Promise<CarWithCatalog> {
   return (await request(itemUrl(id), { signal })).json()
 }
 

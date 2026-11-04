@@ -52,7 +52,7 @@ describe('CarFormPage', () => {
       fireEvent.click(screen.getByText('Save car'))
       await screen.findByRole('heading', { name: 'Corolla' })
       expect(history.location.pathname).toBe('/cars/second')
-      const { id: _id, ...expected } = car
+      const { id: _id, category: _category, specifications: _specifications, ...expected } = car
       expect(api.createCar).toHaveBeenCalledExactlyOnceWith(expected)
     },
   )

@@ -1,13 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
-import type { Car } from '../../cars-api'
+import type { CarWithCatalog } from '../../cars-api'
 import { CarFacts } from '../CarFacts/CarFacts'
 import { CarCatalogDetails } from '../CarCatalogDetails/CarCatalogDetails'
-import { CatalogStatus } from '../CatalogStatus/CatalogStatus'
-import { useCatalogs } from '../../useCatalogs'
 
-export function CarDetails({ car }: { car: Car }) {
-  const catalogs = useCatalogs()
+export function CarDetails({ car }: { car: CarWithCatalog }) {
   return (
     <PageSection
       eyebrow="Fleet · Car details"
@@ -20,15 +17,7 @@ export function CarDetails({ car }: { car: Car }) {
       }
     >
       <CarFacts car={car} />
-      {catalogs.categories.isSuccess && catalogs.specifications.isSuccess ? (
-        <CarCatalogDetails
-          car={car}
-          categories={catalogs.categories.data}
-          specifications={catalogs.specifications.data}
-        />
-      ) : (
-        <CatalogStatus {...catalogs} />
-      )}
+      <CarCatalogDetails car={car} />
       <div className="mt-6 flex flex-wrap gap-3">
         <Link className="btn-primary" from="/cars/$id" to="./edit">
           Edit car
