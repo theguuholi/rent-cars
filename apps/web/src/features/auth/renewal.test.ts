@@ -140,12 +140,15 @@ describe('Delayed session operations', () => {
       device()
       const fetch = vi.fn()
       vi.stubGlobal('fetch', fetch)
-      vi.spyOn(navigator.locks, 'request').mockImplementationOnce(async (_name, callback) => {
-        if (change === 'account') session.set(adminSession)
-        else localStorage.setItem(deviceKey, 'replacement')
-        return (callback as () => Promise<void>)()
-      })
+      const lock = vi
+        .spyOn(navigator.locks, 'request')
+        .mockImplementationOnce(async (_name, callback) => {
+          if (change === 'account') session.set(adminSession)
+          else localStorage.setItem(deviceKey, 'replacement')
+          return (callback as () => Promise<void>)()
+        })
       await (change === 'logout' ? signOut() : renew())
+      expect(lock).toHaveBeenCalledExactlyOnceWith('rent-cars.session', expect.any(Function))
       expect(fetch).not.toHaveBeenCalled()
       expect(session.read()).toBe(adminSession)
     },
