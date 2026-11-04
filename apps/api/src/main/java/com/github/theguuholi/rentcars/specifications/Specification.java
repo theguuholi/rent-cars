@@ -1,11 +1,10 @@
 package com.github.theguuholi.rentcars.specifications;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.github.theguuholi.rentcars.shared.http.JsonViews;
+import com.github.theguuholi.rentcars.shared.persistence.VersionedEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
-import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -20,7 +19,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 @JsonView(JsonViews.Summary.class)
 @Entity
 @Table(name = "specifications")
-public class Specification {
+public class Specification extends VersionedEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
@@ -33,18 +32,6 @@ public class Specification {
   @NotBlank
   @Column(nullable = false, columnDefinition = "text")
   private String description;
-
-  @Version
-  @Column(nullable = false)
-  private long version;
-
-  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-  @Schema(
-      description = "Revision to send as expectedVersion when editing.",
-      accessMode = Schema.AccessMode.READ_ONLY)
-  public long getVersion() {
-    return version;
-  }
 
   @CreationTimestamp
   @Column(name = "inserted_at", nullable = false, updatable = false)

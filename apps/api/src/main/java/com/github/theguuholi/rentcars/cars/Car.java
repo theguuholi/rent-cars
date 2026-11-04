@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.github.theguuholi.rentcars.categories.Category;
 import com.github.theguuholi.rentcars.shared.http.JsonViews;
+import com.github.theguuholi.rentcars.shared.persistence.VersionedEntity;
 import com.github.theguuholi.rentcars.specifications.Specification;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.CollectionTable;
@@ -21,7 +22,6 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -46,7 +46,7 @@ import org.springframework.web.server.ResponseStatusException;
 @JsonView(JsonViews.Summary.class)
 @Entity
 @Table(name = "cars")
-public class Car {
+public class Car extends VersionedEntity {
 
   @JsonProperty
   @Schema(
@@ -156,18 +156,6 @@ public class Car {
   @Immutable
   @OrderBy("name ASC, id ASC")
   private Set<Specification> specifications;
-
-  @Version
-  @Column(nullable = false)
-  private long version;
-
-  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-  @Schema(
-      description = "Revision to send as expectedVersion when editing.",
-      accessMode = Schema.AccessMode.READ_ONLY)
-  public long getVersion() {
-    return version;
-  }
 
   @CreationTimestamp
   @Column(name = "inserted_at", nullable = false, updatable = false)
