@@ -15,6 +15,8 @@ make dev
 
 Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. Press Ctrl+C to stop the applications and run `make db-stop` to stop PostgreSQL.
 
+For container images and a local Kubernetes deployment, follow the [Docker and Helm guide](helm/README.md).
+
 ### Explore the API in VS Code
 
 1. Start Docker and run `make api-dev` from the repository root. If `make dev` is already running, use that API.

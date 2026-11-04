@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-proxy
+data:
+  upstream.conf: "server {{ .Release.Name }}-api:8080;"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "rent-cars.labels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "rent-cars.labels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: web
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          securityContext: {{ include "rent-cars.containerSecurity" . | nindent 12 }}
+          resources: {{ toYaml .Values.web.resources | nindent 12 }}
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /index.html, port: http}
+          livenessProbe:
+            tcpSocket: {port: http}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: proxy, mountPath: /etc/nginx/upstream.conf, subPath: upstream.conf, readOnly: true}
+      volumes:
+        - {name: tmp, emptyDir: {}}
+        - name: proxy
+          configMap: {name: {{ .Release.Name }}-proxy}
