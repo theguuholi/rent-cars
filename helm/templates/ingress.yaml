@@ -14,5 +14,5 @@ spec:
             backend:
               service:
                 name: {{ .Release.Name }}-web
-                port: {number: 8080}
+                port: {number: {{ .Values.web.service.port }}}
 {{- end }}

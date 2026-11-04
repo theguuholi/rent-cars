@@ -2,7 +2,7 @@ import type { Session, UserProfile } from './session'
 export async function csrfHeader() {
   const csrf = await fetch('/api/csrf')
   const token = csrf.headers.get('X-XSRF-TOKEN')
-  if (!csrf.ok || !token) throw new Error('Could not start sign-in. Try again.')
+  if (!csrf.ok || !token) throw new Error('Could not get a security token. Try again.')
   return { 'X-XSRF-TOKEN': token }
 }
 export async function readProfile(response: Response): Promise<Session> {

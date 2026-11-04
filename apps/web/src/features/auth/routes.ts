@@ -1,3 +1,4 @@
+import { RegisterPage } from './pages/RegisterPage/RegisterPage'
 import { ForbiddenPage } from './pages/ForbiddenPage/ForbiddenPage'
 import { createRoute } from '@tanstack/react-router'
 import { rootRoute } from '../../routes/root'
@@ -15,4 +16,11 @@ export const forbiddenRoute = createRoute({
   path: '/forbidden',
   staticData: { title: 'Access denied' },
   component: ForbiddenPage,
+})
+
+export const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/register',
+  staticData: { title: 'Create account' },
+  component: RegisterPage,
 })

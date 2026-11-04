@@ -5,8 +5,11 @@ kind: Service
 metadata:
   name: {{ $.Release.Name }}-{{ $component }}
 spec:
+  {{- if eq $component "web" }}
+  type: {{ $.Values.web.service.type }}
+  {{- end }}
   selector:
     {{- include "rent-cars.labels" $ | nindent 4 }}
     app.kubernetes.io/component: {{ $component }}
-  ports: [{name: http, port: 8080, targetPort: http}]
+  ports: [{name: http, port: {{ ternary $.Values.web.service.port 8080 (eq $component "web") }}, targetPort: http}]
 {{- end }}

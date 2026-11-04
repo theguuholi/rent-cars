@@ -17,6 +17,17 @@ Open the [web application](http://localhost:5173) or explore the endpoints in [S
 
 For container images and a local Kubernetes deployment, follow the [Docker and Helm guide](helm/README.md).
 
+### Publish the latest application images
+
+Authenticate with Docker Hub and run the script from the repository root:
+
+```sh
+docker login -u guuhworship
+./scripts/push-images.sh
+```
+
+The script builds both images from the current working tree for the local Docker platform, then pushes `guuhworship/rent-cars-api:latest` and `guuhworship/rent-cars-web:latest`. Set `IMAGE_NAMESPACE` to publish to a different registry and namespace.
+
 ### Explore the API in VS Code
 
 1. Start Docker and run `make api-dev` from the repository root. If `make dev` is already running, use that API.
