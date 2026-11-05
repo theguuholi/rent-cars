@@ -5,10 +5,12 @@ COPY .mvn .mvn
 COPY mvnw pom.xml ./
 COPY src/main src/main
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -Dmaven.test.skip=true package && \
-    cp target/*.jar application.jar && java -Djarmode=tools -jar application.jar extract --layers --destination /layers
+    mkdir -p /data/uploads && cp target/*.jar application.jar && java -Djarmode=tools -jar application.jar extract --layers --destination /layers
 
 FROM gcr.io/distroless/java25-debian13:nonroot
 WORKDIR /app
+COPY --from=build --chown=65532:65532 /data/uploads /data/uploads
+ENV RENT_STORAGE_DIRECTORY=/data/uploads
 COPY --from=build /layers/dependencies/ ./
 COPY --from=build /layers/spring-boot-loader/ ./
 COPY --from=build /layers/snapshot-dependencies/ ./

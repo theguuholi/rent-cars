@@ -53,3 +53,7 @@ Follow [the developer walkthrough](docs/project-walkthrough.md) to try visitor, 
 | [.github/workflows/](.github/workflows/) | CI workflows for verification, coverage and mutation testing |
 
 From the repository root, run `make dev` to start PostgreSQL, the API and the frontend together. Use `make api-dev` or `make web-dev` to start a single application, and `make check` to verify both. See the [contributor guide](AGENTS.md) for development conventions.
+
+### Account avatar
+
+After signing in, open **My avatar** to upload, preview or remove your private profile picture. See [avatar storage and verification](docs/avatars.md) and the executable examples in `requests/rent-cars.http`.

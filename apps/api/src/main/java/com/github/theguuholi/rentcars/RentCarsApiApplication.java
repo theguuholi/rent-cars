@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
             description =
                 "Rent Cars is a car rental project. Its first resource is the vehicle category catalog. "
                     + "Use GET /categories to show drivers the body styles in the catalog and explain each option."))
+@org.springframework.scheduling.annotation.EnableScheduling
 @SpringBootApplication
 public class RentCarsApiApplication {
 

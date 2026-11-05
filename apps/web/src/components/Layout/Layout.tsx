@@ -30,6 +30,7 @@ export function Layout() {
                 <Link to="/specifications">Specifications</Link>
               </>
             )}
+            {identity && <Link to="/account/avatar">My avatar</Link>}
             {identity ? (
               <button
                 type="button"

@@ -1,4 +1,5 @@
 api:
+  avatarStorage: 1Gi
   image:
     repository: docker.io/guuhworship/rent-cars-api
     tag: latest

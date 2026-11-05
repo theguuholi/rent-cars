@@ -1,6 +1,7 @@
+import { AvatarPage } from './pages/AvatarPage/AvatarPage'
 import { RegisterPage } from './pages/RegisterPage/RegisterPage'
 import { ForbiddenPage } from './pages/ForbiddenPage/ForbiddenPage'
-import { createRoute } from '@tanstack/react-router'
+import { createRoute, redirect } from '@tanstack/react-router'
 import { rootRoute } from '../../routes/root'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 
@@ -23,4 +24,14 @@ export const registerRoute = createRoute({
   path: '/register',
   staticData: { title: 'Create account' },
   component: RegisterPage,
+})
+
+export const avatarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/account/avatar',
+  staticData: { title: 'My avatar' },
+  beforeLoad: ({ context }) => {
+    if (!context.session.read()) throw redirect({ to: '/login', replace: true })
+  },
+  component: AvatarPage,
 })

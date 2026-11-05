@@ -106,6 +106,8 @@ class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/sessions/me")
                     .authenticated()
+                    .requestMatchers("/users/me/avatar")
+                    .authenticated()
                     .requestMatchers(catalog)
                     .hasRole("ADMIN")
                     .anyRequest()

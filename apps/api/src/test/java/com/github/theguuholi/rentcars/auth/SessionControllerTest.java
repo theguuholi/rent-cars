@@ -30,6 +30,13 @@ import tools.jackson.databind.ObjectMapper;
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 class SessionControllerTest {
+  @org.junit.jupiter.api.io.TempDir static java.nio.file.Path avatarDirectory;
+
+  @org.springframework.test.context.DynamicPropertySource
+  static void avatarStorage(org.springframework.test.context.DynamicPropertyRegistry properties) {
+    properties.add("rent.storage.directory", () -> avatarDirectory.toString());
+  }
+
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
   @Autowired ObjectMapper json;
@@ -70,6 +77,86 @@ class SessionControllerTest {
             .andExpect(header().string("Cache-Control", "no-store"))
             .andReturn();
     return json.readTree(response.getResponse().getContentAsString()).get("accessToken").asString();
+  }
+
+  @Nested
+  class Avatar {
+    byte[] png() throws Exception {
+      return java.nio.file.Files.readAllBytes(
+          java.nio.file.Path.of("../../requests/fixtures/avatar.png"));
+    }
+
+    @Test
+    @DisplayName(
+        "Given the avatar API, when reading OpenAPI, then document authenticated multipart input and private PNG output")
+    void schema() throws Exception {
+      var response =
+          mvc.perform(get("/v3/api-docs"))
+              .andExpect(status().isOk())
+              .andReturn()
+              .getResponse()
+              .getContentAsString();
+      var path = json.readTree(response).get("paths").get("/users/me/avatar");
+      assertThat(path.get("put").get("requestBody").get("content").has("multipart/form-data"))
+          .isTrue();
+      assertThat(path.get("get").get("responses").get("200").get("content").has("image/png"))
+          .isTrue();
+      assertThat(path.get("put").get("security").get(0).has("bearerAuth")).isTrue();
+    }
+
+    @Test
+    @DisplayName(
+        "Given an authenticated driver, when uploading, reading and deleting an avatar, then expose only a normalized private PNG")
+    void lifecycle() throws Exception {
+      register();
+      var token = login();
+      var image =
+          new org.springframework.mock.web.MockMultipartFile(
+              "image", "photo.jpg", "image/jpeg", png());
+      mvc.perform(
+              multipart(org.springframework.http.HttpMethod.PUT, "/users/me/avatar")
+                  .file(image)
+                  .header("Authorization", "Bearer " + token))
+          .andExpect(status().isNoContent());
+      mvc.perform(get("/users/me/avatar").header("Authorization", "Bearer " + token))
+          .andExpect(status().isOk())
+          .andExpect(content().contentType("image/png"))
+          .andExpect(header().string("Cache-Control", "no-store"));
+      email = UUID.randomUUID() + "@example.test";
+      register();
+      mvc.perform(get("/users/me/avatar").header("Authorization", "Bearer " + login()))
+          .andExpect(status().isNotFound());
+      mvc.perform(delete("/users/me/avatar").header("Authorization", "Bearer " + token))
+          .andExpect(status().isNoContent());
+      mvc.perform(get("/users/me/avatar").header("Authorization", "Bearer " + token))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Given invalid image bytes, when uploading as a driver, then reject with 422")
+    void invalid() throws Exception {
+      register();
+      var fake =
+          new org.springframework.mock.web.MockMultipartFile(
+              "image", "photo.png", "image/png", "fake".getBytes());
+      mvc.perform(
+              multipart(org.springframework.http.HttpMethod.PUT, "/users/me/avatar")
+                  .file(fake)
+                  .header("Authorization", "Bearer " + login()))
+          .andExpect(status().isUnprocessableContent());
+    }
+
+    @Test
+    @DisplayName(
+        "Given anonymous or unsupported avatar access, when calling the API, then refuse access")
+    void privateOnly() throws Exception {
+      mvc.perform(get("/users/me/avatar")).andExpect(status().isUnauthorized());
+      register();
+      mvc.perform(
+              get("/users/" + UUID.randomUUID() + "/avatar")
+                  .header("Authorization", "Bearer " + login()))
+          .andExpect(status().isForbidden());
+    }
   }
 
   @Nested

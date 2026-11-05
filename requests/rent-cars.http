@@ -117,6 +117,27 @@ Cookie: XSRF-TOKEN={{csrf.response.headers.X-XSRF-TOKEN}}
 
 {"email":"{{driverEmail}}","password":"{{driverPassword}}"}
 
+### Optional · Upload or replace your avatar → 204 (sign in with step 4)
+PUT {{baseUrl}}/users/me/avatar
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: multipart/form-data; boundary=rent-cars-avatar
+
+--rent-cars-avatar
+Content-Disposition: form-data; name="image"; filename="avatar.png"
+Content-Type: image/png
+
+< ./fixtures/avatar.png
+--rent-cars-avatar--
+
+### Read your private PNG → 200 (404 if absent)
+GET {{baseUrl}}/users/me/avatar
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Accept: image/png
+
+### Remove your avatar → 204; repeat the read to verify 404
+DELETE {{baseUrl}}/users/me/avatar
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
 ### Renew this device session (enable REST Client's cookie jar and run steps 3 and 4 first)
 # @name refresh
 POST {{baseUrl}}/sessions/refresh

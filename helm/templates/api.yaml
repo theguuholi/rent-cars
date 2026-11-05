@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: {{ .Release.Name }}-api
 spec:
+  strategy: {type: Recreate}
   replicas: 1
   selector:
     matchLabels:
@@ -48,9 +49,12 @@ spec:
           livenessProbe:
             tcpSocket: {port: http}
           volumeMounts:
+            - {name: avatars, mountPath: /data/uploads}
             - {name: tmp, mountPath: /tmp}
             - {name: keys, mountPath: /keys, readOnly: true}
       volumes:
+        - name: avatars
+          persistentVolumeClaim: {claimName: {{ .Release.Name }}-avatars}
         - {name: tmp, emptyDir: {}}
         - name: keys
           secret:
