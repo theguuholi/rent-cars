@@ -54,11 +54,15 @@ class CarService {
 
   @Transactional
   Car create(CarRequest request) {
-    return create(request, List.of());
+    return createCar(request, List.of());
   }
 
   @Transactional
   Car create(CarRequest request, List<MultipartFile> files) {
+    return createCar(request, files);
+  }
+
+  private Car createCar(CarRequest request, List<MultipartFile> files) {
     Car car = new Car();
     apply(car, request);
     changeImages(car, files, request.removeImageIds);
@@ -67,11 +71,15 @@ class CarService {
 
   @Transactional
   Car update(UUID id, CarRequest request) {
-    return update(id, request, List.of());
+    return updateCar(id, request, List.of());
   }
 
   @Transactional
   Car update(UUID id, CarRequest request, List<MultipartFile> files) {
+    return updateCar(id, request, files);
+  }
+
+  private Car updateCar(UUID id, CarRequest request, List<MultipartFile> files) {
     var car = cars.findById(id).orElseThrow(CarService::notFound);
     EditVersion.requireCurrent(request.expectedVersion, car.getVersion());
     apply(car, request);
