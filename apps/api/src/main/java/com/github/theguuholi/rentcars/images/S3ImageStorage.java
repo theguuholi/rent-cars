@@ -1,4 +1,4 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
 import java.util.UUID;
 import software.amazon.awssdk.core.sync.RequestBody;

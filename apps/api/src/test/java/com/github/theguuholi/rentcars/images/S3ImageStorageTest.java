@@ -1,4 +1,4 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;

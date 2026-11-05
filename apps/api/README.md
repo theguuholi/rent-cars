@@ -179,3 +179,7 @@ Car and specification responses include a read-only numeric version. Send it as 
 Sign-in sets the HTTP-only `rent_refresh` cookie. Keep the 15-minute access JWT in memory. Send the cookie and CSRF header to `POST /sessions/refresh` to rotate it and obtain a new JWT with current permissions. Fetch `GET /csrf` first and echo its `X-XSRF-TOKEN` header. The browser sends both cookies automatically on same-origin requests.
 
 Each login starts a separate device session with an absolute seven-day lifetime (`rent.auth.refresh-lifetime`). Reusing a consumed refresh token revokes that device session. Serialize refresh requests across tabs. Use `DELETE /sessions/current` with the same CSRF proof to revoke renewal and expire the cookie. An issued JWT stays valid until expiry. Use HTTPS in production and activate a production profile with secure cookies. Only the development profile permits the refresh cookie over HTTP.
+
+## Car photo galleries
+
+`GET /cars/{carId}/images` lists the public gallery and `GET /cars/{carId}/images/{imageId}` returns a normalized PNG. Administrators add one image with multipart `POST /cars/{carId}/images` and remove it with `DELETE /cars/{carId}/images/{imageId}`. The API returns the `CarImage` entity on creation, with a `Location` header. Storage configuration is shared with avatars; no additional bucket or local volume is required. See [the car photo walkthrough](../../docs/car-images.md) for permissions, validation, cleanup and REST Client examples.

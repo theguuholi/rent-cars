@@ -116,4 +116,19 @@ class CarRepositoryTest {
       }
     }
   }
+
+  @Nested
+  class FindForRead {
+    @Test
+    @DisplayName(
+        "Given a known or absent car, when reading under a shared lock, then return only the requested car")
+    void readLock() {
+      var id = sedan("READ1234");
+      tx.executeWithoutResult(
+          _ -> {
+            assertThat(cars.findForRead(id).orElseThrow().id()).isEqualTo(id);
+            assertThat(cars.findForRead(UUID.randomUUID())).isEmpty();
+          });
+    }
+  }
 }

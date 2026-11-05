@@ -1,4 +1,4 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
@@ -11,20 +11,20 @@ import java.util.UUID;
 /** Durable allocation ledger, including uploads that failed before the account was updated. */
 @Schema(hidden = true)
 @Entity
-@Table(name = "avatar_objects")
-class AvatarObject {
+@Table(name = "image_objects")
+public class ImageObject {
   @Id private UUID id;
 
   @Column(nullable = false, insertable = false, updatable = false)
   private Instant createdAt;
 
-  protected AvatarObject() {}
+  protected ImageObject() {}
 
-  AvatarObject(UUID id) {
+  public ImageObject(UUID id) {
     this.id = id;
   }
 
-  UUID id() {
+  public UUID id() {
     return id;
   }
 }

@@ -1,4 +1,4 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;

@@ -2,6 +2,7 @@ import { useSession } from '../../../auth/session'
 import { Link } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import type { CarWithCatalog } from '../../cars-api'
+import { CarGallery } from '../CarGallery/CarGallery'
 import { CarFacts } from '../CarFacts/CarFacts'
 import { CarCatalogDetails } from '../CarCatalogDetails/CarCatalogDetails'
 
@@ -20,6 +21,7 @@ export function CarDetails({ car }: { car: CarWithCatalog }) {
     >
       <CarFacts car={car} />
       <CarCatalogDetails car={car} />
+      <CarGallery key={car.id} carId={car.id} />
       {isAdmin && (
         <div className="mt-6 flex flex-wrap gap-3">
           <Link className="btn-primary" from="/cars/$id" to="./edit">

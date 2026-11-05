@@ -144,6 +144,35 @@ Accept: image/png
 DELETE {{baseUrl}}/users/me/avatar
 Authorization: Bearer {{login.response.body.$.accessToken}}
 
+### Car photos · Upload one photo to the first listed car → 201
+# Run steps 1, 3 and 4 first. Repeat this request to add another photo; existing photos remain.
+# The API uses the same local/S3/GCS storage configuration as avatars.
+# @name uploadCarPhoto
+POST {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}/images
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: multipart/form-data; boundary=rent-cars-photo
+
+--rent-cars-photo
+Content-Disposition: form-data; name="image"; filename="car.png"
+Content-Type: image/png
+
+< ./fixtures/avatar.png
+--rent-cars-photo--
+
+### Car photos · List the public gallery → 200
+# @name carPhotos
+GET {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}/images
+
+### Car photos · Read the first listed photo without authentication → 200
+# Skip if carPhotos returned an empty array. Do not rerun listCars between this and the preceding request.
+GET {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}/images/{{carPhotos.response.body.$[0].id}}
+Accept: image/png
+
+### Car photos · Delete the first listed photo as admin → 204
+# Rerun carPhotos after deletion. Reading the removed photo returns 404.
+DELETE {{baseUrl}}/cars/{{listCars.response.body.$[0].id}}/images/{{carPhotos.response.body.$[0].id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
 ### Renew this device session (enable REST Client's cookie jar and run steps 3 and 4 first)
 # @name refresh
 POST {{baseUrl}}/sessions/refresh

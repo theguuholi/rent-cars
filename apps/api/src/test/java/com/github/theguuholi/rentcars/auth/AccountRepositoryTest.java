@@ -57,7 +57,7 @@ class AccountRepositoryTest {
           accounts.saveAndFlush(new Account(UUID.randomUUID() + "@example.test", "encoded"));
       var id = account.profile().id();
       var key = UUID.randomUUID();
-      db.sql("insert into avatar_objects(id) values(?)").param(key).update();
+      db.sql("insert into image_objects(id) values(?)").param(key).update();
       tx.executeWithoutResult(_ -> assertThat(accounts.changeAvatar(id, key)).isOne());
       tx.executeWithoutResult(
           _ -> assertThat(accounts.findWithAvatar(id).orElseThrow().avatarKey()).isEqualTo(key));

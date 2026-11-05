@@ -1,9 +1,12 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
+import com.google.cloud.ServiceOptions;
 import com.google.cloud.http.HttpTransportOptions;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
+import java.nio.file.Path;
 import java.time.Duration;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -14,6 +17,21 @@ import software.amazon.awssdk.services.s3.S3Client;
 
 @Configuration(proxyBeanMethods = false)
 class StorageConfiguration {
+  @Bean
+  ImageStorage imageStorage(
+      @Value("${rent.storage.provider:local}") String provider,
+      @Value("${rent.storage.directory:.rent-cars/uploads}") Path directory,
+      @Value("${rent.storage.bucket:}") String bucket,
+      ObjectProvider<S3Client> s3,
+      ObjectProvider<Storage> gcs) {
+    return switch (provider) {
+      case "local" -> new LocalImageStorage(directory);
+      case "s3" -> new S3ImageStorage(s3.getObject(), requireBucket(bucket));
+      case "gcs" -> new GcsImageStorage(gcs.getObject(), requireBucket(bucket));
+      default -> throw new IllegalArgumentException("Unknown rent.storage.provider: " + provider);
+    };
+  }
+
   @Configuration(proxyBeanMethods = false)
   @ConditionalOnProperty(name = "rent.storage.provider", havingValue = "s3")
   static class S3Configuration {
@@ -31,11 +49,6 @@ class StorageConfiguration {
                       .apiCallAttemptTimeout(Duration.ofSeconds(25)))
           .build();
     }
-
-    @Bean
-    ImageStorage s3ImageStorage(S3Client client, @Value("${rent.storage.bucket}") String bucket) {
-      return new S3ImageStorage(client, requireBucket(bucket));
-    }
   }
 
   @Configuration(proxyBeanMethods = false)
@@ -50,16 +63,11 @@ class StorageConfiguration {
                   .setReadTimeout(20000)
                   .build())
           .setRetrySettings(
-              StorageOptions.getDefaultRetrySettings().toBuilder()
+              ServiceOptions.getDefaultRetrySettings().toBuilder()
                   .setTotalTimeoutDuration(Duration.ofSeconds(30))
                   .build())
           .build()
           .getService();
-    }
-
-    @Bean
-    ImageStorage gcsImageStorage(Storage client, @Value("${rent.storage.bucket}") String bucket) {
-      return new GcsImageStorage(client, requireBucket(bucket));
     }
   }
 

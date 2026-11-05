@@ -5,6 +5,7 @@ import static org.mockito.Mockito.*;
 
 import com.github.theguuholi.rentcars.TestcontainersConfiguration;
 import com.github.theguuholi.rentcars.auth.AccountRepository;
+import com.github.theguuholi.rentcars.images.*;
 import java.io.*;
 import java.nio.file.Path;
 import java.util.UUID;
@@ -29,8 +30,9 @@ class AvatarServiceTest {
   }
 
   @Autowired AvatarService avatars;
+  @Autowired ImageCleanup cleanup;
   @Autowired AccountRepository accounts;
-  @Autowired AvatarObjectRepository objects;
+  @Autowired ImageObjectRepository objects;
   @Autowired JdbcClient db;
   @Autowired TransactionTemplate tx;
   @Autowired ImageStorage storage;
@@ -114,8 +116,8 @@ class AvatarServiceTest {
       }
       byte[] current = avatars.read(account);
       assertThat(current[0]).isIn((byte) 1, (byte) 2);
-      db.sql("update avatar_objects set created_at=now()-interval '2 hours'").update();
-      avatars.clean();
+      db.sql("update image_objects set created_at=now()-interval '2 hours'").update();
+      cleanup.clean();
       assertThat(avatars.read(account)).isEqualTo(current);
     }
 
@@ -132,7 +134,7 @@ class AvatarServiceTest {
     @Test
     @DisplayName(
         "Given an avatar, when removing twice, then reads return 404 and cleanup can remove the object")
-    void delete() throws Exception {
+    void delete() {
       avatars.replace(account, new byte[] {1});
       avatars.remove(account);
       avatars.remove(account);
@@ -152,10 +154,10 @@ class AvatarServiceTest {
               .param(account)
               .query(UUID.class)
               .single();
-      var racing = mock(AvatarObjectRepository.class);
+      var racing = mock(ImageObjectRepository.class);
       when(racing.deleteUnreferenced(key)).thenAnswer(_ -> objects.deleteUnreferenced(key));
-      doReturn(java.util.List.of(new AvatarObject(key))).when(racing).lockOrphans();
-      var service = new AvatarService(accounts, racing, storage, tx);
+      doReturn(java.util.List.of(new ImageObject(key))).when(racing).lockOrphans();
+      var service = new ImageCleanup(racing, storage);
       tx.executeWithoutResult(_ -> service.clean());
       assertThat(avatars.read(account)).containsExactly(3);
     }
@@ -165,13 +167,13 @@ class AvatarServiceTest {
         "Given an old orphan with a failed deletion, when retrying cleanup, then keep the allocation until deletion succeeds")
     void retry() throws Exception {
       var key = UUID.randomUUID();
-      db.sql("insert into avatar_objects(id,created_at) values(?,now()-interval '2 hours')")
+      db.sql("insert into image_objects(id,created_at) values(?,now()-interval '2 hours')")
           .param(key)
           .update();
       storage.write(key, new byte[] {1});
       var broken = mock(ImageStorage.class);
       doThrow(new IOException("offline")).when(broken).delete(key);
-      var service = new AvatarService(accounts, objects, broken, tx);
+      var service = new ImageCleanup(objects, broken);
       assertThatThrownBy(
               () ->
                   tx.executeWithoutResult(
@@ -180,20 +182,20 @@ class AvatarServiceTest {
                       }))
           .isInstanceOf(UncheckedIOException.class);
       assertThat(
-              db.sql("select count(*) from avatar_objects where id=?")
+              db.sql("select count(*) from image_objects where id=?")
                   .param(key)
                   .query(Long.class)
                   .single())
           .isEqualTo(1L);
-      avatars.clean();
+      cleanup.clean();
       assertThat(
-              db.sql("select count(*) from avatar_objects where id=?")
+              db.sql("select count(*) from image_objects where id=?")
                   .param(key)
                   .query(Long.class)
                   .single())
           .isZero();
       assertThatThrownBy(() -> storage.read(key)).isInstanceOf(IOException.class);
-      avatars.clean();
+      cleanup.clean();
     }
   }
 }

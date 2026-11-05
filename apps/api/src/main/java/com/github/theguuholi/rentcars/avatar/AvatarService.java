@@ -1,11 +1,13 @@
 package com.github.theguuholi.rentcars.avatar;
 
 import com.github.theguuholi.rentcars.auth.AccountRepository;
+import com.github.theguuholi.rentcars.images.ImageObject;
+import com.github.theguuholi.rentcars.images.ImageObjectRepository;
+import com.github.theguuholi.rentcars.images.ImageStorage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,13 +17,13 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 class AvatarService {
   private final AccountRepository accounts;
-  private final AvatarObjectRepository objects;
+  private final ImageObjectRepository objects;
   private final ImageStorage storage;
   private final TransactionTemplate tx;
 
   AvatarService(
       AccountRepository accounts,
-      AvatarObjectRepository objects,
+      ImageObjectRepository objects,
       ImageStorage storage,
       TransactionTemplate tx) {
     this.accounts = accounts;
@@ -34,7 +36,7 @@ class AvatarService {
   void replace(UUID account, byte[] image) {
     var key = UUID.randomUUID();
     // Reserve independently so a crash or rolled-back write leaves a discoverable orphan.
-    objects.saveAndFlush(new AvatarObject(key));
+    objects.saveAndFlush(new ImageObject(key));
     tx.executeWithoutResult(
         status -> {
           objects.lockAllocation(key);
@@ -66,21 +68,5 @@ class AvatarService {
             .findWithAvatar(account)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     return storage.read(owner.avatarKey());
-  }
-
-  @Scheduled(fixedDelayString = "${rent.storage.cleanup-delay:PT10M}")
-  @Transactional
-  void clean() {
-    for (var object : objects.lockOrphans()) {
-      var key = object.id();
-      // Recheck after acquiring the lock in case an in-flight writer committed while selecting.
-      if (objects.deleteUnreferenced(key) == 1) {
-        try {
-          storage.delete(key);
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      }
-    }
   }
 }

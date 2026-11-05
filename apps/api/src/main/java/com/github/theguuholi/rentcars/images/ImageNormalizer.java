@@ -1,33 +1,35 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 import javax.imageio.stream.MemoryCacheImageInputStream;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-final class AvatarImage {
-  private AvatarImage() {}
+public final class ImageNormalizer {
+  private ImageNormalizer() {}
 
-  static byte[] normalize(MultipartFile file) throws IOException {
+  public static byte[] normalize(MultipartFile file, int maxEdge) throws IOException {
     if (file.getSize() > 5L * 1024 * 1024)
       throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE);
     try (var raw = file.getInputStream();
         var stream = new MemoryCacheImageInputStream(raw)) {
       var readers = ImageIO.getImageReaders(stream);
       if (!readers.hasNext()) throw invalid();
-      var reader = readers.next();
-      try {
+      try (var resource = new ReaderResource(readers.next())) {
+        var reader = resource.reader();
         String format = reader.getFormatName();
         if (!format.equalsIgnoreCase("jpeg") && !format.equalsIgnoreCase("png")) throw invalid();
         reader.setInput(stream, true, true);
-        int w = reader.getWidth(0), h = reader.getHeight(0);
+        int w = reader.getWidth(0);
+        int h = reader.getHeight(0);
         if ((long) w * h > 4_000_000L) throw invalid();
         BufferedImage decoded = reader.read(0);
-        double scale = Math.min(1d, 512d / Math.max(w, h));
+        double scale = Math.min(1d, (double) maxEdge / Math.max(w, h));
         var resized =
             new BufferedImage(
                 Math.max(1, (int) (w * scale)),
@@ -42,11 +44,17 @@ final class AvatarImage {
         var bytes = new ByteArrayOutputStream();
         ImageIO.write(resized, "png", bytes);
         return bytes.toByteArray();
-      } catch (javax.imageio.IIOException ex) {
+      } catch (javax.imageio.IIOException _) {
         throw invalid();
-      } finally {
-        reader.dispose();
       }
+    }
+  }
+
+  /** ImageReader exposes dispose rather than AutoCloseable; adapt its lifetime to the try block. */
+  private record ReaderResource(ImageReader reader) implements AutoCloseable {
+    @Override
+    public void close() {
+      reader.dispose();
     }
   }
 

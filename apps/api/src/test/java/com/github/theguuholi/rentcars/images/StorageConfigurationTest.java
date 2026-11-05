@@ -1,4 +1,4 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -14,7 +14,6 @@ class StorageConfigurationTest {
       new ApplicationContextRunner()
           .withUserConfiguration(
               StorageConfiguration.class,
-              LocalImageStorage.class,
               org.springframework.context.support.PropertySourcesPlaceholderConfigurer.class);
 
   @Nested
@@ -111,15 +110,19 @@ class StorageConfigurationTest {
   }
 
   @Nested
-  class S3StorageFactory {
+  class ImageStorageFactory {
     @Test
     @DisplayName(
         "Given a configured bucket, when using the Spring storage factory, then forward the exact bucket to the SDK")
     void configuredBucket() throws Exception {
       var client = mock(S3Client.class);
+      org.springframework.beans.factory.ObjectProvider<S3Client> s3 = mock();
+      org.springframework.beans.factory.ObjectProvider<Storage> gcs = mock();
+      when(s3.getObject()).thenReturn(client);
       var key = java.util.UUID.randomUUID();
       var storage =
-          new StorageConfiguration.S3Configuration().s3ImageStorage(client, "configured-bucket");
+          new StorageConfiguration()
+              .imageStorage("s3", java.nio.file.Path.of("unused"), "configured-bucket", s3, gcs);
       storage.delete(key);
       verify(client)
           .deleteObject(
@@ -127,6 +130,20 @@ class StorageConfigurationTest {
                   .bucket("configured-bucket")
                   .key(key + ".png")
                   .build());
+    }
+
+    @Test
+    @DisplayName(
+        "Given an unknown provider, when Spring starts, then reject the configuration rather than using local storage")
+    void unknown() {
+      context
+          .withPropertyValues("rent.storage.provider=unknown")
+          .run(
+              c ->
+                  assertThat(c)
+                      .hasFailed()
+                      .getFailure()
+                      .hasRootCauseMessage("Unknown rent.storage.provider: unknown"));
     }
   }
 }

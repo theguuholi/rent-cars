@@ -25,7 +25,7 @@ Every ten minutes, a transactional cleanup scans at most 100 objects older than 
 
 `ImageStorage` defines write, read and delete operations independently of this workflow. Local, S3 and GCS adapters implement the same contract.
 
-Metadata uses Spring Data JPA: `AccountRepository` updates/locks account references and `AvatarObjectRepository` manages the allocation ledger. `@Transactional`, `@Lock` and `TransactionTemplate` delimit the operations. Replacement uses `Propagation.NOT_SUPPORTED` to suspend any caller transaction: `saveAndFlush` commits the reservation first, then the transaction template commits the account pointer only after storage succeeds. Keep this ordering when adding callers. Native SQL is confined to repository cleanup queries because PostgreSQL `SKIP LOCKED` and the conditional orphan deletion express concurrency guarantees that plain inherited CRUD does not provide. No schema change is needed for this persistence refactor; V8 remains unchanged.
+Metadata uses Spring Data JPA: `AccountRepository` updates/locks account references and `ImageObjectRepository` manages the allocation ledger. `@Transactional`, `@Lock` and `TransactionTemplate` delimit the operations. Replacement uses `Propagation.NOT_SUPPORTED` to suspend any caller transaction: `saveAndFlush` commits the reservation first, then the transaction template commits the account pointer only after storage succeeds. Keep this ordering when adding callers. Native SQL is confined to repository cleanup queries because PostgreSQL `SKIP LOCKED` and the conditional orphan deletion express concurrency guarantees that plain inherited CRUD does not provide. V8 remains unchanged. V9 renames the allocation table to `image_objects` while preserving account references and adds the car gallery table. The `images` package shares normalization, storage adapters and cleanup between avatars and car photos. Cleanup checks both account and gallery references before deleting objects.
 
 ## Validation
 
@@ -108,3 +108,5 @@ make check-api
 ```
 
 Testcontainers starts pinned S3Mock and fake-gcs-server containers on random ports and removes them afterward. Tests send real SDK requests to verify bytes, create-only writes, reads, missing objects and idempotent deletion. They do not require cloud credentials or billable infrastructure. Unit tests additionally cover provider failures and Spring bean selection. PostgreSQL tests cover concurrent replacement, rollback, references and cleanup. Emulators validate the API contract; they do not validate production IAM, KMS or workload identity.
+
+For public vehicle galleries, see [car photos](car-images.md). Avatars remain private even though both features use the same storage adapters.

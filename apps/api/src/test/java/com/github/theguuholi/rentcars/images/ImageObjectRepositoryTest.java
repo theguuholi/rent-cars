@@ -1,4 +1,4 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,16 +14,16 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @Transactional
-class AvatarObjectRepositoryTest {
-  @Autowired AvatarObjectRepository objects;
+class ImageObjectRepositoryTest {
+  @Autowired ImageObjectRepository objects;
   @Autowired JdbcClient db;
   @Autowired org.springframework.transaction.support.TransactionTemplate tx;
 
   UUID allocate(boolean old) {
     var id = UUID.randomUUID();
-    objects.saveAndFlush(new AvatarObject(id));
+    objects.saveAndFlush(new ImageObject(id));
     if (old)
-      db.sql("update avatar_objects set created_at=now()-interval '2 hours' where id=?")
+      db.sql("update image_objects set created_at=now()-interval '2 hours' where id=?")
           .param(id)
           .update();
     return id;
@@ -79,7 +79,7 @@ class AvatarObjectRepositoryTest {
           tx.executeWithoutResult(
               _ ->
                   assertThat(objects.lockOrphans())
-                      .extracting(AvatarObject::id)
+                      .extracting(ImageObject::id)
                       .doesNotContain(key));
         } finally {
           release.countDown();
@@ -87,7 +87,7 @@ class AvatarObjectRepositoryTest {
         upload.get(10, java.util.concurrent.TimeUnit.SECONDS);
         tx.executeWithoutResult(
             _ -> {
-              assertThat(objects.lockOrphans()).extracting(AvatarObject::id).contains(key);
+              assertThat(objects.lockOrphans()).extracting(ImageObject::id).contains(key);
               assertThat(objects.deleteUnreferenced(key)).isOne();
             });
       }
@@ -98,15 +98,15 @@ class AvatarObjectRepositoryTest {
         "Given more than one batch of old orphans and an object exactly at the grace boundary, when cleaning, then limit the batch and exclude the boundary")
     void boundedBatch() {
       db.sql(
-              "insert into avatar_objects(id,created_at) select gen_random_uuid(),now()-interval '2 hours' from generate_series(1,101)")
+              "insert into image_objects(id,created_at) select gen_random_uuid(),now()-interval '2 hours' from generate_series(1,101)")
           .update();
       var boundary = allocate(false);
-      db.sql("update avatar_objects set created_at=now()-interval '1 hour' where id=?")
+      db.sql("update image_objects set created_at=now()-interval '1 hour' where id=?")
           .param(boundary)
           .update();
       assertThat(objects.lockOrphans())
           .hasSize(100)
-          .extracting(AvatarObject::id)
+          .extracting(ImageObject::id)
           .doesNotContain(boundary);
     }
 
@@ -119,7 +119,7 @@ class AvatarObjectRepositoryTest {
       var referenced = allocate(true);
       reference(referenced);
       assertThat(objects.lockOrphans())
-          .extracting(AvatarObject::id)
+          .extracting(ImageObject::id)
           .contains(old)
           .doesNotContain(recent, referenced);
     }

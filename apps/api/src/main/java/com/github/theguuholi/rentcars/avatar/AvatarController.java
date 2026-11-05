@@ -1,9 +1,9 @@
 package com.github.theguuholi.rentcars.avatar;
 
+import com.github.theguuholi.rentcars.images.ImageNormalizer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
@@ -35,22 +35,18 @@ class AvatarController {
     this.avatars = avatars;
   }
 
-  @ApiResponses({
-    @ApiResponse(
-        responseCode = "200",
-        description = "Private normalized PNG",
-        content =
-            @Content(
-                mediaType = "image/png",
-                schema =
-                    @io.swagger.v3.oas.annotations.media.Schema(
-                        type = "string",
-                        format = "binary"))),
-    @ApiResponse(
-        responseCode = "404",
-        description = "No avatar exists for this account",
-        content = @Content)
-  })
+  @ApiResponse(
+      responseCode = "200",
+      description = "Private normalized PNG",
+      content =
+          @Content(
+              mediaType = "image/png",
+              schema =
+                  @io.swagger.v3.oas.annotations.media.Schema(type = "string", format = "binary")))
+  @ApiResponse(
+      responseCode = "404",
+      description = "No avatar exists for this account",
+      content = @Content)
   @GetMapping(produces = MediaType.IMAGE_PNG_VALUE)
   @Operation(summary = "Read your private avatar as PNG (404 when absent)")
   ResponseEntity<byte[]> read(@AuthenticationPrincipal Jwt jwt) throws IOException {
@@ -60,14 +56,12 @@ class AvatarController {
         .body(avatars.read(UUID.fromString(jwt.getSubject())));
   }
 
-  @ApiResponses({
-    @ApiResponse(responseCode = "204", description = "Avatar replaced", content = @Content),
-    @ApiResponse(responseCode = "413", description = "Image exceeds 5 MiB", content = @Content),
-    @ApiResponse(
-        responseCode = "422",
-        description = "Image is not a valid JPEG or PNG of up to 4 megapixels",
-        content = @Content)
-  })
+  @ApiResponse(responseCode = "204", description = "Avatar replaced", content = @Content)
+  @ApiResponse(responseCode = "413", description = "Image exceeds 5 MiB", content = @Content)
+  @ApiResponse(
+      responseCode = "422",
+      description = "Image is not a valid JPEG or PNG of up to 4 megapixels",
+      content = @Content)
   @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(
@@ -76,7 +70,7 @@ class AvatarController {
           "Send one JPEG or PNG in the image part, up to 5 MiB and 4 megapixels. The stored PNG fits within 512 × 512 pixels.")
   void replace(@AuthenticationPrincipal Jwt jwt, @RequestParam("image") MultipartFile image)
       throws IOException {
-    avatars.replace(UUID.fromString(jwt.getSubject()), AvatarImage.normalize(image));
+    avatars.replace(UUID.fromString(jwt.getSubject()), ImageNormalizer.normalize(image, 512));
   }
 
   @DeleteMapping

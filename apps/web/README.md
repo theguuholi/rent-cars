@@ -16,12 +16,12 @@ Sign in and open **My avatar** (`/account/avatar`). Choose a JPEG or PNG, inspec
 
 The browser always calls `/api/users/me/avatar`. It does not choose the storage provider or talk directly to S3/GCS. Keep storage settings and cloud credentials on the API; never put them in `VITE_*` variables or the frontend bundle. See [the Java storage walkthrough](../api/README.md#avatar-storage-choose-your-environment) for local, S3/GCS and Kubernetes setup.
 
-| Environment | Start/open the frontend | API routing |
-| --- | --- | --- |
-| Local development | `make setup`, then `make dev`; open http://localhost:5173 | Vite forwards `/api` to the Java API on port 8080 |
-| Local API using S3/GCS | Start the configured API, then `make web-dev` | The same Vite proxy and upload requests |
-| Docker Compose | `docker compose -f compose.stack.yaml up --build -d --wait`; open http://localhost:8081 | Nginx forwards `/api` inside the Compose network |
-| Docker Desktop Kubernetes | Follow the Java/Helm walkthrough; open http://localhost:8082 | The web Service exposes Nginx, which forwards `/api` to the API Service |
+| Environment               | Start/open the frontend                                                                 | API routing                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Local development         | `make setup`, then `make dev`; open http://localhost:5173                               | Vite forwards `/api` to the Java API on port 8080                       |
+| Local API using S3/GCS    | Start the configured API, then `make web-dev`                                           | The same Vite proxy and upload requests                                 |
+| Docker Compose            | `docker compose -f compose.stack.yaml up --build -d --wait`; open http://localhost:8081 | Nginx forwards `/api` inside the Compose network                        |
+| Docker Desktop Kubernetes | Follow the Java/Helm walkthrough; open http://localhost:8082                            | The web Service exposes Nginx, which forwards `/api` to the API Service |
 
 Run these commands from the repository root. `API_TARGET` configures the **Vite development proxy only**; it does not reconfigure a built React image or select a storage provider. In Compose and Kubernetes, use the web application's single origin so the authentication cookies and API requests follow the existing proxy setup. Prefer the deployed web application when testing Kubernetes rather than pointing Vite at the cluster.
 
@@ -48,3 +48,7 @@ From `apps/web/`, run `npm ci` and `npm run mutation`. StrykerJS mutates the app
 GitHub runs **Web mutation tests** on Mondays at 06:37 UTC, on manual dispatch, and on every pull request changing files under `apps/web/` or the workflow itself. Download the **web-mutation** artifact from the workflow run.
 
 The sandbox excludes the root `tsconfig.json` project-reference aggregator because Stryker 10 uses a compiler API removed in TypeScript 7 to rewrite references. Its two referenced projects live within `apps/web/`. Vitest runs through Vite; the normal web build still type-checks both projects with the original configuration.
+
+## Car photo gallery
+
+Open a car from the fleet to view its photos. The gallery is public; signed-in administrators also see **Add car photo**, **Upload photo** and **Remove photo** controls. Select one JPEG or PNG at a time, upload it, and wait for the gallery to refresh. Failed uploads retain the selected file for retry. Car photos fit within 1600 × 1600 pixels after server normalization; avatars keep their 512-pixel limit. All local, Compose, S3/GCS and Kubernetes settings described above also apply to car photos. See [the car photo guide](../../docs/car-images.md).

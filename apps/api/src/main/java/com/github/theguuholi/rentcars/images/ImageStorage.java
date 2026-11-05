@@ -1,9 +1,9 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
 import java.io.IOException;
 import java.util.UUID;
 
-interface ImageStorage {
+public interface ImageStorage {
   void write(UUID key, byte[] image) throws IOException;
 
   byte[] read(UUID key) throws IOException;

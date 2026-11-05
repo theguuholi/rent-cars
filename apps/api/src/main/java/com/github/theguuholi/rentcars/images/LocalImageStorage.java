@@ -1,20 +1,15 @@
-package com.github.theguuholi.rentcars.avatar;
+package com.github.theguuholi.rentcars.images;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
-@Component
-@ConditionalOnProperty(name = "rent.storage.provider", havingValue = "local", matchIfMissing = true)
 class LocalImageStorage implements ImageStorage {
   private final Path root;
 
-  LocalImageStorage(@Value("${rent.storage.directory:.rent-cars/uploads}") Path root) {
+  LocalImageStorage(Path root) {
     this.root = root;
   }
 
