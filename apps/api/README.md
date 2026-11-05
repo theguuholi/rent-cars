@@ -89,8 +89,8 @@ There is no separate image controller/repository, scheduler or cleanup queue.
 
 Existing permissions remain unchanged: public car reads, ADMIN mutations. The
 React client is unchanged. Follow **Upload example 1–8** in
-[`requests/rent-cars.http`](../../requests/rent-cars.http); two tiny colored PNG
-fixtures are included, so no local file edits are needed.
+[`requests/rent-cars.http`](../../requests/rent-cars.http); two AI-generated PNG views of the same silver Fiat Argo
+are included, so no local file edits are needed.
 
 Spring handles multipart parsing and the 5 MiB/file and 30 MiB/request limits.
 The service checks JPEG/PNG contents because multipart support does not validate
