@@ -17,7 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 class CarServiceTest {
   private static final ValidatorFactory validators = Validation.buildDefaultValidatorFactory();
   private final CarRepository repository = mock();
-  private final CarService service = new CarService(repository, validators.getValidator());
+  private final CarService service =
+      new CarService(repository, validators.getValidator(), mock(), mock(), mock(), mock());
   private final UUID id = UUID.randomUUID();
 
   private static CarRequest validCar() {
@@ -153,6 +154,20 @@ class CarServiceTest {
   @Nested
   @DisplayName("update")
   class Update {
+    @Test
+    @DisplayName(
+        "Given a stale form version, when updating a car, then reject the request without saving")
+    void staleVersion() {
+      var car = new Car();
+      car.apply(validCar());
+      when(repository.findById(id)).thenReturn(Optional.of(car));
+      var request = patchName("Accord");
+      request.expectedVersion = car.getVersion() + 1;
+      assertThatThrownBy(() -> service.update(id, request))
+          .isInstanceOf(org.springframework.dao.OptimisticLockingFailureException.class);
+      verify(repository, never()).saveAndFlush(any());
+    }
+
     @DisplayName(
         "Given a partial patch with the current version, when updating the fleet, then the service returns the saved car")
     @Test

@@ -13,13 +13,13 @@ Visitors can browse a car's gallery from its detail page. Administrators can add
 
 A missing car or a photo belonging to another car returns 404. Anonymous writes return 401; authenticated non-admin writes return 403. Missing multipart input returns 400, oversized input returns 413 and invalid image content returns 422. Unexpected storage failures preserve existing photos and return a server error.
 
-In `requests/rent-cars.http`, browse the fleet and sign in as admin, then follow **Car photos**. Upload the committed fixture, list the gallery, read its first photo without a token, and delete it as admin. The read/delete examples use the first ID from the named gallery response. Refresh the gallery list before targeting another image. Swagger documents these operations under **Car images**.
+In `requests/rent-cars.http`, browse the fleet and sign in as admin, then follow **Car photos**. Upload the committed fixture, list the gallery, read its first photo without a token, and delete it as admin. The read/delete examples use the first ID from the named gallery response. Refresh the gallery list before targeting another image. Swagger documents these operations under **Cars**.
 
 ## Validation and persistence
 
 The API accepts JPEG/PNG content up to 5 MiB and 4 million pixels. It checks decoded content independently of the submitted filename and MIME type, strips metadata by re-encoding, and preserves aspect ratio within 1600 × 1600 pixels. SVG is not accepted. File paths and cloud credentials are never supplied by the client.
 
-Spring MVC binds `MultipartFile`; Spring Data JPA manages `CarImage` and the image allocation ledger. Spring transactions and repository locks coordinate uploads, reads and deletion. The storage key is an immutable UUID, independent of the original filename. Account avatars retain their existing endpoints and their 512-pixel normalization limit.
+Following the [Spring upload guide](https://spring.io/guides/gs/uploading-files/), `CarController` receives a `MultipartFile` and delegates to `CarService`; downloads return a Spring `Resource`. These operations belong to the existing car controller and service, as they do in the Elixir car context. Spring Data JPA manages `CarImage` and the image allocation ledger. Spring transactions and repository locks coordinate uploads, reads and deletion. The storage key is an immutable UUID, independent of the original filename. Account avatars retain their existing endpoints and their 512-pixel normalization limit.
 
 Flyway V9 preserves existing avatar allocations, renames their table to `image_objects`, and creates `car_images` with a car foreign key and an index. Deleting a car cascades its gallery rows. Each successful upload links an allocation to a car only after its storage write succeeds; a failed or interrupted upload remains discoverable for cleanup. Concurrent uploads append separate images rather than overwriting each other.
 

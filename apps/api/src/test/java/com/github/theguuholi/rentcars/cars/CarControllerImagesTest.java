@@ -4,21 +4,11 @@ import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.UUID;
 import org.junit.jupiter.api.*;
 import org.springframework.mock.web.MockMultipartFile;
 
-class CarImageControllerTest extends CarImageTestSupport {
-  MockMultipartFile png() throws Exception {
-    return new MockMultipartFile(
-        "image",
-        "photo.png",
-        "image/png",
-        Files.readAllBytes(Path.of("../../requests/fixtures/avatar.png")));
-  }
-
+class CarControllerImagesTest extends CarImageTestSupport {
   @Nested
   class Upload {
     @Test
@@ -59,11 +49,11 @@ class CarImageControllerTest extends CarImageTestSupport {
       mvc.perform(multipart(path).file(png())).andExpect(status().isUnauthorized());
       mvc.perform(multipart(path).file(png()).header("Authorization", token("USER")))
           .andExpect(status().isForbidden());
-      var image = service.add(car, new byte[] {1});
+      var image = service.addImage(car, png());
       mvc.perform(delete(path + "/" + image.getId())).andExpect(status().isUnauthorized());
       mvc.perform(delete(path + "/" + image.getId()).header("Authorization", token("USER")))
           .andExpect(status().isForbidden());
-      assertThat(service.list(car)).hasSize(1);
+      assertThat(service.listImages(car)).hasSize(1);
     }
 
     @Test

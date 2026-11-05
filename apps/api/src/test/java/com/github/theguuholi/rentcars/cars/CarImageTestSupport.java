@@ -32,7 +32,8 @@ abstract class CarImageTestSupport {
 
   @Autowired CarRepository cars;
   @Autowired CarImageRepository images;
-  @Autowired CarImageService service;
+  @Autowired CarService service;
+  @Autowired jakarta.validation.Validator validator;
   @Autowired ImageObjectRepository objects;
   @Autowired ImageStorage storage;
   @Autowired ImageCleanup cleanup;
@@ -51,6 +52,14 @@ abstract class CarImageTestSupport {
             .param(UUID.randomUUID().toString().substring(0, 18).toUpperCase())
             .query(UUID.class)
             .single();
+  }
+
+  org.springframework.mock.web.MockMultipartFile png() throws Exception {
+    return new org.springframework.mock.web.MockMultipartFile(
+        "image",
+        "photo.png",
+        "image/png",
+        java.nio.file.Files.readAllBytes(Path.of("../../requests/fixtures/avatar.png")));
   }
 
   String token(String role) {

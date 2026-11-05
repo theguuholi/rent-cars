@@ -9,11 +9,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Cars", description = "Manage rental vehicles, charges and assigned catalog features.")
 @ApiResponse(
@@ -168,5 +171,74 @@ public class CarController {
               schema = @Schema(implementation = ProblemDetail.class)))
   public void delete(@PathVariable UUID id) {
     cars.delete(id);
+  }
+
+  @GetMapping("/{carId}/images")
+  @Operation(summary = "List the car gallery in upload order")
+  public List<CarImage> listImages(@PathVariable UUID carId) {
+    return cars.listImages(carId);
+  }
+
+  @GetMapping(value = "/{carId}/images/{imageId}", produces = MediaType.IMAGE_PNG_VALUE)
+  @Operation(summary = "Read a public car photo as PNG")
+  @ApiResponse(
+      responseCode = "200",
+      content =
+          @Content(mediaType = "image/png", schema = @Schema(type = "string", format = "binary")))
+  public ResponseEntity<Resource> readImage(@PathVariable UUID carId, @PathVariable UUID imageId)
+      throws IOException {
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .contentType(MediaType.IMAGE_PNG)
+        .body(cars.readImage(carId, imageId));
+  }
+
+  @PostMapping(value = "/{carId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @SecurityRequirement(name = "bearerAuth")
+  @ApiResponse(
+      responseCode = "401",
+      description = "A valid session is required",
+      content = @Content)
+  @ApiResponse(
+      responseCode = "403",
+      description = "Administrator access is required",
+      content = @Content)
+  @ApiResponse(responseCode = "404", description = "Car or image not found", content = @Content)
+  @Operation(
+      summary = "Add one car photo",
+      description =
+          "Admin only. Send an image part containing a JPEG or PNG up to 5 MiB and 4 megapixels. Stored PNGs fit within 1600 × 1600 pixels. Existing images are retained.")
+  @ApiResponse(
+      responseCode = "201",
+      description = "Image added",
+      content = @Content(schema = @Schema(implementation = CarImage.class)))
+  @ApiResponse(responseCode = "413", description = "Image too large", content = @Content)
+  @ApiResponse(responseCode = "422", description = "Invalid image", content = @Content)
+  public ResponseEntity<CarImage> addImage(
+      @PathVariable UUID carId, @RequestParam("image") MultipartFile image) throws IOException {
+    var saved = cars.addImage(carId, image);
+    return ResponseEntity.created(URI.create("/cars/" + carId + "/images/" + saved.getId()))
+        .body(saved);
+  }
+
+  @DeleteMapping("/{carId}/images/{imageId}")
+  @ApiResponse(responseCode = "204", description = "Photo removed", content = @Content)
+  @SecurityRequirement(name = "bearerAuth")
+  @ApiResponse(
+      responseCode = "401",
+      description = "A valid session is required",
+      content = @Content)
+  @ApiResponse(
+      responseCode = "403",
+      description = "Administrator access is required",
+      content = @Content)
+  @ApiResponse(responseCode = "404", description = "Car or image not found", content = @Content)
+  @Operation(
+      summary = "Remove one car photo",
+      description =
+          "Admin only. Returns 404 if the photo does not belong to this car or was already removed.")
+  public ResponseEntity<Void> removeImage(@PathVariable UUID carId, @PathVariable UUID imageId) {
+    cars.removeImage(carId, imageId);
+    return ResponseEntity.noContent().build();
   }
 }
