@@ -74,38 +74,41 @@ Each login starts a separate device session with an absolute seven-day lifetime 
 
 ## Car images
 
-`POST /cars` still accepts the existing JSON request. It additionally accepts
-`multipart/form-data` with one `car` part (`Content-Type: application/json`) and
-up to six repeated `images` parts. Images are optional. JPEG and PNG are validated
-from their contents, not the client filename or media type. Limits are 5 MiB per
-file, 30 MiB for the entire request including multipart overhead, and 20 million
-decoded pixels per image. Invalid images return 422; excessive byte sizes return
-413. Tomcat drains up to 32 MiB of rejected request data to deliver the error; much larger rejected requests may terminate the connection. No new frontend code is included.
+The existing `CarController`, `CarService` and `CarRepository` handle images as
+part of the car aggregate. JPA cascade/orphan removal persists the association.
+There is no separate image controller/repository, scheduler or cleanup queue.
 
-Creation returns the existing summary and `Location` header. Follow `Location`
-to read `images`, each containing `id`, `contentType` and `sizeBytes`.
-`GET /cars/{carId}/images/{imageId}` serves public image bytes. Creation and
-`DELETE /cars/{carId}/images/{imageId}` require an ADMIN bearer token. Image IDs
-are checked against the car; storage keys and paths are never client inputs.
+- `POST /cars`: existing JSON or multipart with one `car` JSON part and repeated
+  optional `images` file parts. Creation returns the existing summary and Location.
+- `PATCH /cars/{id}`: JSON or multipart. Include `expectedVersion` in the `car`
+  JSON part. New files are appended; `removeImageIds` explicitly selects old images
+  to remove. Omitted or empty selections retain images. IDs must belong to the car.
+- `GET /cars/{id}`: detail includes image `id`, `contentType` and `sizeBytes`.
+- `GET /cars/{id}?imageId={imageId}`: image bytes through the same public car route.
+- `DELETE /cars/{id}`: deletes the car, its image rows and associated files.
 
-The cars module generates `cars/{carId}/{imageId}.jpg` or `.png`. The entity stores
-that complete key; adapters never prepend another entity prefix. Local storage
-resolves it under a configured directory, while S3 uses it as the object key.
-Changing providers does not copy existing files: migrate objects using the same
-keys before switching the application, and drain pending cleanup jobs first.
+Existing permissions remain unchanged: public car reads, ADMIN mutations. The
+React client is unchanged. Follow **Upload example 1–8** in
+[`requests/rent-cars.http`](../../requests/rent-cars.http); two tiny colored PNG
+fixtures are included, so no local file edits are needed.
 
-### Local development
+Spring handles multipart parsing and the 5 MiB/file and 30 MiB/request limits.
+The service checks JPEG/PNG contents because multipart support does not validate
+image bytes. Decoded images are limited to 20 million pixels. Invalid images
+return 422; excessive upload size returns 413. Tomcat drains up to 32 MiB of
+rejected data; much larger rejected requests may terminate the connection.
 
-The default `dev` profile uses `rent.storage.provider=local` and `./uploads`,
-relative to the Java process working directory (`apps/api` with `make api-dev`).
-Set `UPLOAD_DIRECTORY` to an absolute directory to choose another location. Use
-a persistent volume in containers. The application creates missing directories
-and never clears uploaded files at startup. Restrict write access to the storage
-directory to the application; it rejects symbolic links within that directory.
+### Local and S3 configuration
 
-### Production S3
+The cars service generates `cars/{carId}/{imageId}.jpg` or `.png`; the database
+stores the complete key. Both adapters use that key without adding a second prefix.
 
-`application-prod.yaml` is prepared for an existing private bucket. Set:
+The default `dev` profile stores files in `./uploads`, relative to the Java process
+working directory (`apps/api` with `make api-dev`). Set `UPLOAD_DIRECTORY` to an
+absolute directory if desired. Use a persistent volume in containers and restrict
+write access to the application. Files are never cleared at startup.
+
+`application-prod.yaml` uses an existing private S3 bucket:
 
 ```dotenv
 SPRING_PROFILES_ACTIVE=prod
@@ -114,44 +117,27 @@ DATABASE_USERNAME=rent_cars
 DATABASE_PASSWORD=your-database-password
 S3_BUCKET=your-existing-private-bucket
 AWS_REGION=sa-east-1
-# Keep the existing RENT_AUTH_PRIVATE_KEY and RENT_AUTH_PUBLIC_KEY configuration.
+# Also supply the existing RENT_AUTH_PRIVATE_KEY and RENT_AUTH_PUBLIC_KEY settings.
 ```
 
-The AWS SDK uses its default credentials provider chain. Prefer an attached IAM
-role in AWS; do not store access keys in YAML. Grant `s3:PutObject`, `s3:GetObject`
-and `s3:DeleteObject` on `arn:aws:s3:::YOUR_BUCKET/cars/*`. Keep public bucket access
-blocked: the API serves bytes using its own credentials. Provision the bucket,
-region and any KMS permissions separately. The application does not create AWS
-resources. For versioned buckets, configure lifecycle expiration for noncurrent
-versions if deletion must eventually reclaim all stored versions.
+The SDK uses an explicit default credentials provider chain. Prefer an attached
+IAM role; never put access keys in YAML. Grant `s3:PutObject`, `s3:GetObject` and
+`s3:DeleteObject` on `arn:aws:s3:::YOUR_BUCKET/cars/*`. The API serves private objects
+using its own credentials. Provision the bucket/region separately. For versioned
+buckets, configure noncurrent-version expiration if old versions must be reclaimed.
+Changing providers requires copying existing files with the same keys first.
 
-### Transactions and cleanup
+### File lifecycle
 
-Metadata is transactional; files are not. Before writing a file, the application
-commits a cleanup job in a separate transaction, then locks it during the upload.
-Successful metadata creation removes that job in the same transaction. A failed
-write, rollback, commit failure or process interruption leaves the job available
-after a one-hour grace period. A worker uses `FOR UPDATE SKIP LOCKED` so an active
-upload cannot be cleaned concurrently, including when it lasts beyond the grace
-period. If cleanup already claimed an abandoned intent, the upload fails before
-writing bytes rather than proceeding without a job.
+A transaction callback deletes removed files only after the database commits,
+and attempts to delete newly uploaded files on rollback. A failed deletion logs
+the key for manual cleanup; there are no automatic retries. Process termination
+can also leave orphan files, and direct SQL/cascaded category deletion bypasses
+this service-level file cleanup. This implementation deliberately does not add
+background infrastructure for those cases.
 
-A PostgreSQL trigger queues file cleanup when image metadata is deleted, including
-car and category cascades. Deletion jobs are immediately eligible. The worker runs
-every 60 seconds (`rent.storage.cleanup-delay-ms`) in batches of 100. Failed deletes
-retain their jobs, log a warning and retry after five minutes, allowing newer jobs to progress. Keys are immutable and never reused.
-Do not truncate the image table or bypass triggers when performing maintenance.
-Monitor the queue and logs; file deletion is eventual, not part of the HTTP latency.
-
-### REST Client examples (step 11)
-
-Open [`requests/rent-cars.http`](../../requests/rent-cars.http), run the sign-in and
-category requests, then run **Upload example 1–6** in order. Two tiny PNG fixtures
-are committed under `requests/fixtures/`, so the multipart example needs no local
-file edits. They are colored test swatches, not vehicle photographs. The examples
-cover creation, detail lookup, public image reading, image deletion, car deletion
-and invalid image rejection.
-
-Tests exercise PostgreSQL transactions/cascades and local files. S3 adapter tests
-use the real AWS SDK against a local HTTP stub; they do not verify live IAM,
-bucket policies, region connectivity or AWS provisioning.
+V9 removes the queue/trigger from the initial PR version while preserving the V8
+checksum for developers who already ran it. Existing image metadata is retained.
+Tests cover transactions, content checks, storage failures, actual HTTP upload
+limits and migration. S3 tests use the real SDK against an HTTP stub; live IAM and
+bucket connectivity require validation in the deployment environment.

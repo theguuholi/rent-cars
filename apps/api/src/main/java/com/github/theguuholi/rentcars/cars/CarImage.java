@@ -75,6 +75,10 @@ public class CarImage {
     this.sizeBytes = sizeBytes;
   }
 
+  UUID id() {
+    return id;
+  }
+
   String key() {
     return storageKey;
   }

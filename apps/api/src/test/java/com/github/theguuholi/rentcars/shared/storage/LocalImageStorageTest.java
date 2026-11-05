@@ -62,7 +62,7 @@ class LocalImageStorageTest {
   class Delete {
     @Test
     @DisplayName("Given a stored file, when deleting twice, then deletion is idempotent")
-    void idempotent() throws Exception {
+    void idempotent() {
       var storage = new LocalImageStorage(root);
       storage.store("a.png", new byte[] {1}, "image/png");
       storage.delete("a.png");
@@ -73,7 +73,7 @@ class LocalImageStorageTest {
 
     @Test
     @DisplayName("Given a nonempty directory, when deleting, then IO failure is reported")
-    void failedDelete() throws Exception {
+    void failedDelete() {
       var storage = new LocalImageStorage(root);
       storage.store("dir/a.png", new byte[] {1}, "image/png");
       assertThatThrownBy(() -> storage.delete("dir")).isInstanceOf(UncheckedIOException.class);

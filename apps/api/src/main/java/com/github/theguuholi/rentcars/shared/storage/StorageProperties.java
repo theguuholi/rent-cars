@@ -14,8 +14,8 @@ public record StorageProperties(
     @DefaultValue @Valid Local local,
     @DefaultValue @Valid S3 s3) {
   public enum Provider {
-    local,
-    s3
+    LOCAL,
+    S3
   }
 
   public record Local(@DefaultValue("./uploads") @NotNull Path directory) {}

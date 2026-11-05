@@ -45,7 +45,7 @@ final class LocalImageStorage implements ImageStorage {
   public byte[] load(String key) {
     try {
       return Files.readAllBytes(resolve(key));
-    } catch (NoSuchFileException exception) {
+    } catch (NoSuchFileException _) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Image file not found");
     } catch (IOException exception) {
       throw new UncheckedIOException(exception);

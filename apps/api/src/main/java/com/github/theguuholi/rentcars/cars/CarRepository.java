@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.*;
 interface CarRepository extends JpaRepository<Car, UUID> {
   @EntityGraph(
       type = EntityGraph.EntityGraphType.LOAD,
-      attributePaths = {"category", "specifications"})
+      attributePaths = {"category", "specifications", "images"})
   Optional<Car> findDetailedById(UUID id);
 
   // Serialize deletion; PATCH uses the optimistic version from the editor.

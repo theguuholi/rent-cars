@@ -17,7 +17,12 @@ import org.springframework.web.server.ResponseStatusException;
 class CarServiceTest {
   private static final ValidatorFactory validators = Validation.buildDefaultValidatorFactory();
   private final CarRepository repository = mock();
-  private final CarService service = new CarService(repository, validators.getValidator());
+  private final CarService service =
+      new CarService(
+          repository,
+          validators.getValidator(),
+          mock(com.github.theguuholi.rentcars.shared.storage.ImageStorage.class),
+          mock(jakarta.persistence.EntityManager.class));
   private final UUID id = UUID.randomUUID();
 
   private static CarRequest validCar() {

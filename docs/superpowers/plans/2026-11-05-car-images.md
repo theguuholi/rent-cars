@@ -1,21 +1,15 @@
 # Car images implementation plan
 
-Goal: Create cars and JPEG/PNG images in one multipart request, with local and S3 storage. Backend only; the React client is intentionally unchanged.
+Scope updated after PR #34 review: Spring only, reuse the existing car CRUD and JPA aggregate. No React changes or background cleanup infrastructure.
 
-Architecture: The cars module owns keys (`cars/{carId}/{imageId}.{extension}`). Storage adapters receive complete keys. PostgreSQL metadata and a durable cleanup queue cover rollbacks and cascaded deletes. Existing JSON creation remains supported.
-
-Approved scope: the implementation steps agreed in chat, restricted to Spring and REST Client, on branch `upload`.
-
-1. Configure shared multipart limits (5 MB/file, 30 MB/request), local development and S3 production properties.
-2. Add Flyway tables for images and cleanup jobs, including a deletion trigger covering cascades.
-3. Map CarImage and the detail-only Car association; keep storage internals out of JSON.
-4. Implement local and S3 adapters with an explicit provider selection and typed configuration.
-5. Validate JPEG/PNG contents and bounded dimensions before storage, generating UUID keys.
-6. Add multipart POST /cars while retaining JSON creation.
-7. Register cleanup intent before file writes, lock jobs during upload, and clear intent in the metadata transaction. Retry orphan/deletion cleanup asynchronously.
-8. Add public image reads and admin-only deletion with car/image ownership checks.
-9. Keep all React files unchanged; describe the future multipart client contract in API documentation.
-10. Add behavior tests, run make check-api, inspect coverage and review the diff before committing.
-11. Add runnable REST Client examples with committed small image fixtures, including upload, read and delete.
-
-Review focus: failed commit after file writes; deletion through category cascades; concurrent cleanup versus upload; unsupported/corrupt image content; safe local path resolution. Tests exercise these paths through PostgreSQL, HTTP and adapter boundaries. S3 is tested against an isolated HTTP stub; no live AWS resources are provisioned.
+1. Configure Spring multipart limits and local/S3 destinations.
+2. Persist CarImage metadata associated with Car.
+3. Use JPA cascade and orphan removal through CarRepository.
+4. Keep local/S3 adapters behind ImageStorage; one bean chooses the configured provider.
+5. Validate image contents inside the upload operation; Spring handles multipart size limits.
+6. Accept multiple images on car creation, preserving JSON creation.
+7. Append images and explicitly remove selected removeImageIds on car update, respecting expectedVersion.
+8. Return images in car detail and serve bytes via GET /cars/{id}?imageId=... with existing permissions.
+9. Delete old files after commit and attempt new-file cleanup after rollback; document manual recovery limitations.
+10. Test the HTTP contract, associations, rollback, adapters and migrations; run make check-api and retain CI checks.
+11. Provide executable REST Client examples for creation, update, read and deletion with committed fixtures.

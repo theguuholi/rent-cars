@@ -159,19 +159,43 @@ Content-Type: image/png
 # @name uploadedCar
 GET {{baseUrl}}{{createCarWithImages.response.headers.Location}}
 
-### Upload example 3. Read an image without authentication → 200 image/png
-GET {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}/images/{{uploadedCar.response.body.$.images[0].id}}
+### Upload example 3. Read an image through the public car route → 200 image/png
+GET {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}?imageId={{uploadedCar.response.body.$.images[0].id}}
 
-### Upload example 4. Remove the first image as admin → 204
-# Metadata disappears immediately; background cleanup removes the stored bytes.
-DELETE {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}/images/{{uploadedCar.response.body.$.images[0].id}}
+### Upload example 4. Add a photo and explicitly remove the first photo in one car update → 200
+PATCH {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}
 Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: multipart/form-data; boundary=UpdateCarImages
 
-### Upload example 5. Remove the example car and queue remaining images for cleanup → 204
+--UpdateCarImages
+Content-Disposition: form-data; name="car"
+Content-Type: application/json
+
+{"expectedVersion":{{uploadedCar.response.body.$.version}},"removeImageIds":["{{uploadedCar.response.body.$.images[0].id}}"]}
+--UpdateCarImages
+Content-Disposition: form-data; name="images"; filename="replacement.png"
+Content-Type: image/png
+
+< ./fixtures/car-front.png
+--UpdateCarImages--
+
+### Upload example 5. Refresh the car before another edit → 200
+# @name refreshedCarImages
+GET {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}
+
+### Upload example 6. Remove a photo through the existing JSON update → 200
+# Omitted removeImageIds preserves existing images. All supplied IDs must belong to this car.
+PATCH {{baseUrl}}/cars/{{refreshedCarImages.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{"expectedVersion":{{refreshedCarImages.response.body.$.version}},"removeImageIds":["{{refreshedCarImages.response.body.$.images[0].id}}"]}
+
+### Upload example 7. Delete the car and its remaining files → 204
 DELETE {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}
 Authorization: Bearer {{login.response.body.$.accessToken}}
 
-### Upload example 6. Reject a fake JPEG without creating a car → 422
+### Upload example 8. Reject a fake JPEG without creating a car → 422
 POST {{baseUrl}}/cars
 Authorization: Bearer {{login.response.body.$.accessToken}}
 Content-Type: multipart/form-data; boundary=InvalidImageBoundary

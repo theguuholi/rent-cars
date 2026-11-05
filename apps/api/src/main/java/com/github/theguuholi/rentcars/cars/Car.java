@@ -8,6 +8,7 @@ import com.github.theguuholi.rentcars.shared.http.JsonViews;
 import com.github.theguuholi.rentcars.shared.persistence.VersionedEntity;
 import com.github.theguuholi.rentcars.specifications.Specification;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -27,9 +28,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -165,9 +165,9 @@ public class Car extends VersionedEntity {
   @Schema(
       description = "Images associated with this vehicle, in creation order.",
       accessMode = Schema.AccessMode.READ_ONLY)
-  @OneToMany(mappedBy = "car", fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, orphanRemoval = true)
   @OrderBy("insertedAt ASC, id ASC")
-  private List<CarImage> images = new ArrayList<>();
+  private Set<CarImage> images = new LinkedHashSet<>();
 
   @CreationTimestamp
   @Column(name = "inserted_at", nullable = false, updatable = false)
@@ -207,7 +207,7 @@ public class Car extends VersionedEntity {
     licensePlate = normalized;
   }
 
-  List<CarImage> images() {
+  Set<CarImage> images() {
     return images;
   }
 

@@ -36,7 +36,7 @@ final class S3ImageStorage implements ImageStorage {
       return client
           .getObjectAsBytes(GetObjectRequest.builder().bucket(bucket).key(key).build())
           .asByteArray();
-    } catch (NoSuchKeyException exception) {
+    } catch (NoSuchKeyException _) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Image file not found");
     }
   }

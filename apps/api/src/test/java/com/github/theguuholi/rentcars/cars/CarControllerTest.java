@@ -14,7 +14,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 class CarControllerTest {
   private final CarService service = mock();
-  private final CarController controller = new CarController(service);
+  private final CarController controller =
+      new CarController(
+          service, mock(com.github.theguuholi.rentcars.shared.storage.ImageStorage.class));
   private final UUID id = UUID.randomUUID();
 
   @Nested
