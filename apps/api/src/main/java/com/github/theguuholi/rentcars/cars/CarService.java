@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,10 @@ class CarService {
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
   Car get(UUID id) {
-    return cars.findDetailedById(id).orElseThrow(CarService::notFound);
+    Car car = cars.findDetailedById(id).orElseThrow(CarService::notFound);
+    // Load the gallery separately to avoid multiplying image rows by specifications.
+    Hibernate.initialize(car.images());
+    return car;
   }
 
   @Transactional

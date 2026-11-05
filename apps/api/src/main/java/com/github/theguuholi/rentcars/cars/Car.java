@@ -20,13 +20,16 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -157,6 +160,15 @@ public class Car extends VersionedEntity {
   @OrderBy("name ASC, id ASC")
   private Set<Specification> specifications;
 
+  @JsonProperty
+  @JsonView(JsonViews.Detail.class)
+  @Schema(
+      description = "Images associated with this vehicle, in creation order.",
+      accessMode = Schema.AccessMode.READ_ONLY)
+  @OneToMany(mappedBy = "car", fetch = FetchType.LAZY)
+  @OrderBy("insertedAt ASC, id ASC")
+  private List<CarImage> images = new ArrayList<>();
+
   @CreationTimestamp
   @Column(name = "inserted_at", nullable = false, updatable = false)
   private Instant insertedAt;
@@ -193,6 +205,10 @@ public class Car extends VersionedEntity {
           HttpStatus.UNPROCESSABLE_CONTENT, "License plate cannot be changed");
     }
     licensePlate = normalized;
+  }
+
+  List<CarImage> images() {
+    return images;
   }
 
   UUID id() {

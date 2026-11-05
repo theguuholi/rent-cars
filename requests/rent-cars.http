@@ -129,3 +129,61 @@ Authorization: Bearer {{refresh.response.body.$.accessToken}}
 ### End this device session
 DELETE {{baseUrl}}/sessions/current
 X-XSRF-TOKEN: {{csrf.response.headers.X-XSRF-TOKEN}}
+
+### Upload example 1. Create a car and two images in one request → 201
+# Requires the login and categories requests above. Delete the example car before repeating.
+# The JSON part must use application/json. File paths are relative to this .http file.
+# @name createCarWithImages
+POST {{baseUrl}}/cars
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: multipart/form-data; boundary=CarImageBoundary
+
+--CarImageBoundary
+Content-Disposition: form-data; name="car"
+Content-Type: application/json
+
+{"name":"Photo example","description":"Car with two uploaded images","brand":"Fiat","licensePlate":"IMG1A23","dailyRateCents":15000,"fineAmountCents":0,"categoryId":"{{categories.response.body.$[0].id}}"}
+--CarImageBoundary
+Content-Disposition: form-data; name="images"; filename="car-front.png"
+Content-Type: image/png
+
+< ./fixtures/car-front.png
+--CarImageBoundary
+Content-Disposition: form-data; name="images"; filename="car-side.png"
+Content-Type: image/png
+
+< ./fixtures/car-side.png
+--CarImageBoundary--
+
+### Upload example 2. Read the car and its image identifiers → 200
+# @name uploadedCar
+GET {{baseUrl}}{{createCarWithImages.response.headers.Location}}
+
+### Upload example 3. Read an image without authentication → 200 image/png
+GET {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}/images/{{uploadedCar.response.body.$.images[0].id}}
+
+### Upload example 4. Remove the first image as admin → 204
+# Metadata disappears immediately; background cleanup removes the stored bytes.
+DELETE {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}/images/{{uploadedCar.response.body.$.images[0].id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Upload example 5. Remove the example car and queue remaining images for cleanup → 204
+DELETE {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Upload example 6. Reject a fake JPEG without creating a car → 422
+POST {{baseUrl}}/cars
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: multipart/form-data; boundary=InvalidImageBoundary
+
+--InvalidImageBoundary
+Content-Disposition: form-data; name="car"
+Content-Type: application/json
+
+{"name":"Invalid photo","description":"Must not be created","brand":"Fiat","licensePlate":"IMG9Z99","dailyRateCents":15000,"fineAmountCents":0,"categoryId":"{{categories.response.body.$[0].id}}"}
+--InvalidImageBoundary
+Content-Disposition: form-data; name="images"; filename="fake.jpg"
+Content-Type: image/jpeg
+
+This is not a JPEG image.
+--InvalidImageBoundary--

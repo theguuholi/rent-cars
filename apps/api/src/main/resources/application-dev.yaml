@@ -9,5 +9,9 @@ spring:
       - classpath:db/dev
 
 rent:
+  storage:
+    provider: local
+    local:
+      directory: ${UPLOAD_DIRECTORY:./uploads}
   auth:
     secure-cookie: false
