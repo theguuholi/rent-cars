@@ -118,6 +118,12 @@ Cookie: XSRF-TOKEN={{csrf.response.headers.X-XSRF-TOKEN}}
 {"email":"{{driverEmail}}","password":"{{driverPassword}}"}
 
 ### Optional · Upload or replace your avatar → 204 (sign in with step 4)
+# This request is identical for local, S3 and GCS storage: configure the API, not the client.
+# Local: RENT_STORAGE_PROVIDER=local (default).
+# S3: RENT_STORAGE_PROVIDER=s3, RENT_STORAGE_BUCKET and RENT_STORAGE_REGION + AWS workload credentials.
+# GCS: RENT_STORAGE_PROVIDER=gcs, RENT_STORAGE_BUCKET + Google Application Default Credentials.
+# See docs/avatars.md for setup, permissions, verification and migrating existing objects.
+# Never put cloud credentials or signed storage URLs in this file.
 PUT {{baseUrl}}/users/me/avatar
 Authorization: Bearer {{login.response.body.$.accessToken}}
 Content-Type: multipart/form-data; boundary=rent-cars-avatar

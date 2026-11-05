@@ -16,6 +16,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 @Import(TestcontainersConfiguration.class)
 class AccountRepositoryTest {
   @Autowired AccountRepository accounts;
+  @Autowired org.springframework.jdbc.core.simple.JdbcClient db;
+  @Autowired org.springframework.transaction.support.TransactionTemplate tx;
 
   @Nested
   class FindByEmail {
@@ -42,6 +44,38 @@ class AccountRepositoryTest {
       }
       assertThat(accounts.findByEmail(email).orElseThrow().profile().email()).isEqualTo(email);
       assertThat(accounts.findByEmail("missing-" + email)).isEmpty();
+    }
+  }
+
+  @Nested
+  class ChangeAvatar {
+    @Test
+    @DisplayName(
+        "Given a live account, when changing then clearing its avatar, then persist each pointer and report missing accounts")
+    void change() {
+      var account =
+          accounts.saveAndFlush(new Account(UUID.randomUUID() + "@example.test", "encoded"));
+      var id = account.profile().id();
+      var key = UUID.randomUUID();
+      db.sql("insert into avatar_objects(id) values(?)").param(key).update();
+      tx.executeWithoutResult(_ -> assertThat(accounts.changeAvatar(id, key)).isOne());
+      tx.executeWithoutResult(
+          _ -> assertThat(accounts.findWithAvatar(id).orElseThrow().avatarKey()).isEqualTo(key));
+      tx.executeWithoutResult(_ -> assertThat(accounts.changeAvatar(id, null)).isOne());
+      tx.executeWithoutResult(_ -> assertThat(accounts.findWithAvatar(id)).isEmpty());
+      tx.executeWithoutResult(
+          _ -> assertThat(accounts.changeAvatar(UUID.randomUUID(), key)).isZero());
+    }
+  }
+
+  @Nested
+  class FindWithAvatar {
+    @Test
+    @DisplayName(
+        "Given an unknown account, when looking up its avatar under a read lock, then return empty")
+    void missing() {
+      tx.executeWithoutResult(
+          _ -> assertThat(accounts.findWithAvatar(UUID.randomUUID())).isEmpty());
     }
   }
 }

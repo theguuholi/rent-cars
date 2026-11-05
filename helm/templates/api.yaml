@@ -3,7 +3,11 @@ kind: Deployment
 metadata:
   name: {{ .Release.Name }}-api
 spec:
+  {{- if eq .Values.api.storage.provider "local" }}
   strategy: {type: Recreate}
+  {{- else }}
+  strategy: {type: RollingUpdate}
+  {{- end }}
   replicas: 1
   selector:
     matchLabels:
@@ -15,7 +19,10 @@ spec:
         {{- include "rent-cars.labels" . | nindent 8 }}
         app.kubernetes.io/component: api
     spec:
-      automountServiceAccountToken: false
+      automountServiceAccountToken: {{ .Values.api.serviceAccount.automountToken }}
+      {{- with .Values.api.serviceAccount.name }}
+      serviceAccountName: {{ . | quote }}
+      {{- end }}
       securityContext: {runAsNonRoot: true, fsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets: {{ toYaml . | nindent 8 }}
@@ -28,6 +35,13 @@ spec:
           resources: {{ toYaml .Values.api.resources | nindent 12 }}
           ports: [{name: http, containerPort: 8080}]
           env:
+            - {name: RENT_STORAGE_PROVIDER, value: {{ .Values.api.storage.provider | quote }}}
+            {{- if ne .Values.api.storage.provider "local" }}
+            - {name: RENT_STORAGE_BUCKET, value: {{ required "api.storage.bucket is required for cloud storage" .Values.api.storage.bucket | quote }}}
+            {{- end }}
+            {{- if eq .Values.api.storage.provider "s3" }}
+            - {name: RENT_STORAGE_REGION, value: {{ required "api.storage.region is required for s3" .Values.api.storage.region | quote }}}
+            {{- end }}
             - {name: SPRING_PROFILES_ACTIVE, value: local}
             - {name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://{{ .Release.Name }}-postgres:5432/rent_cars"}
             - {name: SPRING_FLYWAY_CONNECT_RETRIES, value: "10"}
@@ -49,12 +63,16 @@ spec:
           livenessProbe:
             tcpSocket: {port: http}
           volumeMounts:
+            {{- if eq .Values.api.storage.provider "local" }}
             - {name: avatars, mountPath: /data/uploads}
+            {{- end }}
             - {name: tmp, mountPath: /tmp}
             - {name: keys, mountPath: /keys, readOnly: true}
       volumes:
+        {{- if eq .Values.api.storage.provider "local" }}
         - name: avatars
           persistentVolumeClaim: {claimName: {{ .Release.Name }}-avatars}
+        {{- end }}
         - {name: tmp, emptyDir: {}}
         - name: keys
           secret:

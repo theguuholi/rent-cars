@@ -85,3 +85,7 @@ helm uninstall fleet -n rent-cars
 ```
 
 The PostgreSQL claim and the manually created Secret survive uninstall. Reinstall with the same namespace and release name to reuse them. When you want to discard the entire local environment including its data, delete the dedicated cluster with `kind delete cluster --name rent-cars`.
+
+## Avatar storage
+
+The default `api.storage.provider: local` uses a retained PVC and one API replica with Recreate updates. Choose `s3` or `gcs`, set `api.storage.bucket` (and `api.storage.region` for S3), and bind an existing `api.serviceAccount.name` to your cloud workload identity. Cloud mode removes the avatar volume mount and uses RollingUpdate. See [the storage setup and migration guide](../docs/avatars.md#select-a-production-storage-provider) before changing a deployment that already has uploaded images.

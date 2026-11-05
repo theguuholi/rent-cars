@@ -1,6 +1,7 @@
 package com.github.theguuholi.rentcars.avatar;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -21,6 +22,36 @@ class AvatarImageTest {
 
   @Nested
   class Normalize {
+    @Test
+    @DisplayName(
+        "Given a rendering failure, when normalization aborts, then release both the graphics context and image reader")
+    void resourcesAreReleased() throws Exception {
+      var reader = mock(javax.imageio.ImageReader.class);
+      var decoded = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+      when(reader.getFormatName()).thenReturn("png");
+      when(reader.getWidth(0)).thenReturn(1);
+      when(reader.getHeight(0)).thenReturn(1);
+      when(reader.read(0)).thenReturn(decoded);
+      var graphics = mock(java.awt.Graphics2D.class);
+      var failure = new IllegalStateException("rendering failed");
+      when(graphics.drawImage(
+              any(java.awt.Image.class), anyInt(), anyInt(), anyInt(), anyInt(), isNull()))
+          .thenThrow(failure);
+      var file = new MockMultipartFile("image", new byte[] {1});
+      try (var images = mockStatic(ImageIO.class);
+          var buffers =
+              mockConstruction(
+                  BufferedImage.class,
+                  (buffer, _) -> when(buffer.createGraphics()).thenReturn(graphics))) {
+        images
+            .when(() -> ImageIO.getImageReaders(any()))
+            .thenReturn(java.util.List.of(reader).iterator());
+        assertThatThrownBy(() -> AvatarImage.normalize(file)).isSameAs(failure);
+        verify(graphics).dispose();
+        verify(reader).dispose();
+      }
+    }
+
     @ParameterizedTest(name = "Given {2} {0}x{1}, when normalizing, then produce a bounded PNG")
     @CsvSource({"512,512,png", "1024,512,jpeg", "1,1000,png", "2000,2000,png"})
     void normal(int w, int h, String format) throws Exception {

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.github.theguuholi.rentcars.TestcontainersConfiguration;
+import com.github.theguuholi.rentcars.auth.AccountRepository;
 import java.io.*;
 import java.nio.file.Path;
 import java.util.UUID;
@@ -28,6 +29,8 @@ class AvatarServiceTest {
   }
 
   @Autowired AvatarService avatars;
+  @Autowired AccountRepository accounts;
+  @Autowired AvatarObjectRepository objects;
   @Autowired JdbcClient db;
   @Autowired TransactionTemplate tx;
   @Autowired ImageStorage storage;
@@ -45,15 +48,45 @@ class AvatarServiceTest {
   class Replace {
     @Test
     @DisplayName(
+        "Given a caller transaction, when it rolls back after uploading, then the completed avatar operation remains independently committed")
+    void independentOperation() throws Exception {
+      assertThatThrownBy(
+              () ->
+                  tx.executeWithoutResult(
+                      _ -> {
+                        avatars.replace(account, new byte[] {7});
+                        throw new IllegalStateException("caller rollback");
+                      }))
+          .isInstanceOf(IllegalStateException.class);
+      assertThat(avatars.read(account)).containsExactly(7);
+    }
+
+    @Test
+    @DisplayName(
         "Given an avatar, when the replacement storage fails, then the old pointer and old bytes remain readable")
     void failure() throws Exception {
       avatars.replace(account, new byte[] {1});
       var broken = mock(ImageStorage.class);
       doThrow(new IOException("offline")).when(broken).write(any(), any());
-      var service = new AvatarService(db, broken, tx);
+      var service = new AvatarService(accounts, objects, broken, tx);
       assertThatThrownBy(() -> service.replace(account, new byte[] {2}))
           .isInstanceOf(UncheckedIOException.class);
       assertThat(avatars.read(account)).containsExactly(1);
+    }
+
+    @Test
+    @DisplayName(
+        "Given an existing avatar, when the cloud SDK fails during replacement, then roll back the pointer and retain an orphan allocation for cleanup")
+    void cloudFailure() throws Exception {
+      avatars.replace(account, new byte[] {4});
+      var before = objects.count();
+      var broken = mock(ImageStorage.class);
+      doThrow(new IllegalStateException("cloud unavailable")).when(broken).write(any(), any());
+      var service = new AvatarService(accounts, objects, broken, tx);
+      assertThatThrownBy(() -> service.replace(account, new byte[] {5}))
+          .isInstanceOf(IllegalStateException.class);
+      assertThat(avatars.read(account)).containsExactly(4);
+      assertThat(objects.count()).isEqualTo(before + 1);
     }
 
     @Test
@@ -119,14 +152,11 @@ class AvatarServiceTest {
               .param(account)
               .query(UUID.class)
               .single();
-      var selected = mock(JdbcClient.StatementSpec.class);
-      JdbcClient.MappedQuerySpec<UUID> mapped = mock();
-      when(mapped.list()).thenReturn(java.util.List.of(key));
-      when(selected.query(UUID.class)).thenReturn(mapped);
-      var racing = spy(db);
-      doReturn(selected).when(racing).sql(org.mockito.ArgumentMatchers.startsWith("select o.id"));
-      var service = new AvatarService(racing, storage, tx);
-      service.clean();
+      var racing = mock(AvatarObjectRepository.class);
+      when(racing.deleteUnreferenced(key)).thenAnswer(_ -> objects.deleteUnreferenced(key));
+      doReturn(java.util.List.of(new AvatarObject(key))).when(racing).lockOrphans();
+      var service = new AvatarService(accounts, racing, storage, tx);
+      tx.executeWithoutResult(_ -> service.clean());
       assertThat(avatars.read(account)).containsExactly(3);
     }
 
@@ -141,7 +171,7 @@ class AvatarServiceTest {
       storage.write(key, new byte[] {1});
       var broken = mock(ImageStorage.class);
       doThrow(new IOException("offline")).when(broken).delete(key);
-      var service = new AvatarService(db, broken, tx);
+      var service = new AvatarService(accounts, objects, broken, tx);
       assertThatThrownBy(
               () ->
                   tx.executeWithoutResult(

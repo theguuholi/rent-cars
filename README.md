@@ -56,4 +56,4 @@ From the repository root, run `make dev` to start PostgreSQL, the API and the fr
 
 ### Account avatar
 
-After signing in, open **My avatar** to upload, preview or remove your private profile picture. See [avatar storage and verification](docs/avatars.md) and the executable examples in `requests/rent-cars.http`.
+After signing in, open **My avatar** to upload, preview or remove your private profile picture. Storage defaults to a local directory; production can select private S3 or Google Cloud Storage through environment variables. See [avatar storage and verification](docs/avatars.md) and the executable examples in `requests/rent-cars.http`.

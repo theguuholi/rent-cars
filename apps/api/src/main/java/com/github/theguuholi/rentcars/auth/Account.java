@@ -19,7 +19,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 @Schema(hidden = true, description = "Internal login account.")
 @Entity
 @Table(name = "accounts")
-class Account {
+public class Account {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
@@ -33,6 +33,13 @@ class Account {
 
   @Column(nullable = false, length = 5)
   private String role = "USER";
+
+  @Column(unique = true)
+  private UUID avatarKey;
+
+  public UUID avatarKey() {
+    return avatarKey;
+  }
 
   protected Account() {}
 

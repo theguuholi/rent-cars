@@ -1,5 +1,12 @@
 api:
   avatarStorage: 1Gi
+  storage:
+    provider: local # local, s3 or gcs; do not switch existing data without copying objects first
+    bucket: ""
+    region: "" # required for s3
+  serviceAccount:
+    name: "" # existing cloud workload identity service account
+    automountToken: false
   image:
     repository: docker.io/guuhworship/rent-cars-api
     tag: latest
