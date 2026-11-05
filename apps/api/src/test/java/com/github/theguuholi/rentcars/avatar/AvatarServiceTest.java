@@ -120,7 +120,7 @@ class AvatarServiceTest {
               .query(UUID.class)
               .single();
       var selected = mock(JdbcClient.StatementSpec.class);
-      var mapped = mock(JdbcClient.MappedQuerySpec.class);
+      JdbcClient.MappedQuerySpec<UUID> mapped = mock();
       when(mapped.list()).thenReturn(java.util.List.of(key));
       when(selected.query(UUID.class)).thenReturn(mapped);
       var racing = spy(db);

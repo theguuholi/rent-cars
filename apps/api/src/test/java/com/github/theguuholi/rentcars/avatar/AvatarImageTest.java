@@ -37,6 +37,16 @@ class AvatarImageTest {
 
     @Test
     @DisplayName(
+        "Given a valid PNG exactly at the byte limit, when normalizing, then accept it and remove trailing bytes")
+    void exactLimit() throws Exception {
+      var bytes = java.util.Arrays.copyOf(pixels(1, 1, "png"), 5 * 1024 * 1024);
+      var result = AvatarImage.normalize(new MockMultipartFile("image", bytes));
+      assertThat(result.length).isLessThan(1024);
+      assertThat(ImageIO.read(new ByteArrayInputStream(result)).getWidth()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName(
         "Given a renamed executable or an empty image, when decoding, then reject the content")
     void fake() {
       for (var value : new byte[][] {new byte[0], "<svg onload='alert(1)'/>".getBytes()}) {
