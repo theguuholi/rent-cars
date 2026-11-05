@@ -82,35 +82,40 @@ public class CarController {
   }
 
   @SecurityRequirement(name = "bearerAuth")
-  @JsonView(JsonViews.Summary.class)
-  @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @JsonView(JsonViews.Detail.class)
+  @PatchMapping(
+      value = "/{id}/images",
+      consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+      produces = MediaType.APPLICATION_JSON_VALUE)
   @Operation(
-      summary = "Add a car with images",
+      summary = "Upload images for an existing car",
       description =
-          "Send car as application/json and repeat the optional images parts. JPEG/PNG, 5 MB per file, 30 MB total. Follow Location for image identifiers.")
-  @ApiResponse(responseCode = "201", description = "Car created", useReturnTypeSchema = true)
+          "Send one or more repeated images file parts. Appends JPEG/PNG images without replacing existing ones. Maximum 5 MB per file and 30 MB per request. No car JSON or edit version is required.")
+  @ApiResponse(
+      responseCode = "201",
+      description = "Images created; Location points to the car",
+      useReturnTypeSchema = true)
+  @ApiResponse(responseCode = "400", description = "Missing images part or invalid UUID")
+  @ApiResponse(responseCode = "404", description = "Car not found")
   @ApiResponse(responseCode = "413", description = "Upload too large")
-  public ResponseEntity<Car> createWithImages(
-      @RequestPart("car") CarRequest request,
-      @RequestPart(value = "images", required = false) List<MultipartFile> files) {
-    Car car = cars.create(request, files == null ? List.of() : files);
+  @ApiResponse(responseCode = "422", description = "Invalid image contents")
+  public ResponseEntity<Car> uploadImages(
+      @PathVariable UUID id, @RequestPart("images") List<MultipartFile> files) {
+    Car car = cars.uploadImages(id, files);
     return ResponseEntity.created(URI.create("/cars/" + car.id())).body(car);
   }
 
   @SecurityRequirement(name = "bearerAuth")
-  @JsonView(JsonViews.Summary.class)
-  @PatchMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @DeleteMapping("/{id}/images/{imageId}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(
-      summary = "Update a car and its images",
+      summary = "Remove an image from a car",
       description =
-          "Send car as application/json including expectedVersion. New images are appended. removeImageIds removes selected existing images. Omitted images are retained.")
-  @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
-  @ApiResponse(responseCode = "413", description = "Upload too large")
-  public Car updateWithImages(
-      @PathVariable UUID id,
-      @RequestPart("car") CarRequest request,
-      @RequestPart(value = "images", required = false) List<MultipartFile> files) {
-    return cars.update(id, request, files == null ? List.of() : files);
+          "The image must belong to the specified car. Removes its metadata and attempts file deletion after the database commits.")
+  @ApiResponse(responseCode = "204", description = "Image removed", content = @Content)
+  @ApiResponse(responseCode = "404", description = "Car or image not found")
+  public void deleteImage(@PathVariable UUID id, @PathVariable UUID imageId) {
+    cars.deleteImage(id, imageId);
   }
 
   // OpenAPI describes both response forms on get(); they share one path and HTTP method.

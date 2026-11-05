@@ -10,7 +10,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import javax.imageio.ImageIO;
 import javax.imageio.stream.MemoryCacheImageInputStream;
@@ -54,39 +53,43 @@ class CarService {
 
   @Transactional
   Car create(CarRequest request) {
-    return createCar(request, List.of());
-  }
-
-  @Transactional
-  Car create(CarRequest request, List<MultipartFile> files) {
-    return createCar(request, files);
-  }
-
-  private Car createCar(CarRequest request, List<MultipartFile> files) {
     Car car = new Car();
     apply(car, request);
-    changeImages(car, files, request.removeImageIds);
     return cars.saveAndFlush(car);
   }
 
   @Transactional
   Car update(UUID id, CarRequest request) {
-    return updateCar(id, request, List.of());
-  }
-
-  @Transactional
-  Car update(UUID id, CarRequest request, List<MultipartFile> files) {
-    return updateCar(id, request, files);
-  }
-
-  private Car updateCar(UUID id, CarRequest request, List<MultipartFile> files) {
     var car = cars.findById(id).orElseThrow(CarService::notFound);
     EditVersion.requireCurrent(request.expectedVersion, car.getVersion());
     apply(car, request);
-    if (changeImages(car, files, request.removeImageIds)) {
-      entities.lock(car, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
-    }
     return cars.saveAndFlush(car);
+  }
+
+  @Transactional
+  Car uploadImages(UUID id, List<MultipartFile> files) {
+    Car car = cars.findForUpdate(id).orElseThrow(CarService::notFound);
+    var uploadedKeys = new ArrayList<String>();
+    cleanupAfterTransaction(uploadedKeys, List.of());
+    for (MultipartFile file : files) car.images().add(storeImage(car, file, uploadedKeys));
+    entities.lock(car, LockModeType.PESSIMISTIC_FORCE_INCREMENT);
+    cars.saveAndFlush(car);
+    return cars.findDetailedById(id).orElseThrow(CarService::notFound);
+  }
+
+  @Transactional
+  void deleteImage(UUID id, UUID imageId) {
+    Car car = cars.findForUpdate(id).orElseThrow(CarService::notFound);
+    CarImage image =
+        car.images().stream()
+            .filter(item -> item.id().equals(imageId))
+            .findFirst()
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Car image not found"));
+    cleanupAfterTransaction(List.of(), List.of(image.key()));
+    car.images().remove(image);
+    entities.lock(car, LockModeType.PESSIMISTIC_FORCE_INCREMENT);
+    cars.saveAndFlush(car);
   }
 
   @Transactional
@@ -101,23 +104,6 @@ class CarService {
     validate(request);
     car.apply(request);
     validate(car);
-  }
-
-  private boolean changeImages(Car car, List<MultipartFile> files, Set<UUID> removeIds) {
-    Set<UUID> removed = removeIds == null ? Set.of() : removeIds;
-    var oldImages = car.images().stream().filter(image -> removed.contains(image.id())).toList();
-    if (oldImages.size() != removed.size()) {
-      throw new ResponseStatusException(
-          HttpStatus.UNPROCESSABLE_CONTENT, "Every removed image must belong to this car");
-    }
-    if (files.isEmpty() && oldImages.isEmpty()) return false;
-    // Obtain the generated car ID before composing file keys; this does not commit the transaction.
-    cars.saveAndFlush(car);
-    var uploadedKeys = new ArrayList<String>();
-    cleanupAfterTransaction(uploadedKeys, oldImages.stream().map(CarImage::key).toList());
-    car.images().removeAll(oldImages);
-    for (MultipartFile file : files) car.images().add(storeImage(car, file, uploadedKeys));
-    return true;
   }
 
   private CarImage storeImage(Car car, MultipartFile file, List<String> uploadedKeys) {

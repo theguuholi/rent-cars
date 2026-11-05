@@ -78,11 +78,15 @@ The existing `CarController`, `CarService` and `CarRepository` handle images as
 part of the car aggregate. JPA cascade/orphan removal persists the association.
 There is no separate image controller/repository, scheduler or cleanup queue.
 
-- `POST /cars`: existing JSON or multipart with one `car` JSON part and repeated
-  optional `images` file parts. Creation returns the existing summary and Location.
-- `PATCH /cars/{id}`: JSON or multipart. Include `expectedVersion` in the `car`
-  JSON part. New files are appended; `removeImageIds` explicitly selects old images
-  to remove. Omitted or empty selections retain images. IDs must belong to the car.
+- `POST /cars` and `PATCH /cars/{id}` keep their existing JSON contracts.
+- `PATCH /cars/{id}/images`: multipart with one or more repeated `images` file
+  parts. Appends images to an existing car, returns 201 with full car detail and
+  a Location header pointing to `/cars/{id}`. No car JSON or expectedVersion is
+  required. Uploads serialize on the car row so concurrent appends are preserved.
+- `DELETE /cars/{id}/images/{imageId}`: removes one image belonging to the car and
+  returns 204. Attempts file deletion after the metadata transaction commits.
+- Image uploads/removals advance the car version, invalidating previously opened
+  car editors. Normal car PATCH still requires expectedVersion.
 - `GET /cars/{id}`: detail includes image `id`, `contentType` and `sizeBytes`.
 - `GET /cars/{id}?imageId={imageId}`: image bytes through the same public car route.
 - `DELETE /cars/{id}`: deletes the car, its image rows and associated files.

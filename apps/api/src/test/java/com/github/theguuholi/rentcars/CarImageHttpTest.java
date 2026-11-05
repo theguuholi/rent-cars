@@ -17,6 +17,9 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.AfterEach;
@@ -37,6 +40,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -81,19 +85,19 @@ class CarImageHttpTest {
     }
   }
 
-  MockMultipartFile car() {
+  String created() throws Exception {
     String category = jdbc.queryForObject("select id::text from categories limit 1", String.class);
-    return carPart(
+    String body =
         """
-        {"name":"Image car","description":"Photo example","brand":"Fiat","licensePlate":"%s",
+        {"name":"Argo","description":"Photo example","brand":"Fiat","licensePlate":"%s",
         "dailyRateCents":10000,"fineAmountCents":0,"categoryId":"%s"}
         """
-            .formatted(UUID.randomUUID().toString().substring(0, 12), category));
-  }
-
-  MockMultipartFile carPart(String value) {
-    return new MockMultipartFile(
-        "car", "", "application/json", value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            .formatted(UUID.randomUUID().toString().substring(0, 12), category);
+    return mvc.perform(post("/cars").contentType("application/json").content(body))
+        .andExpect(status().isCreated())
+        .andReturn()
+        .getResponse()
+        .getHeader("Location");
   }
 
   static byte[] image(String format) throws IOException {
@@ -102,13 +106,22 @@ class CarImageHttpTest {
     return bytes.toByteArray();
   }
 
+  MockMultipartHttpServletRequestBuilder upload(String location, MockMultipartFile... files) {
+    var request = multipart(location + "/images");
+    for (var file : files) request.file(file);
+    request.with(
+        req -> {
+          req.setMethod("PATCH");
+          return req;
+        });
+    return request;
+  }
+
   String uploaded() throws Exception {
-    return mvc.perform(
-            multipart("/cars").file(car()).file(new MockMultipartFile("images", image("png"))))
-        .andExpect(status().isCreated())
-        .andReturn()
-        .getResponse()
-        .getHeader("Location");
+    String location = created();
+    mvc.perform(upload(location, new MockMultipartFile("images", image("png"))))
+        .andExpect(status().isCreated());
+    return location;
   }
 
   String firstImage(String location) throws Exception {
@@ -123,82 +136,122 @@ class CarImageHttpTest {
   }
 
   @Nested
-  class Create {
+  class Upload {
     @Test
     @DisplayName(
-        "Given PNG and JPEG files, when creating a car, then cascade persists both with server-generated keys and actual media types")
+        "Given an existing car, when uploading PNG and JPEG parts, then 201 includes the updated car and its Location")
     void multipleImages() throws Exception {
+      String location = created();
+      mvc.perform(
+              upload(
+                  location,
+                  new MockMultipartFile("images", "../../bad.exe", "text/plain", image("png")),
+                  new MockMultipartFile("images", image("jpeg"))))
+          .andExpect(status().isCreated())
+          .andExpect(header().string("Location", location))
+          .andExpect(jsonPath("$.images.length()").value(2))
+          .andExpect(jsonPath("$.category.id").exists());
       var response =
-          mvc.perform(
-                  multipart("/cars")
-                      .file(car())
-                      .file(
-                          new MockMultipartFile(
-                              "images", "../../bad.exe", "text/plain", image("png")))
-                      .file(new MockMultipartFile("images", image("jpeg"))))
-              .andExpect(status().isCreated())
-              .andReturn()
-              .getResponse();
-      String location = response.getHeader("Location");
-      var detail =
           mvc.perform(get(location))
-              .andExpect(jsonPath("$.images.length()").value(2))
               .andExpect(jsonPath("$.images[0].storageKey").doesNotExist())
               .andReturn()
               .getResponse();
-      for (var row : json.readTree(detail.getContentAsString()).get("images")) {
+      for (var row : json.readTree(response.getContentAsString()).get("images")) {
         String id = row.get("id").asString();
         String type = row.get("contentType").asString();
         mvc.perform(get(location).param("imageId", id))
             .andExpect(status().isOk())
             .andExpect(content().contentType(type))
             .andExpect(content().bytes(image(type.equals("image/png") ? "png" : "jpeg")));
-        String key =
-            jdbc.queryForObject(
-                "select storage_key from cars_images where id=?",
-                String.class,
-                UUID.fromString(id));
-        assertThat(key)
+        assertThat(
+                jdbc.queryForObject(
+                    "select storage_key from cars_images where id=?",
+                    String.class,
+                    UUID.fromString(id)))
             .isEqualTo(
                 location.substring(1) + "/" + id + (type.equals("image/png") ? ".png" : ".jpg"));
       }
     }
 
     @Test
-    @DisplayName("Given no image parts, when creating a multipart car, then the gallery is empty")
-    void noImages() throws Exception {
-      String location =
-          mvc.perform(multipart("/cars").file(car()))
-              .andExpect(status().isCreated())
-              .andReturn()
-              .getResponse()
-              .getHeader("Location");
-      mvc.perform(get(location)).andExpect(jsonPath("$.images").isEmpty());
+    @DisplayName(
+        "Given an existing gallery, when uploading more images, then old images are retained and the car version advances")
+    void appends() throws Exception {
+      String location = uploaded();
+      String original = firstImage(location);
+      long before = version(location);
+      mvc.perform(upload(location, new MockMultipartFile("images", image("jpeg"))))
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.images.length()").value(2));
+      assertThat(version(location)).isGreaterThan(before);
+      mvc.perform(get(location).param("imageId", original)).andExpect(status().isOk());
+      mvc.perform(
+              patch(location)
+                  .contentType("application/json")
+                  .content("{\"expectedVersion\":" + before + ",\"name\":\"Stale\"}"))
+          .andExpect(status().isConflict());
     }
 
     @Test
     @DisplayName(
-        "Given invalid, empty, unsupported or truncated bytes, when uploading, then no car or image is committed")
-    void invalidContent() throws Exception {
-      for (byte[] bytes :
-          List.of(new byte[0], new byte[] {1, 2}, image("gif"), Arrays.copyOf(image("png"), 40))) {
-        mvc.perform(multipart("/cars").file(car()).file(new MockMultipartFile("images", bytes)))
-            .andExpect(status().is(422));
+        "Given simultaneous uploads, when both append, then neither gallery update is lost")
+    void concurrentUploads() throws Exception {
+      String location = created();
+      var start = new CyclicBarrier(2);
+      try (var workers = Executors.newVirtualThreadPerTaskExecutor()) {
+        java.util.concurrent.Callable<Integer> task =
+            () -> {
+              start.await(10, TimeUnit.SECONDS);
+              return mvc.perform(upload(location, new MockMultipartFile("images", image("png"))))
+                  .andReturn()
+                  .getResponse()
+                  .getStatus();
+            };
+        var first = workers.submit(task);
+        var second = workers.submit(task);
+        assertThat(first.get(20, TimeUnit.SECONDS)).isEqualTo(201);
+        assertThat(second.get(20, TimeUnit.SECONDS)).isEqualTo(201);
       }
-      assertThat(jdbc.queryForObject("select count(*) from cars", Long.class)).isZero();
+      mvc.perform(get(location)).andExpect(jsonPath("$.images.length()").value(2));
+    }
+
+    @Test
+    @DisplayName(
+        "Given an unknown car or missing files, when uploading, then no images are created")
+    void missingInputs() throws Exception {
+      mvc.perform(
+              upload("/cars/" + UUID.randomUUID(), new MockMultipartFile("images", image("png"))))
+          .andExpect(status().isNotFound());
+      mvc.perform(upload(created())).andExpect(status().isBadRequest());
       assertThat(jdbc.queryForObject("select count(*) from cars_images", Long.class)).isZero();
     }
 
     @Test
     @DisplayName(
-        "Given excessive decoded dimensions or an unreadable part, when uploading, then validation rejects the image")
+        "Given invalid, empty, unsupported or truncated bytes, when uploading, then existing car data is preserved")
+    void invalidContent() throws Exception {
+      String location = created();
+      for (byte[] bytes :
+          List.of(new byte[0], new byte[] {1, 2}, image("gif"), Arrays.copyOf(image("png"), 40))) {
+        mvc.perform(upload(location, new MockMultipartFile("images", bytes)))
+            .andExpect(status().is(422));
+      }
+      mvc.perform(get(location))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.images").isEmpty());
+    }
+
+    @Test
+    @DisplayName(
+        "Given excessive decoded dimensions or unreadable bytes, when uploading, then image validation rejects them")
     void invalidDimensionsAndStream() throws Exception {
+      String location = created();
       byte[] bytes = image("png");
       ByteBuffer.wrap(bytes).putInt(16, 5000).putInt(20, 5000);
       CRC32 crc = new CRC32();
       crc.update(bytes, 12, 17);
       ByteBuffer.wrap(bytes).putInt(29, (int) crc.getValue());
-      mvc.perform(multipart("/cars").file(car()).file(new MockMultipartFile("images", bytes)))
+      mvc.perform(upload(location, new MockMultipartFile("images", bytes)))
           .andExpect(status().is(422));
       var unreadable =
           new MockMultipartFile("images", image("png")) {
@@ -207,13 +260,33 @@ class CarImageHttpTest {
               throw new IOException("Unreadable");
             }
           };
-      mvc.perform(multipart("/cars").file(car()).file(unreadable)).andExpect(status().is(422));
+      mvc.perform(upload(location, unreadable)).andExpect(status().is(422));
     }
 
     @Test
     @DisplayName(
-        "Given a partial storage write failure, when creating a car, then rollback removes the file and metadata")
+        "Given a valid image followed by a corrupt one, when uploading, then rollback removes only the new files")
+    void atomicBatch() throws Exception {
+      String location = uploaded();
+      String original = firstImage(location);
+      mvc.perform(
+              upload(
+                  location,
+                  new MockMultipartFile("images", image("jpeg")),
+                  new MockMultipartFile("images", new byte[] {1})))
+          .andExpect(status().is(422));
+      mvc.perform(get(location)).andExpect(jsonPath("$.images.length()").value(1));
+      mvc.perform(get(location).param("imageId", original)).andExpect(status().isOk());
+      try (var files = Files.walk(STORAGE)) {
+        assertThat(files.filter(Files::isRegularFile).count()).isEqualTo(1);
+      }
+    }
+
+    @Test
+    @DisplayName(
+        "Given a partial write failure, when uploading, then rollback removes the partial file and preserves the car")
     void partialWrite() throws Exception {
+      String location = created();
       doAnswer(
               call -> {
                 call.callRealMethod();
@@ -221,10 +294,11 @@ class CarImageHttpTest {
               })
           .when(storage)
           .store(anyString(), any(byte[].class), anyString());
-      mvc.perform(
-              multipart("/cars").file(car()).file(new MockMultipartFile("images", image("png"))))
+      mvc.perform(upload(location, new MockMultipartFile("images", image("png"))))
           .andExpect(status().isInternalServerError());
-      assertThat(jdbc.queryForObject("select count(*) from cars", Long.class)).isZero();
+      mvc.perform(get(location))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.images").isEmpty());
       try (var files = Files.walk(STORAGE)) {
         assertThat(files.filter(Files::isRegularFile)).isEmpty();
       }
@@ -232,14 +306,17 @@ class CarImageHttpTest {
 
     @Test
     @DisplayName(
-        "Given a failing commit after upload, when the transaction rolls back, then uploaded files are removed")
-    void failedCommit() {
+        "Given a commit failure after upload, when rolling back, then new image rows and files are removed")
+    void failedCommit() throws Exception {
+      String location = created();
       assertThatThrownBy(
               () ->
                   transactions.executeWithoutResult(
                       status -> {
                         try {
-                          uploaded();
+                          mvc.perform(
+                                  upload(location, new MockMultipartFile("images", image("png"))))
+                              .andExpect(status().isCreated());
                         } catch (Exception e) {
                           throw new AssertionError(e);
                         }
@@ -256,117 +333,71 @@ class CarImageHttpTest {
       assertThat(jdbc.queryForObject("select count(*) from cars_images", Long.class)).isZero();
       try (var files = Files.walk(STORAGE)) {
         assertThat(files.filter(Files::isRegularFile)).isEmpty();
-      } catch (IOException e) {
-        throw new AssertionError(e);
       }
     }
   }
 
   @Nested
-  class Update {
+  class DeleteImage {
     @Test
     @DisplayName(
-        "Given existing images, when appending and explicitly removing one, then retained files stay and removed files are deleted after commit")
-    void appendAndRemove() throws Exception {
+        "Given a car image, when removing it, then 204 deletes metadata and file and advances the car version")
+    void removes() throws Exception {
       String location = uploaded();
-      String original = firstImage(location);
-      String originalKey = jdbc.queryForObject("select storage_key from cars_images", String.class);
-      mvc.perform(
-              multipart(location)
-                  .file(carPart("{\"expectedVersion\":" + version(location) + "}"))
-                  .file(new MockMultipartFile("images", image("jpeg")))
-                  .with(
-                      req -> {
-                        req.setMethod("PATCH");
-                        return req;
-                      }))
-          .andExpect(status().isOk());
-      mvc.perform(get(location)).andExpect(jsonPath("$.images.length()").value(2));
-      assertThat(Files.exists(STORAGE.resolve(originalKey))).isTrue();
-      mvc.perform(
-              patch(location)
-                  .contentType("application/json")
-                  .content(
-                      "{\"expectedVersion\":"
-                          + version(location)
-                          + ",\"removeImageIds\":[\""
-                          + original
-                          + "\"]}"))
-          .andExpect(status().isOk());
-      mvc.perform(get(location)).andExpect(jsonPath("$.images.length()").value(1));
-      assertThat(Files.exists(STORAGE.resolve(originalKey))).isFalse();
+      String id = firstImage(location);
+      long before = version(location);
+      String key = jdbc.queryForObject("select storage_key from cars_images", String.class);
+      mvc.perform(delete(location + "/images/" + id))
+          .andExpect(status().isNoContent())
+          .andExpect(content().string(""));
+      mvc.perform(get(location)).andExpect(jsonPath("$.images").isEmpty());
+      assertThat(version(location)).isGreaterThan(before);
+      assertThat(Files.exists(STORAGE.resolve(key))).isFalse();
+      mvc.perform(delete(location + "/images/" + id)).andExpect(status().isNotFound());
     }
 
     @Test
     @DisplayName(
-        "Given an omitted upload on multipart update, when changing the name, then images are retained")
-    void preservesOmitted() throws Exception {
+        "Given an image on another car, when removing through the wrong car, then 404 preserves its file")
+    void ownership() throws Exception {
       String location = uploaded();
-      mvc.perform(
-              multipart(location)
-                  .file(
-                      carPart(
-                          "{\"expectedVersion\":" + version(location) + ",\"name\":\"Updated\"}"))
-                  .with(
-                      req -> {
-                        req.setMethod("PATCH");
-                        return req;
-                      }))
-          .andExpect(status().isOk());
-      mvc.perform(get(location))
-          .andExpect(jsonPath("$.images.length()").value(1))
-          .andExpect(jsonPath("$.name").value("Updated"));
+      String id = firstImage(location);
+      String other = created();
+      mvc.perform(delete(other + "/images/" + id)).andExpect(status().isNotFound());
+      mvc.perform(delete("/cars/" + UUID.randomUUID() + "/images/" + id))
+          .andExpect(status().isNotFound());
+      mvc.perform(get(location).param("imageId", id)).andExpect(status().isOk());
     }
 
     @Test
     @DisplayName(
-        "Given an unknown image or stale edit version, when updating, then existing images remain untouched")
-    void rejectsInvalidSelection() throws Exception {
+        "Given a rolled-back image removal, when the transaction ends, then the file is retained")
+    void rollback() throws Exception {
       String location = uploaded();
-      String original = firstImage(location);
-      mvc.perform(
-              patch(location)
-                  .contentType("application/json")
-                  .content(
-                      "{\"expectedVersion\":"
-                          + version(location)
-                          + ",\"removeImageIds\":[\""
-                          + UUID.randomUUID()
-                          + "\"]}"))
-          .andExpect(status().is(422));
-      mvc.perform(
-              patch(location)
-                  .contentType("application/json")
-                  .content("{\"expectedVersion\":999,\"removeImageIds\":[\"" + original + "\"]}"))
-          .andExpect(status().isConflict());
-      mvc.perform(get(location).param("imageId", original)).andExpect(status().isOk());
+      String id = firstImage(location);
+      transactions.executeWithoutResult(
+          status -> {
+            try {
+              mvc.perform(delete(location + "/images/" + id)).andExpect(status().isNoContent());
+            } catch (Exception e) {
+              throw new AssertionError(e);
+            }
+            status.setRollbackOnly();
+          });
+      mvc.perform(get(location).param("imageId", id)).andExpect(status().isOk());
     }
 
     @Test
     @DisplayName(
-        "Given a selected removal and corrupt replacement, when updating, then rollback preserves the original file and metadata")
-    void failedReplacement() throws Exception {
+        "Given failed storage deletion after commit, when removing an image, then the database change succeeds and the orphan remains for manual cleanup")
+    void cleanupFailure() throws Exception {
       String location = uploaded();
-      String original = firstImage(location);
-      mvc.perform(
-              multipart(location)
-                  .file(
-                      carPart(
-                          "{\"expectedVersion\":"
-                              + version(location)
-                              + ",\"removeImageIds\":[\""
-                              + original
-                              + "\"]}"))
-                  .file(new MockMultipartFile("images", new byte[] {1}))
-                  .with(
-                      req -> {
-                        req.setMethod("PATCH");
-                        return req;
-                      }))
-          .andExpect(status().is(422));
-      mvc.perform(get(location).param("imageId", original))
-          .andExpect(status().isOk())
-          .andExpect(content().bytes(image("png")));
+      String id = firstImage(location);
+      String key = jdbc.queryForObject("select storage_key from cars_images", String.class);
+      doThrow(new IllegalStateException("Storage offline")).when(storage).delete(key);
+      mvc.perform(delete(location + "/images/" + id)).andExpect(status().isNoContent());
+      mvc.perform(get(location)).andExpect(jsonPath("$.images").isEmpty());
+      assertThat(Files.exists(STORAGE.resolve(key))).isTrue();
     }
   }
 
@@ -374,7 +405,7 @@ class CarImageHttpTest {
   class Read {
     @Test
     @DisplayName(
-        "Given an image, when reading via the car route, then it is public and cannot be addressed through another car")
+        "Given a stored image, when reading through the car route, then it is public and ownership is checked")
     void publicOwnership() throws Exception {
       String location = uploaded();
       String id = firstImage(location);
@@ -387,26 +418,19 @@ class CarImageHttpTest {
                         return req;
                       }))
           .andExpect(status().isOk());
-      mvc.perform(get("/cars/" + UUID.randomUUID()).param("imageId", id))
-          .andExpect(status().isNotFound());
       mvc.perform(get(location).param("imageId", UUID.randomUUID().toString()))
+          .andExpect(status().isNotFound());
+      mvc.perform(get("/cars/" + UUID.randomUUID()).param("imageId", id))
           .andExpect(status().isNotFound());
     }
 
     @Test
     @DisplayName(
-        "Given two specifications and two images, when reading the car, then JPA returns each image once")
+        "Given multiple specifications and images, when reading detail, then each image is returned exactly once")
     void noDuplicates() throws Exception {
-      String location =
-          mvc.perform(
-                  multipart("/cars")
-                      .file(car())
-                      .file(new MockMultipartFile("images", image("png")))
-                      .file(new MockMultipartFile("images", image("png"))))
-              .andExpect(status().isCreated())
-              .andReturn()
-              .getResponse()
-              .getHeader("Location");
+      String location = uploaded();
+      mvc.perform(upload(location, new MockMultipartFile("images", image("png"))))
+          .andExpect(status().isCreated());
       UUID carId = UUID.fromString(location.substring("/cars/".length()));
       var ids = List.of(UUID.randomUUID(), UUID.randomUUID());
       for (UUID id : ids) {
@@ -429,10 +453,10 @@ class CarImageHttpTest {
   }
 
   @Nested
-  class Delete {
+  class DeleteCar {
     @Test
     @DisplayName(
-        "Given a car with images, when deleting the car, then its files and image rows are removed")
+        "Given a car with images, when deleting the car, then all image rows and files are removed")
     void removesFiles() throws Exception {
       String location = uploaded();
       String key = jdbc.queryForObject("select storage_key from cars_images", String.class);
@@ -440,47 +464,26 @@ class CarImageHttpTest {
       assertThat(Files.exists(STORAGE.resolve(key))).isFalse();
       assertThat(jdbc.queryForObject("select count(*) from cars_images", Long.class)).isZero();
     }
-
-    @Test
-    @DisplayName(
-        "Given storage unavailable after commit, when deleting the car, then the committed deletion is not reported as a failure")
-    void cleanupFailure() throws Exception {
-      String location = uploaded();
-      String key = jdbc.queryForObject("select storage_key from cars_images", String.class);
-      doThrow(new IllegalStateException("Storage offline")).when(storage).delete(key);
-      mvc.perform(delete(location)).andExpect(status().isNoContent());
-      mvc.perform(get(location)).andExpect(status().isNotFound());
-      assertThat(Files.exists(STORAGE.resolve(key))).isTrue();
-    }
-
-    @Test
-    @DisplayName(
-        "Given a rolled-back deletion, when the transaction ends, then the original image remains readable")
-    void rollback() throws Exception {
-      String location = uploaded();
-      String id = firstImage(location);
-      transactions.executeWithoutResult(
-          status -> {
-            try {
-              mvc.perform(delete(location)).andExpect(status().isNoContent());
-            } catch (Exception e) {
-              throw new AssertionError(e);
-            }
-            status.setRollbackOnly();
-          });
-      mvc.perform(get(location).param("imageId", id)).andExpect(status().isOk());
-    }
   }
 
   @Nested
   class Authorization {
     @Test
     @DisplayName(
-        "Given anonymous or driver credentials, when posting multipart, then existing admin permissions apply")
+        "Given anonymous or driver credentials, when uploading or deleting images, then admin permissions are required")
     void adminOnly() throws Exception {
+      String location = uploaded();
+      String id = firstImage(location);
       mvc.perform(
-              multipart("/cars")
-                  .file(car())
+              upload(location, new MockMultipartFile("images", image("png")))
+                  .with(
+                      req -> {
+                        req.removeHeader("Authorization");
+                        return req;
+                      }))
+          .andExpect(status().isUnauthorized());
+      mvc.perform(
+              delete(location + "/images/" + id)
                   .with(
                       req -> {
                         req.removeHeader("Authorization");
@@ -501,74 +504,46 @@ class CarImageHttpTest {
                           .claim("roles", List.of("DRIVER"))
                           .build()))
               .getTokenValue();
-      mvc.perform(multipart("/cars").file(car()).header("Authorization", "Bearer " + token))
+      mvc.perform(
+              upload(location, new MockMultipartFile("images", image("png")))
+                  .header("Authorization", "Bearer " + token))
+          .andExpect(status().isForbidden());
+      mvc.perform(delete(location + "/images/" + id).header("Authorization", "Bearer " + token))
           .andExpect(status().isForbidden());
     }
   }
 
   @Nested
-  class ContractRegressions {
+  class ApiContract {
     @Test
     @DisplayName(
-        "Given an image-only edit, when it commits, then the car version advances and the old version cannot delete an image")
-    void imageVersion() throws Exception {
-      String location = uploaded();
-      String original = firstImage(location);
-      long before = version(location);
-      mvc.perform(
-              multipart(location)
-                  .file(carPart("{\"expectedVersion\":" + before + "}"))
-                  .file(new MockMultipartFile("images", image("png")))
-                  .with(
-                      req -> {
-                        req.setMethod("PATCH");
-                        return req;
-                      }))
-          .andExpect(status().isOk());
-      assertThat(version(location)).isGreaterThan(before);
-      mvc.perform(
-              patch(location)
-                  .contentType("application/json")
-                  .content(
-                      "{\"expectedVersion\":"
-                          + before
-                          + ",\"removeImageIds\":[\""
-                          + original
-                          + "\"]}"))
-          .andExpect(status().isConflict());
-    }
-
-    @Test
-    @DisplayName(
-        "Given car detail and image reads on the same route, when generating OpenAPI, then imageId is optional and both response formats are documented")
-    void optionalImageRead() throws Exception {
-      var response =
-          mvc.perform(get("/v3/api-docs"))
-              .andExpect(status().isOk())
-              .andExpect(
-                  jsonPath(
-                          "$.paths['/cars/{id}'].get.responses['200'].content['application/json'].schema['$ref']")
-                      .value("#/components/schemas/Car_Detail"))
-              .andExpect(
-                  jsonPath(
-                          "$.paths['/cars/{id}'].get.responses['200'].content['image/png'].schema.format")
-                      .value("binary"))
-              .andExpect(
-                  jsonPath(
-                          "$.paths['/cars/{id}'].get.responses['200'].content['image/jpeg'].schema.format")
-                      .value("binary"))
-              .andReturn()
-              .getResponse();
-      var params =
-          json.readTree(response.getContentAsString()).at("/paths/~1cars~1{id}/get/parameters");
-      boolean found = false;
-      for (var parameter : params) {
-        if (parameter.get("name").asString().equals("imageId")) {
-          found = true;
-          assertThat(parameter.path("required").asBoolean()).isFalse();
-        }
-      }
-      assertThat(found).isTrue();
+        "Given the image endpoints, when generating OpenAPI, then upload is multipart and image deletion is documented separately from car JSON")
+    void documentation() throws Exception {
+      mvc.perform(get("/v3/api-docs"))
+          .andExpect(status().isOk())
+          .andExpect(
+              jsonPath(
+                      "$.paths['/cars/{id}/images'].patch.requestBody.content['multipart/form-data']")
+                  .exists())
+          .andExpect(
+              jsonPath(
+                      "$.paths['/cars/{id}/images'].patch.responses['201'].content['application/json'].schema['$ref']")
+                  .value("#/components/schemas/Car_Detail"))
+          .andExpect(
+              jsonPath("$.paths['/cars/{id}/images/{imageId}'].delete.responses['204']").exists())
+          .andExpect(
+              jsonPath("$.paths['/cars'].post.requestBody.content['multipart/form-data']")
+                  .doesNotExist())
+          .andExpect(
+              jsonPath("$.paths['/cars/{id}'].patch.requestBody.content['multipart/form-data']")
+                  .doesNotExist())
+          .andExpect(
+              jsonPath("$.components.schemas.CarRequest_Summary.properties.removeImageIds")
+                  .doesNotExist())
+          .andExpect(
+              jsonPath(
+                      "$.paths['/cars/{id}'].get.responses['200'].content['image/png'].schema.format")
+                  .value("binary"));
     }
   }
 

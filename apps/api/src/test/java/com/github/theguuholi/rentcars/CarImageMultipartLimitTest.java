@@ -57,10 +57,11 @@ class CarImageMultipartLimitTest {
     }
     bytes.write("--limit--\r\n".getBytes(StandardCharsets.UTF_8));
     var request =
-        HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/cars"))
+        HttpRequest.newBuilder(
+                URI.create("http://127.0.0.1:" + port + "/cars/" + UUID.randomUUID() + "/images"))
             .header("Authorization", "Bearer " + token)
             .header("Content-Type", "multipart/form-data; boundary=limit")
-            .POST(HttpRequest.BodyPublishers.ofByteArray(bytes.toByteArray()))
+            .method("PATCH", HttpRequest.BodyPublishers.ofByteArray(bytes.toByteArray()))
             .build();
     try (var client = HttpClient.newHttpClient()) {
       return client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();

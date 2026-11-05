@@ -45,11 +45,6 @@ public class CarRequest {
   Set<UUID> specificationIds;
 
   @Schema(
-      description =
-          "On update, remove these image IDs belonging to the car. Omitted or empty preserves existing images; new multipart images are appended.")
-  Set<UUID> removeImageIds;
-
-  @Schema(
       description = "Required on update. Use the version returned when opening the editor.",
       minimum = "0")
   Long expectedVersion;
