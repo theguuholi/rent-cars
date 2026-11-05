@@ -36,6 +36,115 @@ docker compose exec postgres psql -U postgres -d rent_cars_dev
 
 In psql, use `\dt` to list tables and `\q` to quit.
 
+## Avatar storage: choose your environment
+
+Run the commands in this section **from the repository root**. Storage is configured on the Java API; the React application and REST Client use the same endpoints for every provider.
+
+| Goal | Recommended setup | Where the files live |
+| --- | --- | --- |
+| Everyday development | `local` with `make dev` | `apps/api/.rent-cars/uploads` |
+| Test the complete container stack | `compose.stack.yaml` | The dedicated `avatar_data` Docker volume |
+| Test SDK behavior without a cloud account | `CloudImageStorageTest` | Disposable S3Mock and fake-gcs-server containers |
+| Test a real development bucket | `s3` or `gcs` with development credentials | A separate private development bucket |
+| Test local Kubernetes | Helm with `api.storage.provider=local` | The release's retained avatar PVC |
+| Deploy using cloud storage | Helm with `s3` or `gcs` and a configured workload identity | A private bucket belonging to that environment |
+
+### 1. Develop locally without cloud services
+
+Start Docker, then run:
+
+```sh
+make setup
+RENT_STORAGE_PROVIDER=local make dev
+```
+
+Open http://localhost:5173, sign in and select **My avatar**. For API-only development, use `RENT_STORAGE_PROVIDER=local make api-dev`. Set `RENT_STORAGE_DIRECTORY` to an absolute path if you want files outside the API's working directory. Restarting the API preserves those files; sign in again if your development JWT becomes invalid.
+
+To run the API, web and database entirely in containers:
+
+```sh
+docker compose -f compose.stack.yaml up --build -d --wait
+```
+
+Open http://localhost:8081. This Compose file uses local storage and its own database volume. To stop while retaining data, run `docker compose -f compose.stack.yaml down`. Adding `--volumes` removes both database and avatar data. Keep backups of the database and image storage together.
+
+### 2. Test S3 or Google Cloud Storage
+
+Create a **private development bucket**, separate from production, and configure the provider credentials before starting the API. For S3, use the AWS SDK default credential chain, such as an authenticated AWS profile or temporary environment credentials:
+
+```sh
+RENT_STORAGE_PROVIDER=s3 \
+RENT_STORAGE_BUCKET=your-dev-avatar-bucket \
+RENT_STORAGE_REGION=us-east-1 \
+make api-dev
+```
+
+For GCS, authenticate locally with `gcloud auth application-default login`, then:
+
+```sh
+RENT_STORAGE_PROVIDER=gcs \
+RENT_STORAGE_BUCKET=your-dev-avatar-bucket \
+make api-dev
+```
+
+In another terminal, run `make web-dev`. No frontend storage variables are needed. These commands run the API with the development profile and use a real bucket; they are not production deployment commands. See [provider permissions and credentials](../../docs/avatars.md#select-a-production-storage-provider) for bucket setup, workload identity and production settings.
+
+Changing the provider or bucket does **not** copy existing images. For a fresh environment, use a separate database and bucket. For existing data, follow the [storage migration instructions](../../docs/avatars.md#kubernetes) before switching all API instances together. Do not share one database between instances configured for different storage locations.
+
+To exercise both SDKs locally without credentials or cloud charges:
+
+```sh
+./apps/api/mvnw -f apps/api/pom.xml -Dtest=CloudImageStorageTest test
+```
+
+Docker must be running. Testcontainers starts the emulators on random ports and removes them afterward. `make check-api` includes these tests, PostgreSQL persistence tests and unit tests. Emulator success does not validate production IAM or network access.
+
+### 3. Test on local Kubernetes
+
+First follow the [Helm prerequisites, namespace and Secret setup](../../helm/README.md). Publish images containing this feature using the [image instructions](../../helm/README.md#use-published-images); prefer a unique tag for each build. A registry's existing `latest` tag does not automatically contain your local changes.
+
+For Docker Desktop, select the context before creating the namespace and Secret:
+
+```sh
+kubectl config use-context docker-desktop
+kubectl get nodes
+```
+
+For a new local installation, or one already using local storage, deploy with the existing Secret and your image tags. Replace `your-build-tag` with the published tag:
+
+```sh
+helm upgrade --install fleet ./helm --kube-context docker-desktop -n rent-cars \
+  --set api.storage.provider=local \
+  --set api.demoData=true \
+  --set-string api.image.tag=your-build-tag \
+  --set-string web.image.tag=your-build-tag \
+  --set web.service.type=LoadBalancer --set web.service.port=8082 \
+  --wait --timeout 6m
+helm test fleet -n rent-cars --kube-context docker-desktop --logs
+```
+
+This uses the chart's default image repositories. Override the repositories and `existingSecret` if your setup differs. Enable `demoData` only on a private local cluster. Open http://localhost:8082, sign in and upload an avatar. Verify persistence after restarting the API:
+
+```sh
+kubectl --context docker-desktop -n rent-cars rollout restart deployment/fleet-api
+kubectl --context docker-desktop -n rent-cars rollout status deployment/fleet-api --timeout=180s
+```
+
+Reload the page and verify the avatar is still readable. Flyway applies pending migrations during startup. To diagnose startup or storage failures, inspect `kubectl --context docker-desktop -n rent-cars logs deployment/fleet-api` and `kubectl --context docker-desktop -n rent-cars get pods,pvc`.
+
+For cloud storage, use the [S3/GCS Helm values example](../../docs/avatars.md#kubernetes). Docker Desktop does not automatically provide an AWS or Google workload identity: setting a ServiceAccount name alone does not authenticate to a cloud bucket. Use local storage for the standard local-cluster walkthrough; verify cloud identity on the target platform or supply a separately configured development credential integration. Keep credentials out of the image, repository and frontend bundle.
+
+### Verify the upload contract in every environment
+
+Open [the REST Client walkthrough](../../requests/rent-cars.http). Set `baseUrl` to `http://localhost:8080` for the host API, `http://localhost:8081/api` for Compose, or `http://localhost:8082/api` for the Kubernetes example. Run the CSRF and login steps, then:
+
+1. Upload the PNG fixture: expect **204**.
+2. Read the avatar: expect **200**, `image/png` and `Cache-Control: no-store`.
+3. Restart the API, sign in again if needed and read the same avatar.
+4. Delete it: expect **204**, then **404** on the next read.
+
+Removal clears the account reference immediately. Physical files are deleted by the scheduled cleanup after the grace period; see [consistency and cleanup](../../docs/avatars.md#consistency-and-cleanup).
+
 ## Java quality checks
 
 Run these commands from this directory. Start Docker before running the full test suite so Testcontainers can launch PostgreSQL 17.

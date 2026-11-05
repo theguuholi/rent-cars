@@ -10,6 +10,25 @@ See [web quality checks](#web-quality-checks) for formatting, lint, tests, cover
 
 Specification actions have their own browser URLs. Open `/specifications/new` to create a record, `/specifications/:id/edit` to edit it, or `/specifications/:id/delete` to review deletion. Replace `:id` with the record's UUID. Opening or refreshing a deletion URL only shows the confirmation.
 
+## Avatars across local, cloud and Kubernetes environments
+
+Sign in and open **My avatar** (`/account/avatar`). Choose a JPEG or PNG, inspect the preview, select **Save avatar**, then reload to verify persistence. **Remove avatar** clears the saved image. The API accepts up to 5 MiB and 4 million pixels and normalizes the result to a PNG fitting within 512 × 512 pixels.
+
+The browser always calls `/api/users/me/avatar`. It does not choose the storage provider or talk directly to S3/GCS. Keep storage settings and cloud credentials on the API; never put them in `VITE_*` variables or the frontend bundle. See [the Java storage walkthrough](../api/README.md#avatar-storage-choose-your-environment) for local, S3/GCS and Kubernetes setup.
+
+| Environment | Start/open the frontend | API routing |
+| --- | --- | --- |
+| Local development | `make setup`, then `make dev`; open http://localhost:5173 | Vite forwards `/api` to the Java API on port 8080 |
+| Local API using S3/GCS | Start the configured API, then `make web-dev` | The same Vite proxy and upload requests |
+| Docker Compose | `docker compose -f compose.stack.yaml up --build -d --wait`; open http://localhost:8081 | Nginx forwards `/api` inside the Compose network |
+| Docker Desktop Kubernetes | Follow the Java/Helm walkthrough; open http://localhost:8082 | The web Service exposes Nginx, which forwards `/api` to the API Service |
+
+Run these commands from the repository root. `API_TARGET` configures the **Vite development proxy only**; it does not reconfigure a built React image or select a storage provider. In Compose and Kubernetes, use the web application's single origin so the authentication cookies and API requests follow the existing proxy setup. Prefer the deployed web application when testing Kubernetes rather than pointing Vite at the cluster.
+
+In browser developer tools, inspect the avatar requests after saving: PUT returns 204, GET returns the PNG, and DELETE returns 204. A subsequent GET returns 404 when there is no avatar; this is the expected empty state. A 413 means the file is too large, and 422 means the content is invalid or exceeds the pixel limit. For 401, sign in again if session renewal fails. For a server/storage error, inspect API logs and its storage configuration; changing React's storage variables cannot fix it.
+
+The preview before saving is local to the browser. Verify persistence by saving successfully and reloading; a preview alone does not prove the upload reached storage.
+
 ## Web quality checks
 
 From this directory, use the Node version in `.node-version` and install dependencies with `npm ci`. Run `npm run format:check`, `npm run lint`, `npm run test:coverage` and `npm run build` to reproduce **Web verification**. Use `npm run format` to apply Oxfmt fixes or `npm run lint:fix` for automatic Oxlint fixes.
