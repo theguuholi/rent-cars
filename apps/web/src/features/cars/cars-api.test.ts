@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, test as scenario, vi } from 'vitest'
-import { createCar, deleteCar, getCar, listCars, updateCar, type CarInput } from './cars-api'
+import {
+  createCar,
+  deleteCar,
+  getCar,
+  listCars,
+  updateCar,
+  uploadCarImages,
+  carImageUrl,
+  type CarInput,
+} from './cars-api'
 
 const input: CarInput = {
   name: 'Argo',
@@ -148,6 +157,37 @@ describe('Cars HTTP client', () => {
     async (status, message) => {
       mockResponse(new Response(null, { status }))
       await expect(createCar(input)).rejects.toThrow(message)
+    },
+  )
+})
+
+describe('Car image HTTP client', () => {
+  scenario(
+    'Given photos, when uploading, then repeated multipart parts are sent without a manual content type',
+    async () => {
+      const fetch = mockResponse(
+        Response.json({ ...car, images: [{ id: 'photo' }] }, { status: 201 }),
+      )
+      const files = [
+        new File(['a'], 'front.png', { type: 'image/png' }),
+        new File(['b'], 'side.jpg', { type: 'image/jpeg' }),
+      ]
+      await expect(uploadCarImages('a/b', files)).resolves.toMatchObject({
+        images: [{ id: 'photo' }],
+      })
+      const [url, options] = fetch.mock.calls[0]
+      expect(url).toBe('/api/cars/a%2Fb/images')
+      expect(options.method).toBe('PATCH')
+      expect(options.headers).toBeUndefined()
+      expect(options.body.getAll('images')).toEqual(files)
+      expect(carImageUrl('a/b', 'x&y')).toBe('/api/cars/a%2Fb?imageId=x%26y')
+    },
+  )
+  scenario(
+    'Given oversized photos, when the server rejects them, then a useful size error is shown',
+    async () => {
+      mockResponse(new Response(null, { status: 413 }))
+      await expect(uploadCarImages('car', [])).rejects.toThrow('Images exceed the upload limit')
     },
   )
 })
