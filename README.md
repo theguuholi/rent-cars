@@ -39,21 +39,6 @@ The script builds both images from the current working tree for the local Docker
 
 If a protected request returns **401**, rerun steps 3–5 in the same file. Tokens expire after 15 minutes and restarting the dev API invalidates them. For **403** during login, rerun step 3 before signing in. For **403** on a catalog request, check the role in step 5.
 
-## Car photos
-
-Open a car's detail page to view its photos. Administrators can use **Add photos**
-to select multiple JPEG or PNG files and **Upload photos** to append them to the gallery.
-Create the car first when registering a new vehicle. Each photo must be at most
-5 MiB, with less than 30 MiB selected per upload. Failed uploads preserve the
-selection for retry. Click a photo to open its original size; failed image loads
-have an individual retry button.
-
-The gallery uses the existing public car image endpoint through `/api`.
-TanStack Query refreshes the car detail (including its version) and fleet after an
-upload; TanStack Form manages the selected files and validation. The web Nginx
-proxy accepts request bodies up to 30 MiB. Any additional Ingress must also allow
-that request size, and the API must have working S3-compatible storage.
-
 ## Explore the codebase
 
 Follow [the developer walkthrough](docs/project-walkthrough.md) to try visitor, driver and admin access, trace a browser request into Spring and locate the tests for each layer.

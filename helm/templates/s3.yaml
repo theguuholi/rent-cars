@@ -15,9 +15,13 @@ metadata:
   name: {{ .Release.Name }}-s3
 spec:
   selector:
-    {{- include "rent-cars.labels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: s3
-  ports: [{name: s3, port: 8333, targetPort: s3}]
+  ports:
+    - name: s3
+      port: 8333
+      targetPort: s3
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -28,44 +32,80 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "rent-cars.labels" . | nindent 6 }}
+      app.kubernetes.io/name: {{ .Chart.Name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/component: s3
   template:
     metadata:
       labels:
-        {{- include "rent-cars.labels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ .Chart.Name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: s3
     spec:
       automountServiceAccountToken: false
-      securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: s3
           image: {{ .Values.s3Emulator.image | quote }}
-          args: [mini, -dir=/data, -ip=127.0.0.1, -ip.bind=0.0.0.0, -admin.ui=false, -webdav=false, -master.volumeSizeLimitMB=128, -volume.max=4]
-          securityContext: {{ include "rent-cars.containerSecurity" . | nindent 12 }}
+          args:
+            - mini
+            - "-dir=/data"
+            - "-ip=127.0.0.1"
+            - "-ip.bind=0.0.0.0"
+            - "-admin.ui=false"
+            - "-webdav=false"
+            - "-master.volumeSizeLimitMB=128"
+            - "-volume.max=4"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           resources: {{ toYaml .Values.s3Emulator.resources | nindent 12 }}
-          ports: [{name: s3, containerPort: 8333}]
+          ports:
+            - name: s3
+              containerPort: 8333
           env:
-            - {name: S3_BUCKET, value: {{ .Values.storage.bucket | quote }}}
+            - name: S3_BUCKET
+              value: {{ .Values.storage.bucket | quote }}
           envFrom:
-            - secretRef: {name: "{{ .Release.Name }}-s3"}
+            - secretRef:
+                name: {{ .Release.Name }}-s3
           startupProbe:
-            httpGet: {path: "/buckets/{{ .Values.storage.bucket }}/", port: 8888}
+            httpGet:
+              path: "/buckets/{{ .Values.storage.bucket }}/"
+              port: 8888
             periodSeconds: 3
             failureThreshold: 60
           readinessProbe:
-            httpGet: {path: "/buckets/{{ .Values.storage.bucket }}/", port: 8888}
+            httpGet:
+              path: "/buckets/{{ .Values.storage.bucket }}/"
+              port: 8888
           livenessProbe:
-            tcpSocket: {port: s3}
+            tcpSocket:
+              port: s3
           volumeMounts:
-            - {name: data, mountPath: /data}
-            - {name: tmp, mountPath: /tmp}
+            - name: data
+              mountPath: "/data"
+            - name: tmp
+              mountPath: "/tmp"
       volumes:
-        - {name: tmp, emptyDir: {}}
+        - name: tmp
+          emptyDir: {}
   volumeClaimTemplates:
-    - metadata: {name: data}
+    - metadata:
+        name: data
       spec:
-        accessModes: [ReadWriteOnce]
+        accessModes:
+          - ReadWriteOnce
         resources:
-          requests: {storage: {{ .Values.s3Emulator.storage }}}
+          requests:
+            storage: {{ .Values.s3Emulator.storage }}
 {{- end }}

@@ -3,29 +3,39 @@ api:
     repository: docker.io/guuhworship/rent-cars-api
     tag: latest
     pullPolicy: Always
-  demoData: false
+  # Include demo cars and the development admin in this local chart.
+  flywayLocations: classpath:db/migration,classpath:db/dev
   resources:
-    requests: {cpu: 100m, memory: 256Mi}
-    limits: {memory: 512Mi}
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 web:
   service:
-    type: ClusterIP
-    port: 8080
+    type: LoadBalancer
+    port: 8082
   image:
     repository: docker.io/guuhworship/rent-cars-web
     tag: latest
     pullPolicy: Always
   resources:
-    requests: {cpu: 10m, memory: 16Mi}
-    limits: {memory: 64Mi}
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      memory: 64Mi
 
 postgres:
   image: postgres:17-bookworm
   storage: 1Gi
   resources:
-    requests: {cpu: 50m, memory: 64Mi}
-    limits: {memory: 256Mi}
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
 
 # Pre-create this Secret in the release namespace (see README).
 existingSecret: rent-cars-credentials
@@ -41,14 +51,17 @@ s3Emulator:
   image: chrislusf/seaweedfs:4.52
   storage: 1Gi
   resources:
-    requests: {cpu: 100m, memory: 256Mi}
-    limits: {memory: 512Mi}
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 storage:
   bucket: rent-cars-images
   region: us-east-1
-  # Used only when s3Emulator.enabled=false. Empty endpoint uses AWS S3.
-  endpoint: ""
-  pathStyle: false
-  # Optional Secret containing AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
-  credentialsSecret: ""
+  # Defaults match the fleet release used by make k8s-up.
+  # For another release name, update endpoint and credentialsSecret together.
+  endpoint: http://fleet-s3:8333
+  pathStyle: true
+  credentialsSecret: fleet-s3
