@@ -207,11 +207,28 @@ public class Car extends VersionedEntity {
     licensePlate = normalized;
   }
 
+  public void rent() {
+    if (!available) throw new CarUnavailableException();
+    available = false;
+  }
+
+  public void releaseAfterReturn() {
+    available = true;
+  }
+
+  public int rentalDailyRateCents() {
+    return dailyRateCents.cents();
+  }
+
+  public int rentalFineAmountCents() {
+    return fineAmountCents.cents();
+  }
+
   Set<CarImage> images() {
     return images;
   }
 
-  UUID id() {
+  public UUID id() {
     return id;
   }
 }

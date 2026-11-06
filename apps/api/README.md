@@ -170,3 +170,42 @@ limits and migration. S3 adapter tests use the real SDK against an HTTP stub and
 tests use PostgreSQL and SeaweedFS containers to verify persistence, rollback and
 object cleanup. Live AWS IAM and bucket connectivity require validation in the
 deployment environment.
+
+
+## Rentals
+
+Authenticated accounts can `POST /rentals`, `GET /rentals`, and
+`POST /rentals/{id}/return`. Creation accepts only `carId` and
+`expectedReturnDate` (an ISO-8601 timestamp with an offset). The JWT identifies
+the owner; the server determines start/return times and the final charge.
+`GET /rentals` includes the current car summary and only the owner's records,
+newest first. Start with the numbered rental examples in `requests/rent-cars.http`.
+
+The expected return must be at least 24 hours after the start. An account and a
+car can each have only one open rental. `Rental` protects the lifecycle;
+`RentalPricing` calculates amounts without database or clock access; the service
+coordinates the transaction using an injected UTC clock. Timestamps use
+PostgreSQL's microsecond precision.
+
+Billing matches the Elixir implementation: completed 24-hour periods with a
+minimum of one daily charge, plus the fine for each completed day late. A
+25-hour rental costs one daily rate; an overdue period shorter than 24 hours
+adds no fine. Current car prices are used at return time, not a frozen quotation.
+Totals are signed 64-bit integer centavos; negative or overflowing charges are rejected.
+
+V10 adds `rentals`, return-state checks, restrictive foreign keys and unique
+indexes for open rentals per account/car. Creation and return update availability
+in the same transaction. Concurrent creation is protected by car locks and
+unique indexes; return locks the rental before its car. Car versions advance
+with availability changes. Manual availability changes cannot free an actively
+rented car, and cars/accounts with rental history cannot be deleted.
+
+Business conflicts return 409, invalid periods/charges 422, and missing or
+foreign-owned rentals 404. The controller requires a bearer token; ordinary
+USER accounts can rent without catalog administrator permissions. No payment,
+future booking, cancellation, frontend or infrastructure changes are included.
+
+Run `make check-api` for domain, HTTP/OpenAPI and PostgreSQL tests. Rental tests
+cover concurrent booking/return, rollback, access isolation, persisted history
+and billing boundaries. Flyway applies V10 on startup; existing local or Kubernetes
+databases do not need to be deleted to enable this feature.

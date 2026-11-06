@@ -104,4 +104,51 @@ class CarTest {
       assertThat(json.valueToTree(car).get("licensePlate").asString()).isEqualTo("ABC1234");
     }
   }
+
+  @Nested
+  class Rent {
+    @Test
+    void givenAvailableCarWhenRentingThenRejectsAnotherRental() {
+      var car = new Car();
+      car.rent();
+      assertThat(car).extracting("available").isEqualTo(false);
+      assertThatThrownBy(car::rent).isInstanceOf(CarUnavailableException.class);
+    }
+  }
+
+  @Nested
+  class ReleaseAfterReturn {
+    @Test
+    void givenRentedCarWhenReturnedThenCanBeRentedAgain() {
+      var car = new Car();
+      car.rent();
+      car.releaseAfterReturn();
+      assertThat(car).extracting("available").isEqualTo(true);
+      assertThatCode(car::rent).doesNotThrowAnyException();
+    }
+  }
+
+  @Nested
+  class RentalDailyRateCents {
+    @Test
+    void givenCatalogRateWhenReadingForRentalThenReturnsExactCentavos() {
+      var car = new Car();
+      var input = new CarRequest();
+      input.dailyRateCents = 15050;
+      car.apply(input);
+      assertThat(car.rentalDailyRateCents()).isEqualTo(15050);
+    }
+  }
+
+  @Nested
+  class RentalFineAmountCents {
+    @Test
+    void givenCatalogFineWhenReadingForRentalThenReturnsExactCentavos() {
+      var car = new Car();
+      var input = new CarRequest();
+      input.fineAmountCents = 325;
+      car.apply(input);
+      assertThat(car.rentalFineAmountCents()).isEqualTo(325);
+    }
+  }
 }

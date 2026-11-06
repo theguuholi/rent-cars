@@ -196,3 +196,102 @@ This is not a JPEG image.
 ### Upload example 8. Delete the example car and its remaining files → 204
 DELETE {{baseUrl}}/cars/{{uploadedCar.response.body.$.id}}
 Authorization: Bearer {{login.response.body.$.accessToken}}
+
+
+### Rental example 1. Get a fresh CSRF token for driver registration and login → 204
+# API: http://localhost:8080. For Kubernetes set baseUrl to http://localhost:8082/api.
+# Run the initial admin login and categories requests before creating the rental car below.
+# @name rentalCsrf
+GET {{baseUrl}}/csrf
+
+### Rental example 2. Register the driver (once per email) → 201; 409 means it already exists
+POST {{baseUrl}}/users
+Content-Type: application/json
+X-XSRF-TOKEN: {{rentalCsrf.response.headers.X-XSRF-TOKEN}}
+Cookie: XSRF-TOKEN={{rentalCsrf.response.headers.X-XSRF-TOKEN}}
+
+{"email":"{{driverEmail}}","password":"{{driverPassword}}"}
+
+### Rental example 3. Sign in as the driver → 200
+# @name rentalDriverLogin
+POST {{baseUrl}}/sessions
+Content-Type: application/json
+X-XSRF-TOKEN: {{rentalCsrf.response.headers.X-XSRF-TOKEN}}
+Cookie: XSRF-TOKEN={{rentalCsrf.response.headers.X-XSRF-TOKEN}}
+
+{"email":"{{driverEmail}}","password":"{{driverPassword}}"}
+
+### Rental example 4. Admin creates an available car → 201
+# The timestamp makes a new plate for each run. Wait a second between creations.
+# @name createRentalCar
+POST {{baseUrl}}/cars
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Argo",
+  "description": "Car for the rental walkthrough",
+  "brand": "Fiat",
+  "licensePlate": "RENT{{$timestamp}}",
+  "dailyRateCents": 15000,
+  "fineAmountCents": 3000,
+  "categoryId": "{{categories.response.body.$[0].id}}"
+}
+
+### Rental example 5. Driver rents the car for two days → 201 with Location
+# Start time and account come from the server/JWT. No accountId, total or endDate is sent.
+# If the driver already has an open rental, list and return it before starting another.
+# @name createRental
+POST {{baseUrl}}/rentals
+Authorization: Bearer {{rentalDriverLogin.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "carId": "{{createRentalCar.response.body.$.id}}",
+  "expectedReturnDate": "{{$datetime iso8601 2 d}}"
+}
+
+### Rental example 6. List only this driver's rentals, newest first → 200
+# @name driverRentals
+GET {{baseUrl}}/rentals
+Authorization: Bearer {{rentalDriverLogin.response.body.$.accessToken}}
+
+### Rental example 7. Verify the car is now unavailable and its version increased → 200
+GET {{baseUrl}}/cars/{{createRentalCar.response.body.$.id}}
+
+### Rental example 8. Another account tries to rent the same car → 409
+POST {{baseUrl}}/rentals
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{"carId":"{{createRentalCar.response.body.$.id}}","expectedReturnDate":"{{$datetime iso8601 2 d}}"}
+
+### Rental example 9. Another account tries to return the driver's rental → 404
+POST {{baseUrl}}/rentals/{{createRental.response.body.$.id}}/return
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Rental example 10. Driver returns the car → 200 with endDate and totalCents
+# An immediate return costs one daily rate: 15000 centavos (R$150).
+# Completed 24-hour periods are billed; each completed day late adds the current fine.
+# The calculation uses CURRENT catalog prices, as in the Elixir implementation.
+# @name returnRental
+POST {{baseUrl}}/rentals/{{createRental.response.body.$.id}}/return
+Authorization: Bearer {{rentalDriverLogin.response.body.$.accessToken}}
+
+### Rental example 11. Verify the car is available again → 200
+GET {{baseUrl}}/cars/{{createRentalCar.response.body.$.id}}
+
+### Rental example 12. Returning the same rental again → 409
+POST {{baseUrl}}/rentals/{{createRental.response.body.$.id}}/return
+Authorization: Bearer {{rentalDriverLogin.response.body.$.accessToken}}
+
+### Rental example 13. Less than 24 hours ahead → 422
+POST {{baseUrl}}/rentals
+Authorization: Bearer {{rentalDriverLogin.response.body.$.accessToken}}
+Content-Type: application/json
+
+{"carId":"{{createRentalCar.response.body.$.id}}","expectedReturnDate":"{{$datetime iso8601 1 h}}"}
+
+### Rental example 14. Admin cannot delete a car with rental history → 409
+DELETE {{baseUrl}}/cars/{{createRentalCar.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}

@@ -116,4 +116,48 @@ class CarRepositoryTest {
       }
     }
   }
+
+  private void rentalHistory(UUID carId, boolean returned) {
+    UUID owner =
+        jdbc.queryForObject(
+            "insert into accounts(email,password_hash) values (?, 'unused') returning id",
+            UUID.class,
+            UUID.randomUUID() + "@example.com");
+    jdbc.update(
+        "insert into rentals(car_id,account_id,start_date,expected_return_date) values(?,?,now(),now()+interval '2 days')",
+        carId,
+        owner);
+    if (returned)
+      jdbc.update("update rentals set end_date=start_date,total_cents=100 where car_id=?", carId);
+  }
+
+  @Nested
+  class HasOpenRental {
+    @Test
+    @Transactional
+    @DisplayName(
+        "Given open and closed history, when checking availability conflicts, then only an open rental counts")
+    void givenRentalHistoryWhenCheckingThenOnlyOpenRentalCounts() {
+      UUID id = sedan("RENTOPEN");
+      assertThat(cars.hasOpenRental(id)).isFalse();
+      rentalHistory(id, false);
+      assertThat(cars.hasOpenRental(id)).isTrue();
+      jdbc.update("update rentals set end_date=start_date,total_cents=100 where car_id=?", id);
+      assertThat(cars.hasOpenRental(id)).isFalse();
+    }
+  }
+
+  @Nested
+  class HasRentalHistory {
+    @Test
+    @Transactional
+    @DisplayName(
+        "Given a returned rental, when checking deletion conflicts, then history still protects the car")
+    void givenReturnedRentalWhenCheckingThenHistoryStillExists() {
+      UUID id = sedan("RENTHISTORY");
+      assertThat(cars.hasRentalHistory(id)).isFalse();
+      rentalHistory(id, true);
+      assertThat(cars.hasRentalHistory(id)).isTrue();
+    }
+  }
 }
