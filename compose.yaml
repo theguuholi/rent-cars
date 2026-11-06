@@ -1,4 +1,21 @@
 services:
+  s3:
+    image: chrislusf/seaweedfs:4.52
+    command: [mini, -dir=/data, -ip=127.0.0.1, -ip.bind=0.0.0.0, -admin.ui=false, -webdav=false, -master.volumeSizeLimitMB=128, -volume.max=4]
+    environment:
+      AWS_ACCESS_KEY_ID: rent-cars-dev
+      AWS_SECRET_ACCESS_KEY: rent-cars-dev-secret
+      S3_BUCKET: rent-cars-images
+    ports:
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - s3_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8888/buckets/rent-cars-images/"]
+      interval: 3s
+      timeout: 3s
+      start_period: 15s
+      retries: 30
   postgres:
     image: postgres:17
     environment:
@@ -17,3 +34,4 @@ services:
 
 volumes:
   postgres_data:
+  s3_data:

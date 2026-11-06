@@ -15,7 +15,14 @@ export interface CarInput {
 export type CarPatch = Partial<Omit<CarInput, 'licensePlate'>>
 export type Car = CarInput & { id: string; version: number }
 
+export interface CarImage {
+  id: string
+  contentType: string
+  sizeBytes: number
+}
+
 export type CarWithCatalog = Car & {
+  images: CarImage[]
   category: import('../categories/categories-api').Category
   specifications: import('../specifications/specifications-api').Specification[]
 }
@@ -25,6 +32,7 @@ const itemUrl = (id: string) => `${collection}/${encodeURIComponent(id)}`
 const errors: Record<number, string> = {
   400: 'Check the car details and selected catalog entries.',
   404: 'This car no longer exists.',
+  413: 'Images exceed the upload limit. Use up to 5 MiB per file and less than 30 MiB total.',
   409: 'A car with this license plate already exists.',
   422: 'Check the car details.',
 }
@@ -113,4 +121,15 @@ export function updateCar(id: string, input: CarPatch & { expectedVersion: numbe
 
 export async function deleteCar(id: string): Promise<void> {
   await request(itemUrl(id), { method: 'DELETE' }, protectedFetch)
+}
+
+export function carImageUrl(carId: string, imageId: string): string {
+  return `${itemUrl(carId)}?imageId=${encodeURIComponent(imageId)}`
+}
+
+export async function uploadCarImages(id: string, files: File[]): Promise<CarWithCatalog> {
+  const body = new FormData()
+  for (const file of files) body.append('images', file)
+  const response = await request(`${itemUrl(id)}/images`, { method: 'PATCH', body }, protectedFetch)
+  return response.json()
 }

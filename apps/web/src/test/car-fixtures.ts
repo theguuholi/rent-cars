@@ -3,6 +3,7 @@ export const specifications = [{ id: 'gps', version: 0, name: 'GPS', description
 import type { CarWithCatalog } from '../features/cars/cars-api'
 
 export const car: CarWithCatalog = {
+  images: [],
   category: categories[0],
   specifications,
   version: 0,

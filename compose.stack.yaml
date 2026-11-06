@@ -1,5 +1,20 @@
 name: rent-cars-stack
 services:
+  s3:
+    image: chrislusf/seaweedfs:4.52
+    command: [mini, -dir=/data, -ip=127.0.0.1, -ip.bind=0.0.0.0, -admin.ui=false, -webdav=false, -master.volumeSizeLimitMB=128, -volume.max=4]
+    environment:
+      AWS_ACCESS_KEY_ID: rent-cars-dev
+      AWS_SECRET_ACCESS_KEY: rent-cars-dev-secret
+      S3_BUCKET: rent-cars-images
+    volumes:
+      - s3_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8888/buckets/rent-cars-images/"]
+      interval: 3s
+      timeout: 3s
+      start_period: 15s
+      retries: 30
   postgres:
     image: postgres:17-bookworm
     environment:
@@ -18,10 +33,15 @@ services:
     build: ./apps/api
     image: ${API_IMAGE:-rent-cars-api:local}
     depends_on:
+      s3:
+        condition: service_healthy
       postgres:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      RENT_STORAGE_S3_ENDPOINT: http://s3:8333
+      AWS_ACCESS_KEY_ID: rent-cars-dev
+      AWS_SECRET_ACCESS_KEY: rent-cars-dev-secret
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/rent_cars_dev
     read_only: true
     tmpfs:
@@ -46,3 +66,4 @@ services:
 
 volumes:
   postgres_data:
+  s3_data:

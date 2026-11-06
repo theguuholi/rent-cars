@@ -80,6 +80,7 @@ describe('CarFormPage', () => {
         version: _version,
         category: _category,
         specifications: _specifications,
+        images: _images,
         ...expected
       } = car
       expect(api.createCar).toHaveBeenCalledExactlyOnceWith(expected)

@@ -2,6 +2,7 @@ import { useSession } from '../../../auth/session'
 import { Link } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import type { CarWithCatalog } from '../../cars-api'
+import { CarImages } from '../CarImages/CarImages'
 import { CarFacts } from '../CarFacts/CarFacts'
 import { CarCatalogDetails } from '../CarCatalogDetails/CarCatalogDetails'
 
@@ -18,6 +19,7 @@ export function CarDetails({ car }: { car: CarWithCatalog }) {
         </Link>
       }
     >
+      <CarImages key={car.id} car={car} canUpload={isAdmin} />
       <CarFacts car={car} />
       <CarCatalogDetails car={car} />
       {isAdmin && (

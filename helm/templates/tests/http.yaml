@@ -8,16 +8,24 @@ metadata:
 spec:
   restartPolicy: Never
   automountServiceAccountToken: false
-  securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
-  {{- with .Values.imagePullSecrets }}
-  imagePullSecrets: {{ toYaml . | nindent 4 }}
-  {{- end }}
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 4 }}
   containers:
     - name: http
       image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
       imagePullPolicy: {{ .Values.web.image.pullPolicy }}
-      securityContext: {{ include "rent-cars.containerSecurity" . | nindent 8 }}
-      command: ["/bin/sh", "-ec"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+      command:
+        - "/bin/sh"
+        - "-ec"
       args:
         - |
           url=http://{{ .Release.Name }}-web:{{ .Values.web.service.port }}

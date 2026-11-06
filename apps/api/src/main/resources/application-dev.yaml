@@ -10,8 +10,10 @@ spring:
 
 rent:
   storage:
-    provider: local
-    local:
-      directory: ${UPLOAD_DIRECTORY:./uploads}
+    s3:
+      bucket: rent-cars-images
+      region: us-east-1
+      endpoint: http://localhost:8333
+      path-style: true
   auth:
     secure-cookie: false

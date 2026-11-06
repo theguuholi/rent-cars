@@ -87,6 +87,7 @@ describe('CarEditor', () => {
         version: _version,
         category: _category,
         specifications: _specifications,
+        images: _images,
         ...expected
       } = car
       await waitFor(() => expect(onSave).toHaveBeenCalledExactlyOnceWith(expected))

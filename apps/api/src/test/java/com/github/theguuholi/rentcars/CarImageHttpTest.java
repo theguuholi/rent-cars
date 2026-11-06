@@ -11,8 +11,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -36,14 +34,13 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import software.amazon.awssdk.services.s3.S3Client;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
@@ -51,37 +48,30 @@ import tools.jackson.databind.ObjectMapper;
 @AutoConfigureMockMvc
 @Import({
   TestcontainersConfiguration.class,
+  S3TestConfiguration.class,
   com.github.theguuholi.rentcars.auth.AdminRequests.class
 })
 class CarImageHttpTest {
-  static final Path STORAGE;
-
-  static {
-    try {
-      STORAGE = Files.createTempDirectory("car-images-http-");
-    } catch (IOException e) {
-      throw new ExceptionInInitializerError(e);
-    }
-  }
-
-  @DynamicPropertySource
-  static void properties(DynamicPropertyRegistry registry) {
-    registry.add("rent.storage.local.directory", STORAGE::toString);
-  }
-
   @Autowired MockMvc mvc;
+  @Autowired S3Client s3;
   @Autowired JdbcTemplate jdbc;
   @Autowired ObjectMapper json;
   @Autowired TransactionTemplate transactions;
   @Autowired JwtEncoder encoder;
   @MockitoSpyBean ImageStorage storage;
 
+  List<String> storedKeys() {
+    return s3.listObjectsV2(r -> r.bucket("test-images")).contents().stream()
+        .map(object -> object.key())
+        .toList();
+  }
+
   @AfterEach
-  void cleanup() throws IOException {
+  void cleanup() {
     reset(storage);
     jdbc.update("delete from cars");
-    try (var files = Files.walk(STORAGE)) {
-      for (Path path : files.filter(Files::isRegularFile).toList()) Files.delete(path);
+    for (String key : storedKeys()) {
+      s3.deleteObject(r -> r.bucket("test-images").key(key));
     }
   }
 
@@ -277,9 +267,7 @@ class CarImageHttpTest {
           .andExpect(status().is(422));
       mvc.perform(get(location)).andExpect(jsonPath("$.images.length()").value(1));
       mvc.perform(get(location).param("imageId", original)).andExpect(status().isOk());
-      try (var files = Files.walk(STORAGE)) {
-        assertThat(files.filter(Files::isRegularFile).count()).isEqualTo(1);
-      }
+      assertThat(storedKeys()).hasSize(1);
     }
 
     @Test
@@ -299,9 +287,7 @@ class CarImageHttpTest {
       mvc.perform(get(location))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.images").isEmpty());
-      try (var files = Files.walk(STORAGE)) {
-        assertThat(files.filter(Files::isRegularFile)).isEmpty();
-      }
+      assertThat(storedKeys()).isEmpty();
     }
 
     @Test
@@ -331,9 +317,7 @@ class CarImageHttpTest {
           .isInstanceOf(IllegalStateException.class)
           .hasMessage("Commit rejected");
       assertThat(jdbc.queryForObject("select count(*) from cars_images", Long.class)).isZero();
-      try (var files = Files.walk(STORAGE)) {
-        assertThat(files.filter(Files::isRegularFile)).isEmpty();
-      }
+      assertThat(storedKeys()).isEmpty();
     }
   }
 
@@ -352,7 +336,7 @@ class CarImageHttpTest {
           .andExpect(content().string(""));
       mvc.perform(get(location)).andExpect(jsonPath("$.images").isEmpty());
       assertThat(version(location)).isGreaterThan(before);
-      assertThat(Files.exists(STORAGE.resolve(key))).isFalse();
+      assertThat(storedKeys()).doesNotContain(key);
       mvc.perform(delete(location + "/images/" + id)).andExpect(status().isNotFound());
     }
 
@@ -397,7 +381,7 @@ class CarImageHttpTest {
       doThrow(new IllegalStateException("Storage offline")).when(storage).delete(key);
       mvc.perform(delete(location + "/images/" + id)).andExpect(status().isNoContent());
       mvc.perform(get(location)).andExpect(jsonPath("$.images").isEmpty());
-      assertThat(Files.exists(STORAGE.resolve(key))).isTrue();
+      assertThat(storedKeys()).contains(key);
     }
   }
 
@@ -461,7 +445,7 @@ class CarImageHttpTest {
       String location = uploaded();
       String key = jdbc.queryForObject("select storage_key from cars_images", String.class);
       mvc.perform(delete(location)).andExpect(status().isNoContent());
-      assertThat(Files.exists(STORAGE.resolve(key))).isFalse();
+      assertThat(storedKeys()).doesNotContain(key);
       assertThat(jdbc.queryForObject("select count(*) from cars_images", Long.class)).isZero();
     }
   }

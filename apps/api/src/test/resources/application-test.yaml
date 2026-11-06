@@ -1,0 +1,5 @@
+rent:
+  storage:
+    s3:
+      bucket: test-images
+      region: us-east-1
