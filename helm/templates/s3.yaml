@@ -1,0 +1,71 @@
+{{- if .Values.s3Emulator.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Release.Name }}-s3
+type: Opaque
+# Public development-only credentials, not AWS credentials.
+stringData:
+  AWS_ACCESS_KEY_ID: rent-cars-dev
+  AWS_SECRET_ACCESS_KEY: rent-cars-dev-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-s3
+spec:
+  selector:
+    {{- include "rent-cars.labels" . | nindent 4 }}
+    app.kubernetes.io/component: s3
+  ports: [{name: s3, port: 8333, targetPort: s3}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-s3
+spec:
+  serviceName: {{ .Release.Name }}-s3
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "rent-cars.labels" . | nindent 6 }}
+      app.kubernetes.io/component: s3
+  template:
+    metadata:
+      labels:
+        {{- include "rent-cars.labels" . | nindent 8 }}
+        app.kubernetes.io/component: s3
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: s3
+          image: {{ .Values.s3Emulator.image | quote }}
+          args: [mini, -dir=/data, -ip=127.0.0.1, -ip.bind=0.0.0.0, -admin.ui=false, -webdav=false, -master.volumeSizeLimitMB=128, -volume.max=4]
+          securityContext: {{ include "rent-cars.containerSecurity" . | nindent 12 }}
+          resources: {{ toYaml .Values.s3Emulator.resources | nindent 12 }}
+          ports: [{name: s3, containerPort: 8333}]
+          env:
+            - {name: S3_BUCKET, value: {{ .Values.storage.bucket | quote }}}
+          envFrom:
+            - secretRef: {name: "{{ .Release.Name }}-s3"}
+          startupProbe:
+            httpGet: {path: "/buckets/{{ .Values.storage.bucket }}/", port: 8888}
+            periodSeconds: 3
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: "/buckets/{{ .Values.storage.bucket }}/", port: 8888}
+          livenessProbe:
+            tcpSocket: {port: s3}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: tmp, emptyDir: {}}
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: {storage: {{ .Values.s3Emulator.storage }}}
+{{- end }}

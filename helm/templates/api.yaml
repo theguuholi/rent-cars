@@ -28,6 +28,31 @@ spec:
           ports: [{name: http, containerPort: 8080}]
           env:
             - {name: SPRING_PROFILES_ACTIVE, value: local}
+            - {name: RENT_STORAGE_S3_BUCKET, value: {{ .Values.storage.bucket | quote }}}
+            - {name: RENT_STORAGE_S3_REGION, value: {{ .Values.storage.region | quote }}}
+            {{- if .Values.s3Emulator.enabled }}
+            - {name: RENT_STORAGE_S3_ENDPOINT, value: "http://{{ .Release.Name }}-s3:8333"}
+            - {name: RENT_STORAGE_S3_PATH_STYLE, value: "true"}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef: {name: "{{ .Release.Name }}-s3", key: AWS_ACCESS_KEY_ID}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: {name: "{{ .Release.Name }}-s3", key: AWS_SECRET_ACCESS_KEY}
+            {{- else }}
+            {{- if .Values.storage.endpoint }}
+            - {name: RENT_STORAGE_S3_ENDPOINT, value: {{ .Values.storage.endpoint | quote }}}
+            {{- end }}
+            - {name: RENT_STORAGE_S3_PATH_STYLE, value: {{ .Values.storage.pathStyle | quote }}}
+            {{- if .Values.storage.credentialsSecret }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef: {name: {{ .Values.storage.credentialsSecret | quote }}, key: AWS_ACCESS_KEY_ID}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: {name: {{ .Values.storage.credentialsSecret | quote }}, key: AWS_SECRET_ACCESS_KEY}
+            {{- end }}
+            {{- end }}
             - {name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://{{ .Release.Name }}-postgres:5432/rent_cars"}
             - {name: SPRING_FLYWAY_CONNECT_RETRIES, value: "10"}
             - {name: SPRING_DATASOURCE_USERNAME, value: rent_cars}

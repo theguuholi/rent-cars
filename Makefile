@@ -12,11 +12,11 @@ db-create:
 setup:
 	npm --prefix apps/web ci
 
-dev: db-up
-	API_TARGET="$${API_TARGET:-http://127.0.0.1:$${SERVER_PORT:-8080}}" npm --prefix apps/web run dev:stack
+dev: infra-up
+	AWS_ACCESS_KEY_ID=rent-cars-dev AWS_SECRET_ACCESS_KEY=rent-cars-dev-secret API_TARGET="$${API_TARGET:-http://127.0.0.1:$${SERVER_PORT:-8080}}" npm --prefix apps/web run dev:stack
 
-api-dev: db-up
-	cd apps/api && ./mvnw spring-boot:run
+api-dev: infra-up
+	cd apps/api && AWS_ACCESS_KEY_ID=rent-cars-dev AWS_SECRET_ACCESS_KEY=rent-cars-dev-secret ./mvnw spring-boot:run
 
 web-dev:
 	npm --prefix apps/web run dev -- --strictPort
@@ -35,3 +35,10 @@ check-web:
 	npm --prefix apps/web run build
 
 check: check-api check-web
+
+.PHONY: infra-up infra-stop
+infra-up:
+	docker compose up -d --wait postgres s3
+
+infra-stop:
+	docker compose stop postgres s3

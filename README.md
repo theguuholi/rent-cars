@@ -4,7 +4,7 @@ Rent Cars is a fleet management application. Register vehicles, assign their cat
 
 ## Run the full stack locally
 
-Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), and 5432 (PostgreSQL) are available.
+Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), 5432 (PostgreSQL), and 8333 (development S3) are available.
 
 ```sh
 git clone https://github.com/theguuholi/rent-cars.git
@@ -13,7 +13,7 @@ make setup
 make dev
 ```
 
-Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. Press Ctrl+C to stop the applications and run `make db-stop` to stop PostgreSQL.
+Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. `make dev` and `make api-dev` also start SeaweedFS, an S3-compatible object store with a persistent Docker volume and an automatically created `rent-cars-images` bucket. No cloud account or activation token is required. Press Ctrl+C to stop the applications and run `make infra-stop` to stop PostgreSQL and the S3-compatible development store.
 
 For container images and a local Kubernetes deployment, follow the [Docker and Helm guide](helm/README.md).
 
@@ -52,7 +52,7 @@ The gallery uses the existing public car image endpoint through `/api`.
 TanStack Query refreshes the car detail (including its version) and fleet after an
 upload; TanStack Form manages the selected files and validation. The web Nginx
 proxy accepts request bodies up to 30 MiB. Any additional Ingress must also allow
-that request size, and the API must have working local-volume or S3 storage.
+that request size, and the API must have working S3-compatible storage.
 
 ## Explore the codebase
 
@@ -68,3 +68,62 @@ Follow [the developer walkthrough](docs/project-walkthrough.md) to try visitor, 
 | [.github/workflows/](.github/workflows/) | CI workflows for verification, coverage and mutation testing |
 
 From the repository root, run `make dev` to start PostgreSQL, the API and the frontend together. Use `make api-dev` or `make web-dev` to start a single application, and `make check` to verify both. See the [contributor guide](AGENTS.md) for development conventions.
+
+## Development S3 storage
+
+Both development Compose files use SeaweedFS 4.52. The API uses its existing S3
+adapter with path-style requests, and the browser continues to access images
+through `/api/cars/{id}?imageId={imageId}`. Only the S3 port is published locally,
+at `http://localhost:8333`; the full container stack keeps it internal.
+
+```sh
+# Spring and React on the host, PostgreSQL and S3 in Docker:
+make setup
+make dev
+
+# Alternatively, everything in Docker (open http://localhost:8081):
+docker compose -f compose.stack.yaml up --build -d --wait
+```
+
+The Make targets provide the development-only AWS credentials. When launching
+Spring directly from an IDE, set `AWS_ACCESS_KEY_ID=rent-cars-dev` and
+`AWS_SECRET_ACCESS_KEY=rent-cars-dev-secret`. These are public local credentials,
+not AWS credentials. Production still uses the default AWS credential chain.
+
+Images survive container recreation in the `s3_data` volume. `make infra-stop`
+and `docker compose -f compose.stack.yaml down` preserve volumes; removing
+volumes discards their data. Existing disk uploads are not automatically moved
+into the new bucket. See the [API storage guide](apps/api/README.md#s3-configuration)
+for migration instructions and the [Kubernetes guide](helm/README.md) for the
+same storage setup in a cluster.
+
+## Verify the complete environment
+
+Run `make check-api` and `make check-web` with Docker running. Backend image HTTP
+tests use PostgreSQL and a real SeaweedFS container, including failed upload
+rollback, ownership, authorization and object deletion. Every runtime uses the
+same S3 implementation; endpoint, bucket, region and credentials select the service.
+
+For a full local stack, run `docker compose -f compose.stack.yaml up --build -d --wait`
+and open http://localhost:8081. For Kubernetes, build/load both application images
+and follow [the Helm guide](helm/README.md), then open the forwarded web address.
+In each environment check:
+
+1. Sign in as the development admin, create a car and upload both Argo fixtures.
+2. Open each original image, reload the page and confirm both photos remain.
+3. Add another image; the previous images must remain visible.
+4. Reject a non-JPEG/PNG file and a file larger than 5 MiB without altering the gallery.
+5. Sign out: photos remain readable, but upload controls disappear. Anonymous
+   upload/removal requests must return 401.
+6. Restart the API, database and S3 service, then reopen the car and photos.
+7. Use the REST Client removal endpoint: expect 204, then 404 when reading that image.
+8. Delete the car and verify its remaining images are no longer available.
+
+For Compose persistence checks, use
+`docker compose -f compose.stack.yaml restart api postgres s3`, followed by
+`docker compose -f compose.stack.yaml up -d --wait`. Do not delete volumes.
+For Kubernetes use the rollout commands in the Helm guide and run
+`helm test fleet -n rent-cars --logs` to verify the web proxy and API routing.
+These checks validate the S3-compatible development setup; repeat the image
+lifecycle against the real AWS bucket before deploying there to validate IAM
+permissions and AWS-specific behavior.

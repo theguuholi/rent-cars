@@ -102,15 +102,38 @@ image bytes. Decoded images are limited to 20 million pixels. Invalid images
 return 422; excessive upload size returns 413. Tomcat drains up to 32 MiB of
 rejected data; much larger rejected requests may terminate the connection.
 
-### Local and S3 configuration
+### S3 configuration
 
 The cars service generates `cars/{carId}/{imageId}.jpg` or `.png`; the database
-stores the complete key. Both adapters use that key without adding a second prefix.
+stores the complete key. The S3 adapter uses that key without adding a second prefix.
 
-The default `dev` profile stores files in `./uploads`, relative to the Java process
-working directory (`apps/api` with `make api-dev`). Set `UPLOAD_DIRECTORY` to an
-absolute directory if desired. Use a persistent volume in containers and restrict
-write access to the application. Files are never cleared at startup.
+The default `dev` profile uses the S3 adapter against SeaweedFS at
+`http://localhost:8333`, region `us-east-1`, bucket `rent-cars-images`, with
+path-style addressing. `make api-dev` starts PostgreSQL and SeaweedFS and supplies
+the development-only credentials `rent-cars-dev` / `rent-cars-dev-secret`.
+An IDE launch needs `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` set to those
+values. The all-container Compose stack overrides the endpoint to `http://s3:8333`.
+SeaweedFS automatically creates the bucket and persists objects in `s3_data`.
+
+`rent.storage.s3.endpoint` is optional: unset it for AWS. The SDK also supports
+its standard endpoint environment variables. `rent.storage.s3.path-style`
+defaults to false outside development. Production configuration still targets
+AWS S3, without local credentials or a local endpoint.
+
+All environments use the same S3 adapter: SeaweedFS for development and AWS S3
+for production. There is no filesystem provider or provider selector.
+Existing uploads on disk are not migrated automatically. With the development
+store running, copy the old directory to the bucket root, preserving `cars/...`
+keys (requires AWS CLI):
+
+```sh
+AWS_ACCESS_KEY_ID=rent-cars-dev AWS_SECRET_ACCESS_KEY=rent-cars-dev-secret \
+  aws --region us-east-1 --endpoint-url http://localhost:8333 \
+  s3 sync apps/api/uploads/ s3://rent-cars-images/
+```
+
+Run that command from the repository root. Keep the original files until you have
+verified the existing images through the API. No database changes are needed.
 
 `application-prod.yaml` uses an existing private S3 bucket:
 
@@ -129,7 +152,7 @@ IAM role; never put access keys in YAML. Grant `s3:PutObject`, `s3:GetObject` an
 `s3:DeleteObject` on `arn:aws:s3:::YOUR_BUCKET/cars/*`. The API serves private objects
 using its own credentials. Provision the bucket/region separately. For versioned
 buckets, configure noncurrent-version expiration if old versions must be reclaimed.
-Changing providers requires copying existing files with the same keys first.
+Changing buckets or S3 endpoints requires copying existing objects with the same keys first.
 
 ### File lifecycle
 
@@ -143,5 +166,7 @@ background infrastructure for those cases.
 V9 removes the queue/trigger from the initial PR version while preserving the V8
 checksum for developers who already ran it. Existing image metadata is retained.
 Tests cover transactions, content checks, storage failures, actual HTTP upload
-limits and migration. S3 tests use the real SDK against an HTTP stub; live IAM and
-bucket connectivity require validation in the deployment environment.
+limits and migration. S3 adapter tests use the real SDK against an HTTP stub and SeaweedFS. Image HTTP
+tests use PostgreSQL and SeaweedFS containers to verify persistence, rollback and
+object cleanup. Live AWS IAM and bucket connectivity require validation in the
+deployment environment.

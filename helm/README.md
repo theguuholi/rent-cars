@@ -1,6 +1,6 @@
 # Run Rent Cars on local Kubernetes
 
-The chart installs one Spring Boot API, one Nginx web server and one PostgreSQL 17 instance. The browser uses a single origin. Nginx serves the React bundle and forwards `/api/*` to Spring with the prefix removed. PostgreSQL uses a persistent volume. Kubernetes mounts the RSA keys so access tokens remain verifiable when API pods restart.
+The chart installs one Spring Boot API, one Nginx web server and one PostgreSQL 17 instance and a SeaweedFS S3-compatible development store. The browser uses a single origin. Nginx serves the React bundle and forwards `/api/*` to Spring with the prefix removed. PostgreSQL and SeaweedFS each use a persistent volume. Kubernetes mounts the RSA keys so access tokens remain verifiable when API pods restart.
 
 ## 1. Create a local cluster
 
@@ -37,7 +37,13 @@ kubectl create namespace rent-cars
 
 ```sh
 helm lint helm
-helm upgrade --install fleet ./helm -n rent-cars --wait --timeout 6m
+docker build -t rent-cars-api:s3-dev ./apps/api
+docker build -t rent-cars-web:s3-dev ./apps/web
+kind load docker-image rent-cars-api:s3-dev rent-cars-web:s3-dev --name rent-cars
+helm upgrade --install fleet ./helm -n rent-cars --wait --timeout 6m \
+  --set api.image.repository=rent-cars-api --set api.image.tag=s3-dev --set api.image.pullPolicy=IfNotPresent \
+  --set web.image.repository=rent-cars-web --set web.image.tag=s3-dev --set web.image.pullPolicy=IfNotPresent \
+  --set api.demoData=true
 helm test fleet -n rent-cars --logs
 kubectl -n rent-cars port-forward svc/fleet-web 8081:8080
 ```
@@ -84,4 +90,61 @@ If you have an Ingress controller, set `ingress.enabled=true`, `ingress.classNam
 helm uninstall fleet -n rent-cars
 ```
 
-The PostgreSQL claim and the manually created Secret survive uninstall. Reinstall with the same namespace and release name to reuse them. When you want to discard the entire local environment including its data, delete the dedicated cluster with `kind delete cluster --name rent-cars`.
+The PostgreSQL and SeaweedFS claims and the manually created credentials Secret survive uninstall. Reinstall with the same namespace and release name to reuse them. When you want to discard the entire local environment including its data, delete the dedicated cluster with `kind delete cluster --name rent-cars`.
+
+## Upload and read photos
+
+The default `s3Emulator.enabled=true` runs SeaweedFS 4.52 without a cloud account
+or activation token. It creates `storage.bucket` (default `rent-cars-images`) and
+uses public development-only credentials from the release's S3 Secret. The API
+connects to `http://fleet-s3:8333` for release `fleet`, using path-style requests.
+Only the S3 port is exposed by its ClusterIP Service; management ports are not
+published. Files and object metadata live on the SeaweedFS PVC, not in API pods.
+
+After port-forwarding `svc/fleet-web`, open http://localhost:8081, sign in with
+`test@test` / `test@tesT@dev`, and open a car. Under **Photos**, select both PNG
+files from `requests/fixtures` and upload them. Refresh and open an original
+image to verify reading through the Nginx proxy. The proxy permits 30 MiB requests;
+an optional Ingress must also permit this size.
+
+To verify persistence, restart the API and storage and reopen the image:
+
+```sh
+kubectl -n rent-cars rollout restart deployment/fleet-api
+kubectl -n rent-cars rollout restart statefulset/fleet-s3
+kubectl -n rent-cars rollout restart statefulset/fleet-postgres
+kubectl -n rent-cars rollout status deployment/fleet-api
+kubectl -n rent-cars rollout status statefulset/fleet-s3
+kubectl -n rent-cars rollout status statefulset/fleet-postgres
+```
+
+The bucket initializer preserves existing objects. Reconnect port-forward if
+necessary. Keep the PVC to retain photos; deleting the cluster or its volumes
+can discard them. Existing filesystem uploads must be copied to the bucket with
+the same keys before they can be read using the new provider.
+
+On Docker Desktop's built-in Kubernetes, use `--kube-context docker-desktop`
+in Helm/kubectl commands and skip `kind load docker-image`. Build both local
+images and use their tags with `IfNotPresent`. When rebuilding the same tag,
+restart both deployments, or use new tags to trigger a rollout.
+
+## External AWS S3
+
+Disable the development store and configure the existing private bucket:
+
+```sh
+helm upgrade fleet ./helm -n rent-cars --reuse-values \
+  --set s3Emulator.enabled=false \
+  --set storage.bucket=your-existing-bucket \
+  --set storage.region=sa-east-1 \
+  --set storage.endpoint= \
+  --set storage.pathStyle=false \
+  --set storage.credentialsSecret=your-existing-aws-secret
+```
+
+The external Secret must contain `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+For temporary credentials or workload identity, configure the corresponding SDK
+credential provider environment/token mount instead; this chart does not provision
+an IAM role or service-account integration. Never reuse the emulator credentials
+for AWS. Copy existing objects with their `cars/...` keys before switching stores.
+The emulator PVC is retained when its StatefulSet is removed.
