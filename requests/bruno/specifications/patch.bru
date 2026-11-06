@@ -1,0 +1,30 @@
+meta {
+  name: Change specification description
+  type: http
+  seq: 5
+  tags: [
+    smoke
+  ]
+}
+
+patch {
+  url: {{baseUrl}}/specifications/{{specificationId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {"description":"Dual-zone climate control","expectedVersion":{{specificationVersion}}}
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("specificationId", res.getBody().id);
+    bru.setVar("specificationVersion", res.getBody().version);
+    bru.setVar("specificationName", res.getBody().name);
+  }
+}
+
+assert {
+  res.status: eq 200
+}

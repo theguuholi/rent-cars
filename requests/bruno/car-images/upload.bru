@@ -1,0 +1,34 @@
+meta {
+  name: Upload two Argo photos
+  type: http
+  seq: 1
+  tags: [
+    smoke
+  ]
+}
+
+patch {
+  url: {{baseUrl}}/cars/{{carId}}/images
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  images: @file(../fixtures/car-front.png|../fixtures/car-side.png) @contentType(image/png)
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar("carId", res.getBody().id);
+    bru.setVar("carVersion", res.getBody().version);
+    bru.setVar("imageId", res.getBody().images[0].id);
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+tests {
+  test("Photos uploaded", () => expect(res.getBody().images.length).to.be.at.least(2));
+}

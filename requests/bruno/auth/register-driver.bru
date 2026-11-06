@@ -1,0 +1,34 @@
+meta {
+  name: Register example driver
+  type: http
+  seq: 2
+  tags: [
+    smoke
+  ]
+}
+
+post {
+  url: {{baseUrl}}/users
+  body: json
+  auth: none
+}
+
+headers {
+  X-XSRF-TOKEN: {{csrfToken}}
+}
+
+body:json {
+  {"email":"{{driverEmail}}","password":"{{driverPassword}}"}
+}
+
+script:pre-request {
+  await bru.runRequest("auth/csrf");
+}
+
+tests {
+  test("Driver created or email already registered", () => expect([201, 409]).to.include(res.getStatus()));
+}
+
+docs {
+  Run once per email; 409 is expected on repeats. Existing accounts still need the correct password.
+}

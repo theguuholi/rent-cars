@@ -1,0 +1,26 @@
+meta {
+  name: Check admin identity
+  type: http
+  seq: 4
+  tags: [
+    smoke
+  ]
+}
+
+get {
+  url: {{baseUrl}}/sessions/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("Expected role", () => expect(res.getBody().role).to.equal("ADMIN"));
+}

@@ -4,7 +4,7 @@ This monorepo contains the Spring Boot API in `apps/api/`, the React application
 
 ## Before editing
 
-- Read [the API guide](apps/api/AGENTS.md) for backend work and [the web guide](apps/web/AGENTS.md) for frontend work. For changes to an HTTP contract, inspect both sides and the corresponding REST Client file. Call out downstream work if the request limits changes to one side.
+- Read [the API guide](apps/api/AGENTS.md) for backend work and [the web guide](apps/web/AGENTS.md) for frontend work. For changes to an HTTP contract, inspect both sides and the corresponding Bruno request. Call out downstream work if the request limits changes to one side.
 - Use the [Java feature skill](.agents/skills/rent-cars-java-feature/SKILL.md) or [React feature skill](.agents/skills/rent-cars-react-feature/SKILL.md) when its workflow fits. Follow the nearest existing feature and its tests; verify which domain rules actually apply.
 - Keep code, test descriptions, API examples and repository documentation in English. See the [README](README.md) for prerequisites and local startup.
 

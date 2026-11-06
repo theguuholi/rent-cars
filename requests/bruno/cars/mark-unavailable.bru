@@ -1,0 +1,33 @@
+meta {
+  name: Mark car unavailable and clear equipment
+  type: http
+  seq: 7
+  tags: [
+    manual
+  ]
+}
+
+patch {
+  url: {{baseUrl}}/cars/{{carId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {"available":false,"specificationIds":[],"expectedVersion":{{carVersion}}}
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("carId", res.getBody().id);
+    bru.setVar("carVersion", res.getBody().version);
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Run cars/get first to refresh carVersion. Create a new available car before renting.
+}

@@ -1,0 +1,43 @@
+meta {
+  name: Sign in as driver
+  type: http
+  seq: 5
+  tags: [
+    smoke
+  ]
+}
+
+post {
+  url: {{baseUrl}}/sessions
+  body: json
+  auth: none
+}
+
+headers {
+  X-XSRF-TOKEN: {{csrfToken}}
+}
+
+body:json {
+  {"email":"{{driverEmail}}","password":"{{driverPassword}}"}
+}
+
+script:pre-request {
+  bru.deleteVar("driverToken");
+  await bru.runRequest("auth/csrf");
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("driverToken", res.getBody().accessToken);
+    bru.setVar("sessionToken", res.getBody().accessToken);
+    bru.setVar("sessionTokenName", "driverToken");
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("Access token returned", () => expect(res.getBody().accessToken).to.be.a("string").and.not.empty);
+}

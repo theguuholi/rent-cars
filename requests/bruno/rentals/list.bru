@@ -1,0 +1,22 @@
+meta {
+  name: List my rentals
+  type: http
+  seq: 2
+  tags: [
+    smoke
+  ]
+}
+
+get {
+  url: {{baseUrl}}/rentals
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("Created rental is present", () => expect(res.getBody().some(r => r.id === bru.getVar("rentalId"))).to.equal(true));
+}

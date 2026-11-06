@@ -1,0 +1,22 @@
+meta {
+  name: Browse specifications
+  type: http
+  seq: 1
+  tags: [
+    smoke
+  ]
+}
+
+get {
+  url: {{baseUrl}}/specifications
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("Catalog is an array", () => expect(res.getBody()).to.be.an("array"));
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Preserve car rental history
+  type: http
+  seq: 5
+  tags: [
+    negative
+  ]
+}
+
+delete {
+  url: {{baseUrl}}/cars/{{carId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+assert {
+  res.status: eq 409
+}

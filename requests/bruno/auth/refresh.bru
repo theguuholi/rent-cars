@@ -1,0 +1,37 @@
+meta {
+  name: Refresh last signed-in session
+  type: http
+  seq: 7
+  tags: [
+    smoke
+  ]
+}
+
+post {
+  url: {{baseUrl}}/sessions/refresh
+  body: none
+  auth: none
+}
+
+headers {
+  X-XSRF-TOKEN: {{csrfToken}}
+}
+
+script:pre-request {
+  await bru.runRequest("auth/csrf");
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("sessionToken", res.getBody().accessToken);
+    bru.setVar(bru.getVar("sessionTokenName"), res.getBody().accessToken);
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Refresh cookie belongs to the last login. Updates only that account token.
+}

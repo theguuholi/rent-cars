@@ -1,10 +1,10 @@
 # Rent Cars API
 
-The Spring Boot API manages cars, vehicle categories and equipment specifications. Start the stack with the [local setup guide](../../README.md#run-the-full-stack-locally). Browse the running API in [Swagger UI](http://localhost:8080/swagger-ui.html) or open a [REST Client request](../../requests/).
+The Spring Boot API manages cars, vehicle categories and equipment specifications. Start the stack with the [local setup guide](../../README.md#run-the-full-stack-locally). Browse the running API in [Swagger UI](http://localhost:8080/swagger-ui.html) or open a [Bruno request](../../requests/README.md).
 
 ## Accounts and JWT sessions
 
-In [the API walkthrough](../../requests/rent-cars.http), use the CSRF, admin login and profile requests to verify the seeded development account. The separate driver registration example is optional. First call `GET /csrf` and use its `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` response header on the registration and login POSTs. The REST Client examples carry both forward, and Swagger UI sends the CSRF header automatically. A missing or mismatched cookie/header pair returns 403.
+In [the Bruno walkthrough](../../requests/README.md), use the CSRF, admin login and profile requests to verify the seeded development account. The separate driver registration example is optional. First call `GET /csrf` and use its `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` response header on the registration and login POSTs. The Bruno requests prepare CSRF and carry both forward, and Swagger UI sends the CSRF header automatically. A missing or mismatched cookie/header pair returns 403.
 
 Register with a unique email and a password of at least 12 characters and at most 72 UTF-8 bytes. Registration returns the public profile with role `USER`. Email comparisons ignore case and surrounding whitespace.
 
@@ -24,7 +24,7 @@ export RENT_AUTH_PUBLIC_KEY=file:/run/secrets/rent-cars-public.pem
 
 ## Development database
 
-The `dev` profile includes ten sample vehicle specifications. Start the API with `make api-dev` or `make dev`, then send `GET /specifications` from [step 7 of the API walkthrough](../../requests/rent-cars.http). Flyway runs the development seed after the schema migrations and preserves existing specifications with matching names. Other explicit profiles use only the shared migrations; set `SPRING_PROFILES_ACTIVE=prod` in production because the project's default profile is `dev`.
+The `dev` profile includes ten sample vehicle specifications. Start the API with `make api-dev` or `make dev`, then send `GET /specifications` from [the Bruno specifications folder](../../requests/bruno/specifications). Flyway runs the development seed after the schema migrations and preserves existing specifications with matching names. Other explicit profiles use only the shared migrations; set `SPRING_PROFILES_ACTIVE=prod` in production because the project's default profile is `dev`.
 
 The local connection settings are in [application-dev.yaml](src/main/resources/application-dev.yaml). The `rent_cars_dev` database uses port `5432`, with `postgres` as both the username and password. The port must be available for Docker to start the service.
 
@@ -63,7 +63,7 @@ For trusted branches, the Java verification job uploads the JaCoCo XML to Sonar 
 
 ## Concurrent catalog edits
 
-Car and specification responses include a read-only numeric version. Send it as expectedVersion on every PATCH or PUT. Creation needs no version. Missing versions return 400. Stale forms and competing updates return 409 with an application/problem+json response. Reopen the editor to read the latest data before resubmitting, even if another user changed a different field. The REST Client examples use the version from the last response.
+Car and specification responses include a read-only numeric version. Send it as expectedVersion on every PATCH or PUT. Creation needs no version. Missing versions return 400. Stale forms and competing updates return 409 with an application/problem+json response. Reopen the editor to read the latest data before resubmitting, even if another user changed a different field. The Bruno requests capture versions in shared runtime variables.
 
 ### Renewing a session
 
@@ -92,8 +92,7 @@ There is no separate image controller/repository, scheduler or cleanup queue.
 - `DELETE /cars/{id}`: deletes the car, its image rows and associated files.
 
 Existing permissions remain unchanged: public car reads, ADMIN mutations. The
-React client is unchanged. Follow **Upload example 1–8** in
-[`requests/rent-cars.http`](../../requests/rent-cars.http); two AI-generated PNG views of the same silver Fiat Argo
+React client is unchanged. Follow the [Bruno image requests](../../requests/bruno/car-images); two AI-generated PNG views of the same silver Fiat Argo
 are included, so no local file edits are needed.
 
 Spring handles multipart parsing and the 5 MiB/file and 30 MiB/request limits.
@@ -179,7 +178,7 @@ Authenticated accounts can `POST /rentals`, `GET /rentals`, and
 `expectedReturnDate` (an ISO-8601 timestamp with an offset). The JWT identifies
 the owner; the server determines start/return times and the final charge.
 `GET /rentals` includes the current car summary and only the owner's records,
-newest first. Start with the numbered rental examples in `requests/rent-cars.http`.
+newest first. Start with the [Bruno rental walkthrough](../../requests/README.md).
 
 The expected return must be at least 24 hours after the start. An account and a
 car can each have only one open rental. `Rental` protects the lifecycle;

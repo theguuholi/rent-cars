@@ -1,0 +1,22 @@
+meta {
+  name: Read deleted image
+  type: http
+  seq: 1
+  tags: [
+    negative
+  ]
+}
+
+get {
+  url: {{baseUrl}}/cars/{{carId}}?imageId={{imageId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+}
+
+docs {
+  Run after car-images/delete.
+}

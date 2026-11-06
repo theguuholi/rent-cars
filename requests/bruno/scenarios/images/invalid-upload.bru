@@ -1,0 +1,22 @@
+meta {
+  name: Reject fake JPEG contents
+  type: http
+  seq: 2
+  tags: [
+    negative
+  ]
+}
+
+patch {
+  url: {{baseUrl}}/cars/{{carId}}/images
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  images: @file(../fixtures/invalid-image.jpg) @contentType(image/jpeg)
+}
+
+assert {
+  res.status: eq 422
+}

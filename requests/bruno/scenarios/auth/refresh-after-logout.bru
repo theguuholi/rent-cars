@@ -1,0 +1,30 @@
+meta {
+  name: Reject ended session refresh
+  type: http
+  seq: 1
+  tags: [
+    negative
+  ]
+}
+
+post {
+  url: {{baseUrl}}/sessions/refresh
+  body: none
+  auth: none
+}
+
+headers {
+  X-XSRF-TOKEN: {{csrfToken}}
+}
+
+script:pre-request {
+  await bru.runRequest("auth/csrf");
+}
+
+assert {
+  res.status: eq 401
+}
+
+docs {
+  Run after auth/logout.
+}

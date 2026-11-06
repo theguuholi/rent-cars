@@ -1,0 +1,22 @@
+meta {
+  name: Return the same rental again
+  type: http
+  seq: 3
+  tags: [
+    negative
+  ]
+}
+
+post {
+  url: {{baseUrl}}/rentals/{{rentalId}}/return
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  Run after rentals/return.
+}

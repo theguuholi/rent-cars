@@ -1,0 +1,22 @@
+meta {
+  name: Delete example car without rental history
+  type: http
+  seq: 6
+  tags: [
+    manual
+  ]
+}
+
+delete {
+  url: {{baseUrl}}/cars/{{carId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Run before renting this car. A car with rental history intentionally returns 409.
+}

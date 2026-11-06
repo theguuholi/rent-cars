@@ -1,0 +1,26 @@
+meta {
+  name: Browse public fleet
+  type: http
+  seq: 1
+  tags: [
+    smoke
+  ]
+}
+
+get {
+  url: {{baseUrl}}/cars
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("Fleet is an array", () => expect(res.getBody()).to.be.an("array"));
+}
+
+docs {
+  Does not overwrite carId. Mutations target only the example car you created.
+}

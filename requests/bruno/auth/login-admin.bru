@@ -1,0 +1,43 @@
+meta {
+  name: Sign in as admin
+  type: http
+  seq: 3
+  tags: [
+    smoke
+  ]
+}
+
+post {
+  url: {{baseUrl}}/sessions
+  body: json
+  auth: none
+}
+
+headers {
+  X-XSRF-TOKEN: {{csrfToken}}
+}
+
+body:json {
+  {"email":"{{adminEmail}}","password":"{{adminPassword}}"}
+}
+
+script:pre-request {
+  bru.deleteVar("adminToken");
+  await bru.runRequest("auth/csrf");
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar("adminToken", res.getBody().accessToken);
+    bru.setVar("sessionToken", res.getBody().accessToken);
+    bru.setVar("sessionTokenName", "adminToken");
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("Access token returned", () => expect(res.getBody().accessToken).to.be.a("string").and.not.empty);
+}

@@ -1,0 +1,26 @@
+meta {
+  name: Check driver identity
+  type: http
+  seq: 6
+  tags: [
+    smoke
+  ]
+}
+
+get {
+  url: {{baseUrl}}/sessions/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{driverToken}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("Expected role", () => expect(res.getBody().role).to.equal("USER"));
+}
