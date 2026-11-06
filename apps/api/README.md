@@ -70,3 +70,78 @@ Car and specification responses include a read-only numeric version. Send it as 
 Sign-in sets the HTTP-only `rent_refresh` cookie. Keep the 15-minute access JWT in memory. Send the cookie and CSRF header to `POST /sessions/refresh` to rotate it and obtain a new JWT with current permissions. Fetch `GET /csrf` first and echo its `X-XSRF-TOKEN` header. The browser sends both cookies automatically on same-origin requests.
 
 Each login starts a separate device session with an absolute seven-day lifetime (`rent.auth.refresh-lifetime`). Reusing a consumed refresh token revokes that device session. Serialize refresh requests across tabs. Use `DELETE /sessions/current` with the same CSRF proof to revoke renewal and expire the cookie. An issued JWT stays valid until expiry. Use HTTPS in production and activate a production profile with secure cookies. Only the development profile permits the refresh cookie over HTTP.
+
+
+## Car images
+
+The existing `CarController`, `CarService` and `CarRepository` handle images as
+part of the car aggregate. JPA cascade/orphan removal persists the association.
+There is no separate image controller/repository, scheduler or cleanup queue.
+
+- `POST /cars` and `PATCH /cars/{id}` keep their existing JSON contracts.
+- `PATCH /cars/{id}/images`: multipart with one or more repeated `images` file
+  parts. Appends images to an existing car, returns 201 with full car detail and
+  a Location header pointing to `/cars/{id}`. No car JSON or expectedVersion is
+  required. Uploads serialize on the car row so concurrent appends are preserved.
+- `DELETE /cars/{id}/images/{imageId}`: removes one image belonging to the car and
+  returns 204. Attempts file deletion after the metadata transaction commits.
+- Image uploads/removals advance the car version, invalidating previously opened
+  car editors. Normal car PATCH still requires expectedVersion.
+- `GET /cars/{id}`: detail includes image `id`, `contentType` and `sizeBytes`.
+- `GET /cars/{id}?imageId={imageId}`: image bytes through the same public car route.
+- `DELETE /cars/{id}`: deletes the car, its image rows and associated files.
+
+Existing permissions remain unchanged: public car reads, ADMIN mutations. The
+React client is unchanged. Follow **Upload example 1–8** in
+[`requests/rent-cars.http`](../../requests/rent-cars.http); two AI-generated PNG views of the same silver Fiat Argo
+are included, so no local file edits are needed.
+
+Spring handles multipart parsing and the 5 MiB/file and 30 MiB/request limits.
+The service checks JPEG/PNG contents because multipart support does not validate
+image bytes. Decoded images are limited to 20 million pixels. Invalid images
+return 422; excessive upload size returns 413. Tomcat drains up to 32 MiB of
+rejected data; much larger rejected requests may terminate the connection.
+
+### Local and S3 configuration
+
+The cars service generates `cars/{carId}/{imageId}.jpg` or `.png`; the database
+stores the complete key. Both adapters use that key without adding a second prefix.
+
+The default `dev` profile stores files in `./uploads`, relative to the Java process
+working directory (`apps/api` with `make api-dev`). Set `UPLOAD_DIRECTORY` to an
+absolute directory if desired. Use a persistent volume in containers and restrict
+write access to the application. Files are never cleared at startup.
+
+`application-prod.yaml` uses an existing private S3 bucket:
+
+```dotenv
+SPRING_PROFILES_ACTIVE=prod
+DATABASE_URL=jdbc:postgresql://database-host:5432/rent_cars
+DATABASE_USERNAME=rent_cars
+DATABASE_PASSWORD=your-database-password
+S3_BUCKET=your-existing-private-bucket
+AWS_REGION=sa-east-1
+# Also supply the existing RENT_AUTH_PRIVATE_KEY and RENT_AUTH_PUBLIC_KEY settings.
+```
+
+The SDK uses an explicit default credentials provider chain. Prefer an attached
+IAM role; never put access keys in YAML. Grant `s3:PutObject`, `s3:GetObject` and
+`s3:DeleteObject` on `arn:aws:s3:::YOUR_BUCKET/cars/*`. The API serves private objects
+using its own credentials. Provision the bucket/region separately. For versioned
+buckets, configure noncurrent-version expiration if old versions must be reclaimed.
+Changing providers requires copying existing files with the same keys first.
+
+### File lifecycle
+
+A transaction callback deletes removed files only after the database commits,
+and attempts to delete newly uploaded files on rollback. A failed deletion logs
+the key for manual cleanup; there are no automatic retries. Process termination
+can also leave orphan files, and direct SQL/cascaded category deletion bypasses
+this service-level file cleanup. This implementation deliberately does not add
+background infrastructure for those cases.
+
+V9 removes the queue/trigger from the initial PR version while preserving the V8
+checksum for developers who already ran it. Existing image metadata is retained.
+Tests cover transactions, content checks, storage failures, actual HTTP upload
+limits and migration. S3 tests use the real SDK against an HTTP stub; live IAM and
+bucket connectivity require validation in the deployment environment.

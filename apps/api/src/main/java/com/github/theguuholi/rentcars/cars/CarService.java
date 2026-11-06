@@ -1,27 +1,45 @@
 package com.github.theguuholi.rentcars.cars;
 
 import com.github.theguuholi.rentcars.shared.http.EditVersion;
+import com.github.theguuholi.rentcars.shared.storage.ImageStorage;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import javax.imageio.ImageIO;
+import javax.imageio.stream.MemoryCacheImageInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Transactional(readOnly = true)
 class CarService {
+  private static final Logger log = LoggerFactory.getLogger(CarService.class);
   private final CarRepository cars;
-  // The validator reads rules such as @Min and @NotBlank and reports which fields failed.
   private final Validator validator;
+  private final ImageStorage storage;
+  private final EntityManager entities;
 
-  CarService(CarRepository cars, Validator validator) {
+  CarService(
+      CarRepository cars, Validator validator, ImageStorage storage, EntityManager entities) {
     this.cars = cars;
     this.validator = validator;
+    this.storage = storage;
+    this.entities = entities;
   }
 
   List<Car> list() {
@@ -35,28 +53,110 @@ class CarService {
 
   @Transactional
   Car create(CarRequest request) {
-    return save(new Car(), request);
+    Car car = new Car();
+    apply(car, request);
+    return cars.saveAndFlush(car);
   }
 
   @Transactional
   Car update(UUID id, CarRequest request) {
     var car = cars.findById(id).orElseThrow(CarService::notFound);
     EditVersion.requireCurrent(request.expectedVersion, car.getVersion());
-    return save(car, request);
+    apply(car, request);
+    return cars.saveAndFlush(car);
+  }
+
+  @Transactional
+  Car uploadImages(UUID id, List<MultipartFile> files) {
+    Car car = cars.findForUpdate(id).orElseThrow(CarService::notFound);
+    var uploadedKeys = new ArrayList<String>();
+    cleanupAfterTransaction(uploadedKeys, List.of());
+    for (MultipartFile file : files) car.images().add(storeImage(car, file, uploadedKeys));
+    entities.lock(car, LockModeType.PESSIMISTIC_FORCE_INCREMENT);
+    cars.saveAndFlush(car);
+    return cars.findDetailedById(id).orElseThrow(CarService::notFound);
+  }
+
+  @Transactional
+  void deleteImage(UUID id, UUID imageId) {
+    Car car = cars.findForUpdate(id).orElseThrow(CarService::notFound);
+    CarImage image =
+        car.images().stream()
+            .filter(item -> item.id().equals(imageId))
+            .findFirst()
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Car image not found"));
+    cleanupAfterTransaction(List.of(), List.of(image.key()));
+    car.images().remove(image);
+    entities.lock(car, LockModeType.PESSIMISTIC_FORCE_INCREMENT);
+    cars.saveAndFlush(car);
   }
 
   @Transactional
   void delete(UUID id) {
-    cars.delete(cars.findForUpdate(id).orElseThrow(CarService::notFound));
+    Car car = cars.findForUpdate(id).orElseThrow(CarService::notFound);
+    var keys = car.images().stream().map(CarImage::key).toList();
+    if (!keys.isEmpty()) cleanupAfterTransaction(List.of(), keys);
+    cars.delete(car);
   }
 
-  private Car save(Car car, CarRequest request) {
-    // Check supplied charges before constructing BrlAmount, then check required fields on
-    // the merged car. A PATCH can omit a required field that the stored car already has.
+  private void apply(Car car, CarRequest request) {
     validate(request);
     car.apply(request);
     validate(car);
-    return cars.saveAndFlush(car);
+  }
+
+  private CarImage storeImage(Car car, MultipartFile file, List<String> uploadedKeys) {
+    try {
+      byte[] bytes = file.getBytes();
+      try (var stream = new MemoryCacheImageInputStream(new ByteArrayInputStream(bytes))) {
+        var readers = ImageIO.getImageReaders(stream);
+        if (!readers.hasNext()) throw invalidImage();
+        var reader = readers.next();
+        try {
+          String format = reader.getFormatName();
+          if (!format.equalsIgnoreCase("JPEG") && !format.equalsIgnoreCase("PNG"))
+            throw invalidImage();
+          reader.setInput(stream);
+          if ((long) reader.getWidth(0) * reader.getHeight(0) > 20_000_000) throw invalidImage();
+          reader.read(0);
+          boolean jpeg = format.equalsIgnoreCase("JPEG");
+          String contentType = jpeg ? "image/jpeg" : "image/png";
+          UUID imageId = UUID.randomUUID();
+          String key = "cars/" + car.id() + "/" + imageId + (jpeg ? ".jpg" : ".png");
+          uploadedKeys.add(key);
+          storage.store(key, bytes, contentType);
+          return new CarImage(car, imageId, key, contentType, bytes.length);
+        } finally {
+          reader.dispose();
+        }
+      }
+    } catch (IOException _) {
+      throw invalidImage();
+    }
+  }
+
+  private void cleanupAfterTransaction(List<String> uploadedKeys, List<String> removedKeys) {
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCompletion(int status) {
+            List<String> keys = status == STATUS_COMMITTED ? removedKeys : uploadedKeys;
+            for (String key : keys) {
+              try {
+                storage.delete(key);
+              } catch (RuntimeException exception) {
+                log.warn("Could not delete image {}; manual cleanup is required", key, exception);
+              }
+            }
+          }
+        });
+  }
+
+  private static ResponseStatusException invalidImage() {
+    return new ResponseStatusException(
+        HttpStatus.UNPROCESSABLE_CONTENT,
+        "Provide a valid JPEG or PNG image with at most 20 million pixels");
   }
 
   private <T> void validate(T value) {

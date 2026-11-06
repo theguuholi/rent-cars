@@ -722,7 +722,8 @@ class CarHttpTest {
               "version",
               "specificationIds",
               "category",
-              "specifications");
+              "specifications",
+              "images");
       assertThat(car.get("dailyRateCents").isIntegralNumber()).isTrue();
       assertThat(car.get("dailyRateCents").asInt()).isEqualTo(12345);
       assertThat(car.get("fineAmountCents").isIntegralNumber()).isTrue();
