@@ -1,4 +1,4 @@
-name: Public API Playwright
+name: Playwright public journeys
 on:
   pull_request:
     paths:
@@ -39,29 +39,32 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
         working-directory: apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
       - name: Generate local API signing keys
         run: |
           openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$RUNNER_TEMP/private.pem"
           openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
           echo "RENT_AUTH_PRIVATE_KEY=file:$RUNNER_TEMP/private.pem" >> "$GITHUB_ENV"
           echo "RENT_AUTH_PUBLIC_KEY=file:$RUNNER_TEMP/public.pem" >> "$GITHUB_ENV"
-      - name: Test public GET /cars
+      - name: Test public API and browser journey
         run: |
-          make api-dev > "$RUNNER_TEMP/api.log" 2>&1 &
-          api_pid=$!
-          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          make dev > "$RUNNER_TEMP/dev.log" 2>&1 &
+          dev_pid=$!
+          trap 'kill "$dev_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 180); do
-            if curl --fail --silent http://localhost:8080/cars > /dev/null; then
+            if curl --fail --silent http://localhost:8080/cars > /dev/null && curl --fail --silent http://localhost:5173/cars > /dev/null; then
               break
             fi
-            if ! kill -0 "$api_pid" 2>/dev/null; then
-              tail -100 "$RUNNER_TEMP/api.log"
+            if ! kill -0 "$dev_pid" 2>/dev/null; then
+              tail -100 "$RUNNER_TEMP/dev.log"
               exit 1
             fi
             sleep 2
           done
-          if ! curl --fail --silent http://localhost:8080/cars > /dev/null; then
-            tail -100 "$RUNNER_TEMP/api.log"
+          if ! curl --fail --silent http://localhost:8080/cars > /dev/null || ! curl --fail --silent http://localhost:5173/cars > /dev/null; then
+            tail -100 "$RUNNER_TEMP/dev.log"
             exit 1
           fi
           npm --prefix apps/web run test:public-api
+          npm --prefix apps/web run test:browser
