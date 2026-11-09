@@ -6,7 +6,7 @@ Spring Boot, image storage and the basic API workflows in HTTP Yac. Start with
 Commands use a POSIX shell (macOS/Linux, or a configured WSL2 environment on Windows).
 Unless a command explicitly changes directory, run it from the repository root.
 
-## 1. Install and verify the tools
+## Step 1: Install and verify the tools
 
 | Tool | Version / installation | Why it is needed |
 | --- | --- | --- |
@@ -43,7 +43,9 @@ Maven version. No separate PostgreSQL, SeaweedFS, React or Spring installation
 is needed. Docker supplies the data services and project dependencies supply
 the frameworks. Initial builds need network access to download dependencies/images.
 
-## 2. Get the project
+- [ ] Step 1 complete: I followed the instructions and verified the results before continuing.
+
+## Step 2: Get the project
 
 ```sh
 git clone https://github.com/theguuholi/rent-cars.git
@@ -57,7 +59,9 @@ If you already have a checkout, open that directory instead of cloning again.
 this repository folder in VS Code. Do not run `npm install` at the repository
 root; the frontend package lives in `apps/web`.
 
-## 3. Start local development
+- [ ] Step 2 complete: I followed the instructions and verified the results before continuing.
+
+## Step 3: Start local development
 
 ```sh
 make dev
@@ -110,7 +114,9 @@ make web-dev
 Do not run these alongside another instance of `make dev`: they use the same
 ports. PostgreSQL uses 5432 and the local S3 endpoint uses 8333.
 
-## 4. Open the requests in VS Code
+- [ ] Step 3 complete: I followed the instructions and verified the results before continuing.
+
+## Step 4: Open the requests in VS Code
 
 1. Open the repository folder in VS Code and install the recommended **HTTP Yac**
    extension (`anweber.vscode-httpyac`). No Desktop API client is needed.
@@ -138,54 +144,64 @@ file. HTTP Yac may keep response previews in its extension storage. Sign in agai
 API signing-key changes or token expiration. Admin and driver tokens are separate.
 The refresh cookie belongs to the last account you signed in with.
 
-## 5. Authenticate both roles
+- [ ] Step 4 complete: I followed the instructions and verified the results before continuing.
+
+## Step 5: Authenticate both roles
+
+Track your progress in the **Done** column: replace `☐` with `☑` after
+executing each step and checking its result. These table checkboxes are edited
+in the Markdown source, not clicked in the preview.
 
 The notation below is `file.http → request_name`, under `requests/http`.
 Find the matching `# @name` or the descriptive heading in that file.
 Run these in order:
 
-| Step | Request | Expected result |
-| --- | --- | --- |
-| 1 | `auth.http → auth_register_driver` | **201** creates `driver@example.com`; **409** is allowed if that email already exists |
-| 2 | `auth.http → auth_login_admin` | **200** captures `adminToken` |
-| 3 | `auth.http → auth_me_admin` | **200**, role `ADMIN` |
-| 4 | `auth.http → auth_login_driver` | **200** captures `driverToken` without replacing `adminToken` |
-| 5 | `auth.http → auth_me_driver` | **200**, role `USER` |
-| 6 | `auth.http → auth_refresh` | **200** renews the driver session, because driver was the last login |
-| 7 | `auth.http → auth_me_session` | **200** confirms the refreshed token works |
+| Step | Done | Request | Expected result |
+| --- | --- | --- | --- |
+| 1 | ☐ | `auth.http → auth_register_driver` | **201** creates `driver@example.com`; **409** is allowed if that email already exists |
+| 2 | ☐ | `auth.http → auth_login_admin` | **200** captures `adminToken` |
+| 3 | ☐ | `auth.http → auth_me_admin` | **200**, role `ADMIN` |
+| 4 | ☐ | `auth.http → auth_login_driver` | **200** captures `driverToken` without replacing `adminToken` |
+| 5 | ☐ | `auth.http → auth_me_driver` | **200**, role `USER` |
+| 6 | ☐ | `auth.http → auth_refresh` | **200** renews the driver session, because driver was the last login |
+| 7 | ☐ | `auth.http → auth_me_session` | **200** confirms the refreshed token works |
 
 The example driver password is `local-example-only-123`. These credentials are
 for development only. Registration does not reset an existing account's password.
 
-## 6. Read catalogs and create equipment
+- [ ] Step 5 complete: I followed the instructions and verified the results before continuing.
 
-| Step | Request | Expected result |
-| --- | --- | --- |
-| 8 | `categories.http → categories_list` | **200**; captures the `SEDAN` category as `categoryId` |
-| 9 | `specifications.http → specifications_list` | **200**; lists equipment |
-| 10 | `specifications.http → specifications_create` | **201**; creates uniquely named equipment and captures its ID/version |
-| 11 | `specifications.http → specifications_get` | **200**; reads the equipment you created |
-| 12 | `specifications.http → specifications_update` | **200**; replaces its name/description and captures the new version |
-| 13 | `specifications.http → specifications_patch` | **200**; changes only its description |
+## Step 6: Read catalogs and create equipment
+
+| Step | Done | Request | Expected result |
+| --- | --- | --- | --- |
+| 8 | ☐ | `categories.http → categories_list` | **200**; captures the `SEDAN` category as `categoryId` |
+| 9 | ☐ | `specifications.http → specifications_list` | **200**; lists equipment |
+| 10 | ☐ | `specifications.http → specifications_create` | **201**; creates uniquely named equipment and captures its ID/version |
+| 11 | ☐ | `specifications.http → specifications_get` | **200**; reads the equipment you created |
+| 12 | ☐ | `specifications.http → specifications_update` | **200**; replaces its name/description and captures the new version |
+| 13 | ☐ | `specifications.http → specifications_patch` | **200**; changes only its description |
 
 The category is selected by name, not by array position. The specification ID
 comes from creation, so later mutations target your example record.
 
-## 7. Create a car and exercise photos
+- [ ] Step 6 complete: I followed the instructions and verified the results before continuing.
 
-| Step | Request | Expected result |
-| --- | --- | --- |
-| 14 | `cars.http → cars_list` | **200**; public fleet, without changing the selected `carId` |
-| 15 | `cars.http → cars_create` | **201**; creates an available Argo using your category/equipment and captures `carId`/`carVersion` |
-| 16 | `cars.http → cars_get` | **200**; detail and current version |
-| 17 | `cars.http → cars_update` | **200**; edits the description using `expectedVersion` |
-| 18 | `car-images.http → car_images_upload` | **201**; uploads the two Argo PNG fixtures and captures `imageId` |
-| 19 | `car-images.http → car_images_read` | **200**, `image/png`; reads the image bytes without authentication |
-| 20 | `car-images.http → car_images_append` | **201**; adds another photo without replacing the first two |
-| 21 | `car-images.http → car_images_delete` | **204**, empty body; deletes the captured photo |
-| 22 | `scenarios-images.http → scenarios_images_deleted_image` | **404**, expected; confirms the photo is no longer readable |
-| 23 | `scenarios-images.http → scenarios_images_invalid_upload` | **422**, expected; rejects the deliberately invalid JPEG fixture |
-| 24 | `cars.http → cars_get` | **200**; remaining photos and refreshed version |
+## Step 7: Create a car and exercise photos
+
+| Step | Done | Request | Expected result |
+| --- | --- | --- | --- |
+| 14 | ☐ | `cars.http → cars_list` | **200**; public fleet, without changing the selected `carId` |
+| 15 | ☐ | `cars.http → cars_create` | **201**; creates an available Argo using your category/equipment and captures `carId`/`carVersion` |
+| 16 | ☐ | `cars.http → cars_get` | **200**; detail and current version |
+| 17 | ☐ | `cars.http → cars_update` | **200**; edits the description using `expectedVersion` |
+| 18 | ☐ | `car-images.http → car_images_upload` | **201**; uploads the two Argo PNG fixtures and captures `imageId` |
+| 19 | ☐ | `car-images.http → car_images_read` | **200**, `image/png`; reads the image bytes without authentication |
+| 20 | ☐ | `car-images.http → car_images_append` | **201**; adds another photo without replacing the first two |
+| 21 | ☐ | `car-images.http → car_images_delete` | **204**, empty body; deletes the captured photo |
+| 22 | ☐ | `scenarios-images.http → scenarios_images_deleted_image` | **404**, expected; confirms the photo is no longer readable |
+| 23 | ☐ | `scenarios-images.http → scenarios_images_invalid_upload` | **422**, expected; rejects the deliberately invalid JPEG fixture |
+| 24 | ☐ | `cars.http → cars_get` | **200**; remaining photos and refreshed version |
 
 Fixtures live in `requests/fixtures`; multipart paths resolve relative to the
 HTTP file directory. There is no need to select or copy local image paths manually.
@@ -195,20 +211,29 @@ Images are stored in SeaweedFS, not in the API container filesystem.
 Every image mutation can change the car version. Run `cars.http → cars_get` before a later
 manual edit if your version is stale; do not guess `expectedVersion`.
 
-## 8. Rent and return the car
+- [ ] Step 7 complete: I followed the instructions and verified the results before continuing.
 
-| Step | Request | Expected result |
-| --- | --- | --- |
-| 25 | `rentals.http → rentals_create` | **201**; driver rents the car with a return date two days ahead; captures `rentalId` |
-| 26 | `rentals.http → rentals_list` | **200**; includes only that driver's rentals |
-| 27 | `cars.http → cars_get` | **200**, `available=false` |
-| 28 | `scenarios-rentals.http → scenarios_rentals_unavailable_car` | **409**; administrator cannot rent the same occupied car |
-| 29 | `scenarios-rentals.http → scenarios_rentals_foreign_return` | **404**; administrator cannot return the driver's rental |
-| 30 | `rentals.http → rentals_return` | **200**; fills return time/total and releases the car |
-| 31 | `cars.http → cars_get` | **200**, `available=true` |
-| 32 | `scenarios-rentals.http → scenarios_rentals_return_twice` | **409**; duplicate return is rejected |
-| 33 | `scenarios-rentals.http → scenarios_rentals_invalid_period` | **422**; expected return less than 24 hours ahead is rejected |
-| 34 | `scenarios-rentals.http → scenarios_rentals_delete_history` | **409**; rental history prevents deleting the car |
+## Step 8: Rent and return the car
+
+Before sending `rentals_create`, confirm that `cars_create` returned **201**
+in this VS Code window and environment. Its response saves `state.carId`;
+`cars_list` only lists cars and does not select one. Also sign in as driver.
+After restarting VS Code or resetting HTTP Yac, repeat the login/catalog/create
+steps to restore the in-memory values. A car created in React or another CLI
+process does not populate this editor's request state.
+
+| Step | Done | Request | Expected result |
+| --- | --- | --- | --- |
+| 25 | ☐ | `rentals.http → rentals_create` | **201**; driver rents the car with a return date two days ahead; captures `rentalId` |
+| 26 | ☐ | `rentals.http → rentals_list` | **200**; includes only that driver's rentals |
+| 27 | ☐ | `cars.http → cars_get` | **200**, `available=false` |
+| 28 | ☐ | `scenarios-rentals.http → scenarios_rentals_unavailable_car` | **409**; administrator cannot rent the same occupied car |
+| 29 | ☐ | `scenarios-rentals.http → scenarios_rentals_foreign_return` | **404**; administrator cannot return the driver's rental |
+| 30 | ☐ | `rentals.http → rentals_return` | **200**; fills return time/total and releases the car |
+| 31 | ☐ | `cars.http → cars_get` | **200**, `available=true` |
+| 32 | ☐ | `scenarios-rentals.http → scenarios_rentals_return_twice` | **409**; duplicate return is rejected |
+| 33 | ☐ | `scenarios-rentals.http → scenarios_rentals_invalid_period` | **422**; expected return less than 24 hours ahead is rejected |
+| 34 | ☐ | `scenarios-rentals.http → scenarios_rentals_delete_history` | **409**; rental history prevents deleting the car |
 
 An immediate return costs **15000 centavos (R$150)** for this example. Billing
 uses completed 24-hour periods, at least one daily charge, and completed days
@@ -221,7 +246,9 @@ creation, use `rentals.http → rentals_list` to find it, then temporarily repla
 Restore the placeholder afterward. Do not delete the database to resolve
 this ordinary workflow conflict.
 
-## 9. Try deletion and finish the session
+- [ ] Step 8 complete: I followed the instructions and verified the results before continuing.
+
+## Step 9: Try deletion and finish the session
 
 The rented car is retained as history. To test successful deletion separately:
 
@@ -238,7 +265,9 @@ The rented car is retained as history. To test successful deletion separately:
 Rerun the logins before another workflow. An issued JWT has its own expiry;
 logout invalidates the refresh session, not all previously issued access tokens.
 
-## 10. Run the normal workflow automatically
+- [ ] Step 9 complete: I followed the instructions and verified the results before continuing.
+
+## Step 10: Run the normal workflow automatically
 
 With the API running, in a separate terminal:
 
@@ -257,7 +286,9 @@ Do not use an unfiltered **Run All**: some examples intentionally require a
 specific intermediate state, such as testing an unavailable car before its return.
 Separate CLI invocations do not share runtime tokens or IDs.
 
-## 11. Alternative: run everything in containers
+- [ ] Step 10 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
+
+## Step 11: Alternative: run everything in containers
 
 You can skip running Java and React on the host in this mode. Docker builds both
 applications using their Dockerfiles; host Node is only needed for HTTP Yac CLI.
@@ -288,7 +319,9 @@ Inspect startup failures with:
 docker compose -f compose.stack.yaml logs --tail=100 api web postgres s3
 ```
 
-## 12. Alternative: Docker Desktop Kubernetes
+- [ ] Step 11 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
+
+## Step 12: Alternative: Docker Desktop Kubernetes
 
 1. Enable Kubernetes in Docker Desktop and wait until it is ready.
 2. Verify the additional tools and the explicit context:
@@ -349,7 +382,9 @@ kubectl --context docker-desktop -n rent-cars logs deployment/fleet-api --tail=1
 kubectl --context docker-desktop -n rent-cars logs deployment/fleet-web --tail=100
 ```
 
-## 13. Choose the right URL
+- [ ] Step 12 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
+
+## Step 13: Choose the right URL
 
 | Mode | React | HTTP Yac API base URL | Database and photos |
 | --- | --- | --- | --- |
@@ -360,7 +395,9 @@ kubectl --context docker-desktop -n rent-cars logs deployment/fleet-web --tail=1
 The `/api` prefix belongs to the web proxy. Direct Spring requests on port 8080
 do **not** include it. Each environment needs its own login and record IDs.
 
-## 14. Stop, reset and run checks
+- [ ] Step 13 complete: I followed the instructions and verified the results before continuing.
+
+## Step 14: Stop, reset and run checks
 
 For local development, press Ctrl+C in the application terminal, then:
 
@@ -404,7 +441,9 @@ Backend checks use isolated Testcontainers databases/storage; frontend checks
 run formatting, lint, coverage and build. Reports are in
 `apps/api/target/site/jacoco` and `apps/web/coverage`.
 
-## 15. Common problems
+- [ ] Step 14 complete: I followed the instructions and verified the results before continuing.
+
+## Step 15: Common problems
 
 | Symptom | What to check |
 | --- | --- |
@@ -428,3 +467,5 @@ run formatting, lint, coverage and build. Reports are in
 You have completed onboarding when the React catalog opens, HTTP Yac confirms both
 roles, you can create/edit a car, upload/read/delete its photos, and a driver can
 rent and return it with availability changing correctly.
+
+- [ ] Step 15 complete: I reviewed the troubleshooting guidance and resolved any issues encountered.

@@ -4,6 +4,12 @@
 # @name rentals_create
 # @tag smoke
 {{
+  if (!state.carId) {
+    throw new Error("No car selected. Send cars_create in cars.http and confirm 201 in this VS Code window and environment before renting. Listing cars does not select one.");
+  }
+  if (!state.driverToken) {
+    throw new Error("Sign in as driver with auth_login_driver in auth.http before renting.");
+  }
   state.expectedReturnDate = new Date(Date.now() + 2 * 86400000).toISOString();
 }}
 POST {{baseUrl}}/rentals
