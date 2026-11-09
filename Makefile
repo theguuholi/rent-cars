@@ -58,6 +58,7 @@ check-api:
 check-web:
 	npm --prefix apps/web run format:check
 	npm --prefix apps/web run lint
+	npm --prefix apps/web run architecture
 	npm --prefix apps/web run test:coverage
 	npm --prefix apps/web run build
 
