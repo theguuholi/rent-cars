@@ -29,3 +29,7 @@ coverage/
 # Stryker mutation runs
 .stryker-tmp/
 reports/mutation/
+
+# Playwright API test output
+playwright-report/
+test-results/

@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ci": "vitest run",
+    "test:public-api": "playwright test",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lint:fix": "oxlint --fix",
@@ -26,6 +27,7 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.0",
     "@stryker-mutator/core": "10.1.1",
     "@stryker-mutator/vitest-runner": "10.1.1",
     "@swc/core": "1.15.4",
