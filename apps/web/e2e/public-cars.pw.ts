@@ -1,26 +1,39 @@
 import { expect, test } from '@playwright/test'
 
-test('public GET /cars lists seeded cars without authentication', async ({ request }) => {
-  const response = await request.get('/cars')
+const CAR_ID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
 
-  expect(response.status()).toBe(200)
-  expect(response.headers()['content-type']).toContain('application/json')
+test('Given seeded cars, when a guest lists them, then public summaries are ordered', async ({
+  request,
+}) => {
+  const response = await test.step('When a guest requests GET /cars', () => request.get('/cars'))
 
-  const cars: unknown = await response.json()
-  expect(Array.isArray(cars)).toBe(true)
-  const catalog = cars as Array<Record<string, unknown>>
-  expect(catalog.length).toBeGreaterThan(0)
+  const catalog = await test.step('Then the API returns a nonempty JSON catalog', async () => {
+    expect(response.status()).toBe(200)
+    expect(response.headers()['content-type']).toContain('application/json')
+    const cars: unknown = await response.json()
+    expect(Array.isArray(cars)).toBe(true)
+    const result = cars as Array<Record<string, unknown>>
+    expect(result.length).toBeGreaterThan(0)
+    return result
+  })
 
-  for (const car of catalog) {
-    expect(car).toEqual(
-      expect.objectContaining({
-        id: expect.stringMatching(/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i),
-        name: expect.any(String),
-        available: expect.any(Boolean),
-      }),
+  await test.step('And every car has a public identifier, name, and availability', async () => {
+    for (const car of catalog) {
+      expect(car).toEqual(
+        expect.objectContaining({
+          id: expect.stringMatching(CAR_ID_PATTERN),
+          name: expect.any(String),
+          available: expect.any(Boolean),
+        }),
+      )
+    }
+  })
+
+  await test.step('And cars are ordered by name', async () => {
+    expect(catalog.map((car) => car.name)).toEqual(
+      catalog
+        .map((car) => car.name)
+        .sort((left, right) => String(left).localeCompare(String(right))),
     )
-  }
-  expect(catalog.map((car) => car.name)).toEqual(
-    catalog.map((car) => car.name).sort((left, right) => String(left).localeCompare(String(right))),
-  )
+  })
 })

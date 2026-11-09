@@ -342,6 +342,26 @@ Keep API tests in `apps/web/e2e/` with the `.pw.ts` suffix so Vitest unit tests
 and Playwright checks run separately. Add browser tests only when a user action
 or rendering behavior needs a browser.
 
+The scenario name uses **Given / When / Then**, and `test.step` prints each real
+action or assertion while the test runs. Given names the prepared state, When
+performs the request, and Then checks the result. This gives a readable BDD
+sequence without a separate Gherkin parser. For a future browser journey, after
+signing in as a driver, the steps would look like this:
+
+```ts
+await test.step('When the driver opens a car', async () => {
+  await page.getByRole('link', { name: 'Argo' }).click()
+})
+await test.step('Then the rental action is visible', async () => {
+  await expect(page.getByRole('button', { name: 'Rent car' })).toBeVisible()
+})
+```
+
+Prefer visible roles and labels for clicks and form fields, then assert the
+result on screen. Keep setup and steps real; do not add empty narrative steps or
+fixed sleeps. The current suite still executes only the public `GET /cars` API
+test.
+
 - [ ] Step 11 complete: I ran the single public API test and checked that it passed.
 
 ## Step 12: Alternative: run everything in containers
