@@ -6,6 +6,8 @@ For frontend-only development, run `make setup` and `make web-dev` from the repo
 
 The home page (`/`) contains only the navigation menu. Open `/categories` to browse body styles. Select **Specifications** (`/specifications`) to list vehicle features, create a new feature, edit its name and description, or confirm deletion. This catalog uses the Java backend. The Go backend currently serves categories only.
 
+Sign in as a driver and open an available car under `/cars` to choose an expected return time and rent it. The car detail shows **Return car** for your open rental; after returning, the same car can be rented again. The API sets the actual start and return times and calculates the final charge. A competing rental or an account with another open rental receives a conflict message on the form.
+
 See [web quality checks](#web-quality-checks) for formatting, lint, tests, coverage and the production build.
 
 Specification actions have their own browser URLs. Open `/specifications/new` to create a record, `/specifications/:id/edit` to edit it, or `/specifications/:id/delete` to review deletion. Replace `:id` with the record's UUID. Opening or refreshing a deletion URL only shows the confirmation.
