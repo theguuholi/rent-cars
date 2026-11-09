@@ -1,0 +1,39 @@
+{
+  "forbidden": [
+    {
+      "name": "auth-does-not-depend-on-catalog",
+      "severity": "error",
+      "comment": "Authentication owns sessions and access; catalog features consume it, never the reverse.",
+      "from": { "path": "^src/features/auth/" },
+      "to": { "path": "^src/features/(cars|categories|specifications)/" }
+    },
+    {
+      "name": "categories-and-specifications-are-independent",
+      "severity": "error",
+      "comment": "Each catalog concept owns its own API and UI.",
+      "from": { "path": "^src/features/categories/" },
+      "to": { "path": "^src/features/(cars|specifications)/" }
+    },
+    {
+      "name": "specifications-do-not-depend-on-other-catalog-features",
+      "severity": "error",
+      "comment": "Specification management does not need car or category internals.",
+      "from": { "path": "^src/features/specifications/" },
+      "to": { "path": "^src/features/(cars|categories)/" }
+    },
+    {
+      "name": "cars-use-only-catalog-apis",
+      "severity": "error",
+      "comment": "Car forms use category and specification contracts, not their pages or components.",
+      "from": { "path": "^src/features/cars/" },
+      "to": {
+        "path": "^src/features/(categories|specifications)/",
+        "pathNot": "^src/features/(categories/categories-api|specifications/specifications-api)\\.ts$"
+      }
+    }
+  ],
+  "options": {
+    "parser": "swc",
+    "doNotFollow": { "path": "node_modules" }
+  }
+}

@@ -12,7 +12,9 @@ Specification actions have their own browser URLs. Open `/specifications/new` to
 
 ## Web quality checks
 
-From this directory, use the Node version in `.node-version` and install dependencies with `npm ci`. Run `npm run format:check`, `npm run lint`, `npm run test:coverage` and `npm run build` to reproduce **Web verification**. Use `npm run format` to apply Oxfmt fixes or `npm run lint:fix` for automatic Oxlint fixes.
+From this directory, use the Node version in `.node-version` and install dependencies with `npm ci`. Run `npm run format:check`, `npm run lint`, `npm run architecture`, `npm run test:coverage` and `npm run build` to reproduce **Web verification**. `make check-web` runs all five from the repository root. Use `npm run format` to apply Oxfmt fixes or `npm run lint:fix` for automatic Oxlint fixes.
+
+The [domain glossary and React import boundaries](../../docs/domain-language.md#react-names-and-boundaries) explain the dependency-cruiser rules. The check uses SWC to parse the project's TypeScript 7 sources.
 
 Vitest requires at least **95% each** for global line, statement, function and branch coverage across application TypeScript under `src/`. Tests, test helpers and declarations are excluded. Open `coverage/index.html` for the HTML report; `coverage/lcov.info` is available for tooling. Download **web-coverage** from the Web quality workflow to inspect a PR, including one that failed its coverage threshold.
 
