@@ -289,17 +289,51 @@ Separate CLI invocations do not share runtime tokens or IDs.
 
 ## Step 11: Verify one public API with Playwright
 
-Keep `make dev` running from Step 3. In a second terminal, run:
+Run these commands from the repository root. Docker Desktop must be running;
+complete `make setup` from Step 2 once before running the test.
 
-```sh
-npm --prefix apps/web run test:public-api
-```
+1. In **terminal 1**, start the local stack (or keep the `make dev` process from
+   Step 3 running):
+
+   ```sh
+   make dev
+   ```
+
+   Wait for Spring to report that it started on port 8080. Confirm the public
+   endpoint responds before starting Playwright:
+
+   ```sh
+   curl -i http://localhost:8080/cars
+   ```
+
+   Expect **200 OK** and a JSON array of development cars.
+
+2. In **terminal 2**, run the single Playwright test:
+
+   ```sh
+   npm --prefix apps/web run test:public-api
+   ```
+
+   Expect `1 passed`. Leave terminal 1 running until the test finishes, then
+   press Ctrl+C there when you are done.
 
 This sends one unauthenticated **GET /cars** request to the Spring API at
 `http://localhost:8080`. The test checks status 200, JSON, the seeded catalog's
-basic fields and alphabetical order. It does not need a browser download or a
-login. To target another API instance, set `RENT_CARS_API_URL` before running the
-command. Use a seeded development instance; the test expects at least one car.
+basic fields and alphabetical order. Playwright uses its HTTP request fixture:
+this first test does **not** open a browser and needs neither a browser download
+nor a login. It expects at least one car, so use the seeded development API.
+
+To target an API listening on another port, set its root URL, for example:
+
+```sh
+RENT_CARS_API_URL=http://localhost:18080 npm --prefix apps/web run test:public-api
+```
+
+If the test reports a connection error, check that terminal 1 is still running
+and that `curl` succeeds. If it reports an empty catalog, check that the API is
+using the development profile and has completed its seed migration. The same
+test runs in the `Public API Playwright` GitHub Actions workflow on relevant
+pull requests and pushes to master.
 
 For new Playwright cases, keep each test focused on an observable API contract.
 Use the isolated `request` fixture for public calls, avoid shared tokens and
