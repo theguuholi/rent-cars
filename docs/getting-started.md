@@ -287,7 +287,7 @@ Separate CLI invocations do not share runtime tokens or IDs.
 
 - [ ] Step 10 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
 
-## Step 11: Verify the public API and catalog navigation with Playwright
+## Step 11: Verify the public API and browser journeys with Playwright
 
 Run these commands from the repository root. Docker Desktop must be running;
 complete `make setup` from Step 2 once before running the test.
@@ -317,7 +317,7 @@ complete `make setup` from Step 2 once before running the test.
    Expect `1 passed`. Leave terminal 1 running until the test finishes, then
    continue to the browser test.
 
-3. Install Playwright's Chromium browser once, then run the catalog journey:
+3. Install Playwright's Chromium browser once, then run the browser journeys:
 
    ```sh
    cd apps/web
@@ -326,9 +326,19 @@ complete `make setup` from Step 2 once before running the test.
    npm --prefix apps/web run test:browser
    ```
 
-   Expect `1 passed`. The test opens the catalog, chooses a visible car, opens
-   its details and follows **Back to cars**. Press Ctrl+C in terminal 1 when
-   finished.
+   Expect `2 passed`. One test opens the catalog, chooses a visible car, opens
+   its details and follows **Back to cars**. The other registers a new driver,
+   rents one available car, checks that it becomes unavailable, returns it and
+   checks that it becomes available again. To run only the rental journey:
+
+   ```sh
+   npm --prefix apps/web run test:rental
+   ```
+
+   Each rental run creates one driver with a unique test email in the
+   development database. A successful run returns the car before finishing;
+   the completed rental remains in its history.
+   Press Ctrl+C in terminal 1 when finished.
 
 This sends one unauthenticated **GET /cars** request to the Spring API at
 `http://localhost:8080`. The test checks status 200, JSON, the seeded catalog's
@@ -376,7 +386,7 @@ fixed sleeps. See the [Playwright journey skill](../.agents/skills/rent-cars-pla
 when extending browser coverage. For another Vite host, set `RENT_CARS_WEB_URL`;
 for another API host, set `RENT_CARS_API_URL`.
 
-- [ ] Step 11 complete: I ran the public API and browser journey tests and checked that both passed.
+- [ ] Step 11 complete: I ran the public API and both browser journeys and checked that all passed.
 
 ## Step 12: Alternative: run everything in containers
 
