@@ -1,0 +1,13 @@
+# @import ./common.http
+
+### Reject ended session refresh
+# @name scenarios_auth_refresh_after_logout
+# @tag negative
+# @forceRef csrf
+POST {{baseUrl}}/sessions/refresh
+X-XSRF-TOKEN: {{csrfToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 401);
+}}

@@ -1,0 +1,104 @@
+# @import ./common.http
+
+### Browse specifications
+# @name specifications_list
+# @tag smoke
+GET {{baseUrl}}/specifications
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+
+  test("Catalog is an array", () => assert.ok(Array.isArray(response.parsedBody)));
+}}
+
+### Create example specification
+# @name specifications_create
+# @tag smoke
+{{
+  state.specificationName = "Example AC " + Date.now();
+}}
+POST {{baseUrl}}/specifications
+Authorization: Bearer {{state.adminToken}}
+Content-Type: application/json
+
+{
+  "name": "{{state.specificationName}}",
+  "description": "HTTP example equipment"
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 201);
+  if (response.statusCode === 201) {
+    state.specificationId = response.parsedBody.id;
+    state.specificationVersion = response.parsedBody.version;
+    state.specificationName = response.parsedBody.name;
+  }
+}}
+
+### Read example specification
+# @name specifications_get
+# @tag smoke
+GET {{baseUrl}}/specifications/{{state.specificationId}}
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.specificationId = response.parsedBody.id;
+    state.specificationVersion = response.parsedBody.version;
+    state.specificationName = response.parsedBody.name;
+  }
+}}
+
+### Replace example specification
+# @name specifications_update
+# @tag smoke
+PUT {{baseUrl}}/specifications/{{state.specificationId}}
+Authorization: Bearer {{state.adminToken}}
+Content-Type: application/json
+
+{"name":"{{state.specificationName}} updated","description":"Automatic climate control","expectedVersion":{{state.specificationVersion}}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.specificationId = response.parsedBody.id;
+    state.specificationVersion = response.parsedBody.version;
+    state.specificationName = response.parsedBody.name;
+  }
+}}
+
+### Change specification description
+# @name specifications_patch
+# @tag smoke
+PATCH {{baseUrl}}/specifications/{{state.specificationId}}
+Authorization: Bearer {{state.adminToken}}
+Content-Type: application/json
+
+{"description":"Dual-zone climate control","expectedVersion":{{state.specificationVersion}}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.specificationId = response.parsedBody.id;
+    state.specificationVersion = response.parsedBody.version;
+    state.specificationName = response.parsedBody.name;
+  }
+}}
+
+### Delete example specification
+# @name specifications_delete
+# @tag manual
+DELETE {{baseUrl}}/specifications/{{state.specificationId}}
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 204);
+}}

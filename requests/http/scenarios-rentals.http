@@ -1,0 +1,74 @@
+# @import ./common.http
+
+### Another account rents an unavailable car
+# @name scenarios_rentals_unavailable_car
+# @tag negative
+{{
+  state.expectedReturnDate = new Date(Date.now() + 2 * 86400000).toISOString();
+}}
+POST {{baseUrl}}/rentals
+Authorization: Bearer {{state.adminToken}}
+Content-Type: application/json
+
+{
+  "carId": "{{state.carId}}",
+  "expectedReturnDate": "{{state.expectedReturnDate}}"
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 409);
+}}
+
+### Another account returns my rental
+# @name scenarios_rentals_foreign_return
+# @tag negative
+POST {{baseUrl}}/rentals/{{state.rentalId}}/return
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 404);
+}}
+
+### Return the same rental again
+# @name scenarios_rentals_return_twice
+# @tag negative
+POST {{baseUrl}}/rentals/{{state.rentalId}}/return
+Authorization: Bearer {{state.driverToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 409);
+}}
+
+### Reject return less than 24 hours ahead
+# @name scenarios_rentals_invalid_period
+# @tag negative
+{{
+  state.invalidReturnDate = new Date(Date.now() + 3600000).toISOString();
+}}
+POST {{baseUrl}}/rentals
+Authorization: Bearer {{state.driverToken}}
+Content-Type: application/json
+
+{
+  "carId": "{{state.carId}}",
+  "expectedReturnDate": "{{state.invalidReturnDate}}"
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 422);
+}}
+
+### Preserve car rental history
+# @name scenarios_rentals_delete_history
+# @tag negative
+DELETE {{baseUrl}}/cars/{{state.carId}}
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 409);
+}}

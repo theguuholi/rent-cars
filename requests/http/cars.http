@@ -1,0 +1,104 @@
+# @import ./common.http
+
+### Browse public fleet
+# @name cars_list
+# @tag smoke
+GET {{baseUrl}}/cars
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+
+  test("Fleet is an array", () => assert.ok(Array.isArray(response.parsedBody)));
+}}
+
+### Create example Argo
+# @name cars_create
+# @tag smoke
+{{
+  state.licensePlate = "BR" + Date.now() + Math.floor(Math.random() * 10000);
+}}
+POST {{baseUrl}}/cars
+Authorization: Bearer {{state.adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Argo",
+  "description": "HTTP example vehicle",
+  "brand": "Fiat",
+  "licensePlate": "{{state.licensePlate}}",
+  "dailyRateCents": 15000,
+  "fineAmountCents": 3000,
+  "categoryId": "{{state.categoryId}}",
+  "specificationIds": ["{{state.specificationId}}"]
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 201);
+  if (response.statusCode === 201) {
+    state.carId = response.parsedBody.id;
+    state.carVersion = response.parsedBody.version;
+  }
+}}
+
+### Read example car and current version
+# @name cars_get
+# @tag smoke
+GET {{baseUrl}}/cars/{{state.carId}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.carId = response.parsedBody.id;
+    state.carVersion = response.parsedBody.version;
+  }
+}}
+
+### Update example car
+# @name cars_update
+# @tag smoke
+PATCH {{baseUrl}}/cars/{{state.carId}}
+Authorization: Bearer {{state.adminToken}}
+Content-Type: application/json
+
+{"description":"Updated HTTP example vehicle","expectedVersion":{{state.carVersion}}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.carId = response.parsedBody.id;
+    state.carVersion = response.parsedBody.version;
+  }
+}}
+
+### Delete example car without rental history
+# @name cars_delete
+# @tag manual
+DELETE {{baseUrl}}/cars/{{state.carId}}
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 204);
+}}
+
+### Mark car unavailable and clear equipment
+# @name cars_mark_unavailable
+# @tag manual
+PATCH {{baseUrl}}/cars/{{state.carId}}
+Authorization: Bearer {{state.adminToken}}
+Content-Type: application/json
+
+{"available":false,"specificationIds":[],"expectedVersion":{{state.carVersion}}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.carId = response.parsedBody.id;
+    state.carVersion = response.parsedBody.version;
+  }
+}}

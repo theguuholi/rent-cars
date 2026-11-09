@@ -6,7 +6,7 @@
 2. Follow **Cars** and open any seeded car. In the browser Network panel, filter by Fetch/XHR. Opening the detail runs one `GET /api/cars/{id}`. Expand its response to see the category and equipment descriptions. The browser does not need an admin catalog request to display their names.
 3. Open `/categories` directly in a new tab. The router takes you to **Sign in** before the protected page loads. In the development profile use `test@test` and `test@tesT@dev`. On success you return to Categories. Check the three requests below in the Network panel.
 4. Navigate to **Specifications** or **Cars → New car** as the admin. The editor needs all available catalog options, so it requests the protected catalogs with the Bearer token. The public detail only needs the features assigned to one vehicle.
-5. Sign out. Private data is discarded. To try a regular driver, use the optional signup request in [the REST Client walkthrough](../requests/rent-cars.http), then sign in with that email and password. Open `/categories` again. A driver sees **Access denied** and can still browse cars.
+5. Sign out. Private data is discarded. To try a regular driver, use the optional signup request in [the HTTP Yac walkthrough](../requests/README.md), then sign in with that email and password. Open `/categories` again. A driver sees **Access denied** and can still browse cars.
 
 ## Trace one login
 

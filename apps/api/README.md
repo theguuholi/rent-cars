@@ -1,10 +1,10 @@
 # Rent Cars API
 
-The Spring Boot API manages cars, vehicle categories and equipment specifications. Start the stack with the [local setup guide](../../README.md#run-the-full-stack-locally). Browse the running API in [Swagger UI](http://localhost:8080/swagger-ui.html) or open a [REST Client request](../../requests/).
+The Spring Boot API manages cars, vehicle categories and equipment specifications. Start the stack with the [local setup guide](../../README.md#run-the-full-stack-locally). Browse the running API in [Swagger UI](http://localhost:8080/swagger-ui.html) or open a [HTTP Yac request](../../requests/README.md).
 
 ## Accounts and JWT sessions
 
-In [the API walkthrough](../../requests/rent-cars.http), use the CSRF, admin login and profile requests to verify the seeded development account. The separate driver registration example is optional. First call `GET /csrf` and use its `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` response header on the registration and login POSTs. The REST Client examples carry both forward, and Swagger UI sends the CSRF header automatically. A missing or mismatched cookie/header pair returns 403.
+In [the HTTP Yac walkthrough](../../requests/README.md), use the CSRF, admin login and profile requests to verify the seeded development account. The separate driver registration example is optional. First call `GET /csrf` and use its `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` response header on the registration and login POSTs. The HTTP Yac requests prepare CSRF and carry both forward, and Swagger UI sends the CSRF header automatically. A missing or mismatched cookie/header pair returns 403.
 
 Register with a unique email and a password of at least 12 characters and at most 72 UTF-8 bytes. Registration returns the public profile with role `USER`. Email comparisons ignore case and surrounding whitespace.
 
@@ -24,7 +24,7 @@ export RENT_AUTH_PUBLIC_KEY=file:/run/secrets/rent-cars-public.pem
 
 ## Development database
 
-The `dev` profile includes ten sample vehicle specifications. Start the API with `make api-dev` or `make dev`, then send `GET /specifications` from [step 7 of the API walkthrough](../../requests/rent-cars.http). Flyway runs the development seed after the schema migrations and preserves existing specifications with matching names. Other explicit profiles use only the shared migrations; set `SPRING_PROFILES_ACTIVE=prod` in production because the project's default profile is `dev`.
+The `dev` profile includes ten sample vehicle specifications. Start the API with `make api-dev` or `make dev`, then send `GET /specifications` from [the HTTP Yac specifications file](../../requests/http/specifications.http). Flyway runs the development seed after the schema migrations and preserves existing specifications with matching names. Other explicit profiles use only the shared migrations; set `SPRING_PROFILES_ACTIVE=prod` in production because the project's default profile is `dev`.
 
 The local connection settings are in [application-dev.yaml](src/main/resources/application-dev.yaml). The `rent_cars_dev` database uses port `5432`, with `postgres` as both the username and password. The port must be available for Docker to start the service.
 
@@ -63,7 +63,7 @@ For trusted branches, the Java verification job uploads the JaCoCo XML to Sonar 
 
 ## Concurrent catalog edits
 
-Car and specification responses include a read-only numeric version. Send it as expectedVersion on every PATCH or PUT. Creation needs no version. Missing versions return 400. Stale forms and competing updates return 409 with an application/problem+json response. Reopen the editor to read the latest data before resubmitting, even if another user changed a different field. The REST Client examples use the version from the last response.
+Car and specification responses include a read-only numeric version. Send it as expectedVersion on every PATCH or PUT. Creation needs no version. Missing versions return 400. Stale forms and competing updates return 409 with an application/problem+json response. Reopen the editor to read the latest data before resubmitting, even if another user changed a different field. The HTTP Yac requests capture versions in shared runtime variables.
 
 ### Renewing a session
 
@@ -92,8 +92,7 @@ There is no separate image controller/repository, scheduler or cleanup queue.
 - `DELETE /cars/{id}`: deletes the car, its image rows and associated files.
 
 Existing permissions remain unchanged: public car reads, ADMIN mutations. The
-React client is unchanged. Follow **Upload example 1–8** in
-[`requests/rent-cars.http`](../../requests/rent-cars.http); two AI-generated PNG views of the same silver Fiat Argo
+React client is unchanged. Follow the [HTTP Yac image requests](../../requests/http/car-images.http); two AI-generated PNG views of the same silver Fiat Argo
 are included, so no local file edits are needed.
 
 Spring handles multipart parsing and the 5 MiB/file and 30 MiB/request limits.
@@ -170,3 +169,42 @@ limits and migration. S3 adapter tests use the real SDK against an HTTP stub and
 tests use PostgreSQL and SeaweedFS containers to verify persistence, rollback and
 object cleanup. Live AWS IAM and bucket connectivity require validation in the
 deployment environment.
+
+
+## Rentals
+
+Authenticated accounts can `POST /rentals`, `GET /rentals`, and
+`POST /rentals/{id}/return`. Creation accepts only `carId` and
+`expectedReturnDate` (an ISO-8601 timestamp with an offset). The JWT identifies
+the owner; the server determines start/return times and the final charge.
+`GET /rentals` includes the current car summary and only the owner's records,
+newest first. Start with the [HTTP Yac rental walkthrough](../../requests/README.md).
+
+The expected return must be at least 24 hours after the start. An account and a
+car can each have only one open rental. `Rental` protects the lifecycle;
+`RentalPricing` calculates amounts without database or clock access; the service
+coordinates the transaction using an injected UTC clock. Timestamps use
+PostgreSQL's microsecond precision.
+
+Billing matches the Elixir implementation: completed 24-hour periods with a
+minimum of one daily charge, plus the fine for each completed day late. A
+25-hour rental costs one daily rate; an overdue period shorter than 24 hours
+adds no fine. Current car prices are used at return time, not a frozen quotation.
+Totals are signed 64-bit integer centavos; negative or overflowing charges are rejected.
+
+V10 adds `rentals`, return-state checks, restrictive foreign keys and unique
+indexes for open rentals per account/car. Creation and return update availability
+in the same transaction. Concurrent creation is protected by car locks and
+unique indexes; return locks the rental before its car. Car versions advance
+with availability changes. Manual availability changes cannot free an actively
+rented car, and cars/accounts with rental history cannot be deleted.
+
+Business conflicts return 409, invalid periods/charges 422, and missing or
+foreign-owned rentals 404. The controller requires a bearer token; ordinary
+USER accounts can rent without catalog administrator permissions. No payment,
+future booking, cancellation, frontend or infrastructure changes are included.
+
+Run `make check-api` for domain, HTTP/OpenAPI and PostgreSQL tests. Rental tests
+cover concurrent booking/return, rollback, access isolation, persisted history
+and billing boundaries. Flyway applies V10 on startup; existing local or Kubernetes
+databases do not need to be deleted to enable this feature.

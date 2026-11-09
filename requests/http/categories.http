@@ -1,0 +1,17 @@
+# @import ./common.http
+
+### List categories and select SEDAN
+# @name categories_list
+# @tag smoke
+GET {{baseUrl}}/categories
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    const category = response.parsedBody.find(item => item.name === "SEDAN");
+    if (!category) throw new Error("SEDAN category is missing");
+    state.categoryId = category.id;
+  }
+}}

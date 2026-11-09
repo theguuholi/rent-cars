@@ -1,0 +1,144 @@
+# @import ./common.http
+
+### Register example driver
+# @name auth_register_driver
+# @tag smoke
+# @forceRef csrf
+POST {{baseUrl}}/users
+X-XSRF-TOKEN: {{csrfToken}}
+Content-Type: application/json
+
+{
+  "email": "{{driverEmail}}",
+  "password": "{{driverPassword}}"
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.ok([201, 409].includes(response.statusCode));
+
+  test("Driver created or email already registered", () => assert.ok([201, 409].includes(response.statusCode)));
+}}
+
+### Sign in as admin
+# @name auth_login_admin
+# @tag smoke
+# @forceRef csrf
+{{
+  delete state.adminToken;
+}}
+POST {{baseUrl}}/sessions
+X-XSRF-TOKEN: {{csrfToken}}
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.adminToken = response.parsedBody.accessToken;
+    state.sessionToken = response.parsedBody.accessToken;
+    state.sessionTokenName = "adminToken";
+  }
+  test("Access token returned", () => assert.ok(typeof response.parsedBody.accessToken === "string" && response.parsedBody.accessToken.length > 0));
+}}
+
+### Check admin identity
+# @name auth_me_admin
+# @tag smoke
+GET {{baseUrl}}/sessions/me
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+
+  test("Expected role", () => assert.equal(response.parsedBody.role, "ADMIN"));
+}}
+
+### Sign in as driver
+# @name auth_login_driver
+# @tag smoke
+# @forceRef csrf
+{{
+  delete state.driverToken;
+}}
+POST {{baseUrl}}/sessions
+X-XSRF-TOKEN: {{csrfToken}}
+Content-Type: application/json
+
+{
+  "email": "{{driverEmail}}",
+  "password": "{{driverPassword}}"
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.driverToken = response.parsedBody.accessToken;
+    state.sessionToken = response.parsedBody.accessToken;
+    state.sessionTokenName = "driverToken";
+  }
+  test("Access token returned", () => assert.ok(typeof response.parsedBody.accessToken === "string" && response.parsedBody.accessToken.length > 0));
+}}
+
+### Check driver identity
+# @name auth_me_driver
+# @tag smoke
+GET {{baseUrl}}/sessions/me
+Authorization: Bearer {{state.driverToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+
+  test("Expected role", () => assert.equal(response.parsedBody.role, "USER"));
+}}
+
+### Refresh last signed-in session
+# @name auth_refresh
+# @tag smoke
+# @forceRef csrf
+POST {{baseUrl}}/sessions/refresh
+X-XSRF-TOKEN: {{csrfToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.sessionToken = response.parsedBody.accessToken;
+    state[state.sessionTokenName] = response.parsedBody.accessToken;
+  }
+}}
+
+### Check refreshed session
+# @name auth_me_session
+# @tag smoke
+GET {{baseUrl}}/sessions/me
+Authorization: Bearer {{state.sessionToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+}}
+
+### End current device session
+# @name auth_logout
+# @tag manual
+# @forceRef csrf
+DELETE {{baseUrl}}/sessions/current
+X-XSRF-TOKEN: {{csrfToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 204);
+  if (response.statusCode === 204) {
+    delete state[state.sessionTokenName];
+    delete state.sessionToken;
+  }
+}}

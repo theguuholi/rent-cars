@@ -58,6 +58,7 @@ class SecurityConfiguration {
             paths.matcher("/cars/**"),
             paths.matcher("/categories/**"),
             paths.matcher("/specifications/**"));
+    var rentalEndpoints = paths.matcher("/rentals/**");
     var cookieEndpoints =
         new OrRequestMatcher(
             paths.matcher(HttpMethod.POST, "/sessions/refresh"),
@@ -71,8 +72,8 @@ class SecurityConfiguration {
             errors ->
                 errors.defaultAccessDeniedHandlerFor(
                     (request, response, denied) -> {
-                      // A catalog write without a bearer token is an authentication failure for API
-                      // clients.
+                      // A protected write without a bearer token is an authentication failure for
+                      // API clients.
                       if (denied instanceof CsrfException) {
                         response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
                         response.setStatus(HttpStatus.UNAUTHORIZED.value());
@@ -80,7 +81,7 @@ class SecurityConfiguration {
                         forbidden.handle(request, response, denied);
                       }
                     },
-                    catalog))
+                    new OrRequestMatcher(catalog, rentalEndpoints)))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             a ->
@@ -105,6 +106,8 @@ class SecurityConfiguration {
                         "/v3/api-docs.yaml")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/sessions/me")
+                    .authenticated()
+                    .requestMatchers(rentalEndpoints)
                     .authenticated()
                     .requestMatchers(catalog)
                     .hasRole("ADMIN")

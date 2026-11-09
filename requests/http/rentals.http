@@ -1,0 +1,68 @@
+# @import ./common.http
+
+### Rent the example car
+# @name rentals_create
+# @tag smoke
+{{
+  if (!state.carId) {
+    throw new Error("No car selected. Send cars_create in cars.http and confirm 201 in this VS Code window and environment before renting. Listing cars does not select one.");
+  }
+  if (!state.driverToken) {
+    throw new Error("Sign in as driver with auth_login_driver in auth.http before renting.");
+  }
+  state.expectedReturnDate = new Date(Date.now() + 2 * 86400000).toISOString();
+}}
+POST {{baseUrl}}/rentals
+Authorization: Bearer {{state.driverToken}}
+Content-Type: application/json
+
+{
+  "carId": "{{state.carId}}",
+  "expectedReturnDate": "{{state.expectedReturnDate}}"
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 201);
+  if (response.statusCode === 201) {
+    state.rentalId = response.parsedBody.id;
+    state.carVersion = response.parsedBody.car.version;
+  }
+  test("Rental open and car unavailable", () => {
+    assert.equal(response.parsedBody.endDate, null);
+    assert.equal(response.parsedBody.totalCents, null);
+    assert.equal(response.parsedBody.car.available, false);
+  });
+}}
+
+### List my rentals
+# @name rentals_list
+# @tag smoke
+GET {{baseUrl}}/rentals
+Authorization: Bearer {{state.driverToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+
+  test("Created rental is present", () => assert.equal(response.parsedBody.some(r => r.id === state.rentalId), true));
+}}
+
+### Return rented car
+# @name rentals_return
+# @tag smoke
+POST {{baseUrl}}/rentals/{{state.rentalId}}/return
+Authorization: Bearer {{state.driverToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  if (response.statusCode === 200) {
+    state.carVersion = response.parsedBody.car.version;
+  }
+  test("Rental closed and car released", () => {
+    assert.equal(typeof response.parsedBody.endDate, "string");
+    assert.ok(response.parsedBody.totalCents >= 15000);
+    assert.equal(response.parsedBody.car.available, true);
+  });
+}}

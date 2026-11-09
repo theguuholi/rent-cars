@@ -62,6 +62,10 @@ class CarService {
   Car update(UUID id, CarRequest request) {
     var car = cars.findById(id).orElseThrow(CarService::notFound);
     EditVersion.requireCurrent(request.expectedVersion, car.getVersion());
+    if (Boolean.TRUE.equals(request.available) && cars.hasOpenRental(id)) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT, "A rented car cannot be made available manually");
+    }
     apply(car, request);
     return cars.saveAndFlush(car);
   }
@@ -95,6 +99,10 @@ class CarService {
   @Transactional
   void delete(UUID id) {
     Car car = cars.findForUpdate(id).orElseThrow(CarService::notFound);
+    if (cars.hasRentalHistory(id)) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT, "A car with rental history cannot be deleted");
+    }
     var keys = car.images().stream().map(CarImage::key).toList();
     if (!keys.isEmpty()) cleanupAfterTransaction(List.of(), keys);
     cars.delete(car);

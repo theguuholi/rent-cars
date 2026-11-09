@@ -31,7 +31,7 @@ until curl -fsS http://localhost:8081/api/csrf >/dev/null; do sleep 1; done
 
 Return to the editor tab. In the dev profile, restarting the API changes its signing key, so the old JWT yields 401 immediately. The database-backed refresh cookie is still valid. Expect both catalog reads to return 401, one successful POST to `/api/sessions/refresh`, and successful retries. The unsaved name and URL should be intact. A full page reload discards the draft and tests a different behavior. To verify session restoration, reload separately after finishing the draft test.
 
-For REST Client, open `requests/rent-cars.http` and temporarily set `@baseUrl = http://localhost:8081/api`. Run steps 3–5, restart the Compose API, and repeat step 5 with the original bearer (401). Run **Renew this device session**, **Verify the renewed access token**, then **End this device session**. Expect 200, 200 and 204 respectively. Another refresh returns 401. Enable the REST Client cookie jar and use the CSRF header from step 3.
+For HTTP Yac, open `requests/http/auth.http` and select the `compose` environment. Run `auth.http → auth_login_admin` and `auth.http → auth_me_admin`, restart the Compose API, and repeat `auth.http → auth_me_admin` with the original bearer (401). Run `auth.http → auth_refresh`, `auth.http → auth_me_session`, then `auth.http → auth_logout`. Expect 200, 200 and 204. Use `scenarios-auth.http → scenarios_auth_refresh_after_logout` to verify the ended session returns 401. Keep the cookie jar enabled; each cookie-authenticated write reuses `auth.http → auth_csrf` automatically.
 
 ## 3. Publish each tested image
 

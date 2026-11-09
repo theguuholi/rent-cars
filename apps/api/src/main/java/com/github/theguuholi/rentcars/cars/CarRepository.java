@@ -11,6 +11,14 @@ interface CarRepository extends JpaRepository<Car, UUID> {
       attributePaths = {"category", "specifications", "images"})
   Optional<Car> findDetailedById(UUID id);
 
+  @Query(
+      value = "select exists(select 1 from rentals where car_id = :id and end_date is null)",
+      nativeQuery = true)
+  boolean hasOpenRental(UUID id);
+
+  @Query(value = "select exists(select 1 from rentals where car_id = :id)", nativeQuery = true)
+  boolean hasRentalHistory(UUID id);
+
   // Serialize deletion; PATCH uses the optimistic version from the editor.
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select c from Car c where c.id = :id")

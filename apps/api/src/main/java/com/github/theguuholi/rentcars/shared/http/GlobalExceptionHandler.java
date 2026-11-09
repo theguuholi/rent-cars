@@ -1,5 +1,7 @@
 package com.github.theguuholi.rentcars.shared.http;
 
+import com.github.theguuholi.rentcars.cars.CarUnavailableException;
+import com.github.theguuholi.rentcars.rentals.RentalException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.ConstraintViolationException;
 import java.sql.SQLException;
@@ -27,6 +29,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
               requiredMode = Schema.RequiredMode.REQUIRED,
               example = "{\"description\":[\"must not be blank\"]}")
           Map<String, List<String>> errors) {}
+
+  @ExceptionHandler(RentalException.class)
+  ProblemDetail rentalRule(RentalException exception) {
+    HttpStatus status =
+        switch (exception.reason()) {
+          case INVALID_PERIOD, INVALID_RETURN -> HttpStatus.UNPROCESSABLE_CONTENT;
+          case ALREADY_RENTING, ALREADY_RETURNED -> HttpStatus.CONFLICT;
+        };
+    return ProblemDetail.forStatusAndDetail(status, exception.getMessage());
+  }
+
+  @ExceptionHandler(CarUnavailableException.class)
+  ProblemDetail unavailableCar(CarUnavailableException exception) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+  }
 
   @ExceptionHandler(ConstraintViolationException.class)
   @ResponseStatus(HttpStatus.UNPROCESSABLE_CONTENT)
