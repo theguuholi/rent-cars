@@ -1,4 +1,4 @@
-name: Playwright public journeys
+name: Playwright journeys
 on:
   pull_request:
     paths:
@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  public-cars:
+  api-and-browser:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
