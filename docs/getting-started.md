@@ -287,7 +287,7 @@ Separate CLI invocations do not share runtime tokens or IDs.
 
 - [ ] Step 10 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
 
-## Step 11: Verify the public API and catalog navigation with Playwright
+## Step 11: Verify API, catalog and authentication with Playwright
 
 Run these commands from the repository root. Docker Desktop must be running;
 complete `make setup` from Step 2 once before running the test.
@@ -317,7 +317,7 @@ complete `make setup` from Step 2 once before running the test.
    Expect `1 passed`. Leave terminal 1 running until the test finishes, then
    continue to the browser test.
 
-3. Install Playwright's Chromium browser once, then run the catalog journey:
+3. Install Playwright's Chromium browser once, then run the browser journeys:
 
    ```sh
    cd apps/web
@@ -326,11 +326,24 @@ complete `make setup` from Step 2 once before running the test.
    npm --prefix apps/web run test:browser
    ```
 
-   Expect `1 passed`. The test opens the catalog, chooses a visible car, opens
-   its details and follows **Back to cars**. Press Ctrl+C in terminal 1 when
-   finished.
+   Expect `6 passed`: one catalog journey and five authentication journeys.
+   The authentication tests cover driver registration and login, duplicate
+   email, invalid admin credentials followed by a successful retry, session
+   restore and sign out, redirect after admin login, and denial for a driver
+   opening an admin page. Press Ctrl+C in terminal 1 when finished.
 
-This sends one unauthenticated **GET /cars** request to the Spring API at
+   To run only the authentication journeys, use:
+
+   ```sh
+   npm --prefix apps/web run test:auth
+   ```
+
+   These tests use the seeded development administrator from Step 3. Set
+   `RENT_CARS_ADMIN_EMAIL` and `RENT_CARS_ADMIN_PASSWORD` if your local seed
+   differs. Each run registers three drivers with unique test emails in the
+   development database; they do not depend on earlier runs or a fixed driver ID.
+
+The public API test sends one unauthenticated **GET /cars** request to the Spring API at
 `http://localhost:8080`. The test checks status 200, JSON, the seeded catalog's
 basic fields and alphabetical order. Playwright uses its HTTP request fixture:
 the API test does **not** open a browser and needs neither a browser download
@@ -344,8 +357,8 @@ RENT_CARS_API_URL=http://localhost:18080 npm --prefix apps/web run test:public-a
 
 If the test reports a connection error, check that terminal 1 is still running
 and that `curl` succeeds. If it reports an empty catalog, check that the API is
-using the development profile and has completed its seed migration. The same
-tests run in the `Playwright public journeys` GitHub Actions workflow on relevant
+using the development profile and has completed its seed migration. All Playwright
+checks run in the `Playwright journeys` GitHub Actions workflow on relevant
 pull requests and pushes to master.
 
 For new API cases, keep each test focused on an observable HTTP contract. Use
@@ -376,7 +389,7 @@ fixed sleeps. See the [Playwright journey skill](../.agents/skills/rent-cars-pla
 when extending browser coverage. For another Vite host, set `RENT_CARS_WEB_URL`;
 for another API host, set `RENT_CARS_API_URL`.
 
-- [ ] Step 11 complete: I ran the public API and browser journey tests and checked that both passed.
+- [ ] Step 11 complete: I ran the public API and browser journey tests and checked that all passed.
 
 ## Step 12: Alternative: run everything in containers
 
