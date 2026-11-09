@@ -30,6 +30,7 @@ export function RentalActions({ carId, available }: { carId: string; available: 
     onSuccess: refresh,
   })
   const form = useForm({
+    // Stryker disable next-line StringLiteral: datetime-local sanitizes a non-date default to empty.
     defaultValues: { expectedReturnDate: '' },
     onSubmit: ({ value }) => rent.mutate(new Date(value.expectedReturnDate).toISOString()),
   })
@@ -112,7 +113,7 @@ export function RentalActions({ carId, available }: { carId: string; available: 
                     Choose a local date and time at least 24 hours ahead.
                   </p>
                   <p id="rental-return-error" role="alert">
-                    {field.state.meta.errors.join(' ')}
+                    {field.state.meta.errors[0]}
                   </p>
                 </div>
               )}

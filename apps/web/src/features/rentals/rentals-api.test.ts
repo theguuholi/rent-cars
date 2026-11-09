@@ -40,12 +40,14 @@ describe('rentals API', () => {
   scenario.each([
     [409, { detail: 'Car is unavailable' }, 'This car has already been rented.'],
     [409, { detail: 'Account already has an open rental' }, 'You already have an open rental.'],
+    [409, {}, 'This car has already been rented.'],
     [
       422,
       { detail: 'Expected return must be at least 24 hours after the start' },
       'Expected return must',
     ],
     [500, {}, 'Rental request failed (500).'],
+    [422, { detail: 42 }, 'Rental request failed (422).'],
   ])(
     'Given HTTP %i, when renting, then the API explains the failure',
     async (status, body, message) => {
