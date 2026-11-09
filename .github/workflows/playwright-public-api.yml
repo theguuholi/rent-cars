@@ -1,4 +1,4 @@
-name: Playwright public journeys
+name: Playwright journeys
 on:
   pull_request:
     paths:
@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  public-cars:
+  api-and-browser:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -47,7 +47,7 @@ jobs:
           openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
           echo "RENT_AUTH_PRIVATE_KEY=file:$RUNNER_TEMP/private.pem" >> "$GITHUB_ENV"
           echo "RENT_AUTH_PUBLIC_KEY=file:$RUNNER_TEMP/public.pem" >> "$GITHUB_ENV"
-      - name: Test public API and browser journey
+      - name: Test public API and browser journeys
         run: |
           make dev > "$RUNNER_TEMP/dev.log" 2>&1 &
           dev_pid=$!
