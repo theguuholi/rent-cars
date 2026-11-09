@@ -1,9 +1,0 @@
-{
-  "version": "1",
-  "name": "Rent Cars",
-  "type": "collection",
-  "ignore": [
-    "node_modules",
-    ".git"
-  ]
-}

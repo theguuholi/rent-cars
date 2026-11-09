@@ -2,7 +2,7 @@
 
 Rent Cars is a fleet management application. Register vehicles, assign their category and equipment, and manage availability, daily rates and fines. The React frontend calls a Spring Boot API backed by PostgreSQL.
 
-New to the project? Follow the [step-by-step onboarding tutorial](docs/getting-started.md): tools, React/Java startup, Bruno requests, containers and Kubernetes.
+New to the project? Follow the [step-by-step onboarding tutorial](docs/getting-started.md): tools, React/Java startup, HTTP Yac requests, containers and Kubernetes.
 
 ## Run the full stack locally
 
@@ -33,8 +33,8 @@ The script builds both images from the current working tree for the local Docker
 ### Explore the API in VS Code
 
 1. Start Docker and run `make api-dev` from the repository root. If `make dev` is already running, use that API.
-2. Install the official **Bruno** extension in VS Code and open `requests/bruno` as a collection. You can edit each `.bru` request as text.
-3. Select **local** or **k8s** and follow the [Bruno walkthrough](requests/README.md), or run the collection with the **smoke** tag filter.
+2. Install the recommended **HTTP Yac** extension in VS Code and open `requests/http/auth.http`. Click **Send** above a request.
+3. Local is the default. Follow the [HTTP Yac walkthrough](requests/README.md); tokens and IDs are shared across files.
 
 Login requests capture separate administrator and driver tokens. Catalog queries and creation responses capture IDs and versions for the following requests. Credentials are development-only; tokens remain in runtime memory. On 401, sign in again. The walkthrough documents refresh, uploads, rentals and expected errors.
 
@@ -48,7 +48,7 @@ Follow [the developer walkthrough](docs/project-walkthrough.md) to try visitor, 
 | --- | --- |
 | [apps/api/](apps/api/README.md) | Java API, Maven Wrapper, Flyway migrations and backend tests |
 | [apps/web/](apps/web/README.md) | React and TypeScript application, feature routes and frontend tests |
-| [requests/](requests/) | Bruno collection for authentication, catalogs, images and rentals |
+| [requests/](requests/) | HTTP Yac files for authentication, catalogs, images and rentals |
 | [.github/workflows/](.github/workflows/) | CI workflows for verification, coverage and mutation testing |
 
 From the repository root, run `make dev` to start PostgreSQL, the API and the frontend together. Use `make api-dev` or `make web-dev` to start a single application, and `make check` to verify both. See the [contributor guide](AGENTS.md) for development conventions.
@@ -100,7 +100,7 @@ In each environment check:
 5. Sign out: photos remain readable, but upload controls disappear. Anonymous
    upload/removal requests must return 401.
 6. Restart the API, database and S3 service, then reopen the car and photos.
-7. Use the Bruno `car-images/delete` request: expect 204, then 404 when reading that image.
+7. Use the HTTP Yac `car-images.http → car_images_delete` request: expect 204, then 404 when reading that image.
 8. Delete the car and verify its remaining images are no longer available.
 
 For Compose persistence checks, use

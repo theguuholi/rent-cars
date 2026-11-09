@@ -31,7 +31,7 @@ until curl -fsS http://localhost:8081/api/csrf >/dev/null; do sleep 1; done
 
 Return to the editor tab. In the dev profile, restarting the API changes its signing key, so the old JWT yields 401 immediately. The database-backed refresh cookie is still valid. Expect both catalog reads to return 401, one successful POST to `/api/sessions/refresh`, and successful retries. The unsaved name and URL should be intact. A full page reload discards the draft and tests a different behavior. To verify session restoration, reload separately after finishing the draft test.
 
-For Bruno, open `requests/bruno` and set the selected environment's `baseUrl` to `http://localhost:8081/api`. Run `auth/login-admin` and `auth/me-admin`, restart the Compose API, and repeat `auth/me-admin` with the original bearer (401). Run `auth/refresh`, `auth/me-session`, then `auth/logout`. Expect 200, 200 and 204. Use `scenarios/auth/refresh-after-logout` to verify the ended session returns 401. Keep the cookie jar enabled; each cookie-authenticated write reuses `auth/csrf` automatically.
+For HTTP Yac, open `requests/http/auth.http` and select the `compose` environment. Run `auth.http → auth_login_admin` and `auth.http → auth_me_admin`, restart the Compose API, and repeat `auth.http → auth_me_admin` with the original bearer (401). Run `auth.http → auth_refresh`, `auth.http → auth_me_session`, then `auth.http → auth_logout`. Expect 200, 200 and 204. Use `scenarios-auth.http → scenarios_auth_refresh_after_logout` to verify the ended session returns 401. Keep the cookie jar enabled; each cookie-authenticated write reuses `auth.http → auth_csrf` automatically.
 
 ## 3. Publish each tested image
 

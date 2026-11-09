@@ -1,0 +1,78 @@
+# @import ./common.http
+
+### Upload two Argo photos
+# @name car_images_upload
+# @tag smoke
+PATCH {{baseUrl}}/cars/{{state.carId}}/images
+Authorization: Bearer {{state.adminToken}}
+Content-Type: multipart/form-data; boundary=CarImageBoundary
+
+--CarImageBoundary
+Content-Disposition: form-data; name="images"; filename="car-front.png"
+Content-Type: image/png
+
+< ../fixtures/car-front.png
+--CarImageBoundary
+Content-Disposition: form-data; name="images"; filename="car-side.png"
+Content-Type: image/png
+
+< ../fixtures/car-side.png
+--CarImageBoundary--
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 201);
+  if (response.statusCode === 201) {
+    state.carId = response.parsedBody.id;
+    state.carVersion = response.parsedBody.version;
+    state.imageId = response.parsedBody.images[0].id;
+  }
+  test("Photos uploaded", () => assert.ok(response.parsedBody.images.length >= 2));
+}}
+
+### Read public image bytes
+# @name car_images_read
+# @tag smoke
+GET {{baseUrl}}/cars/{{state.carId}}?imageId={{state.imageId}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+
+  test("PNG returned", () => assert.ok(response.headers["content-type"].includes("image/png")));
+}}
+
+### Append another photo
+# @name car_images_append
+# @tag smoke
+PATCH {{baseUrl}}/cars/{{state.carId}}/images
+Authorization: Bearer {{state.adminToken}}
+Content-Type: multipart/form-data; boundary=CarImageBoundary
+
+--CarImageBoundary
+Content-Disposition: form-data; name="images"; filename="car-front.png"
+Content-Type: image/png
+
+< ../fixtures/car-front.png
+--CarImageBoundary--
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 201);
+  if (response.statusCode === 201) {
+    state.carId = response.parsedBody.id;
+    state.carVersion = response.parsedBody.version;
+  }
+  test("Existing photos kept", () => assert.ok(response.parsedBody.images.length >= 3));
+}}
+
+### Delete captured image
+# @name car_images_delete
+# @tag smoke
+DELETE {{baseUrl}}/cars/{{state.carId}}/images/{{state.imageId}}
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 204);
+}}

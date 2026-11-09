@@ -1,2 +1,5 @@
 /uploads/
 /apps/api/uploads/
+
+# Personal HTTP client environment overrides
+http-client.private.env.json

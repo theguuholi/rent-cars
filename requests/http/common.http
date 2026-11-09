@@ -1,0 +1,21 @@
+# Shared defaults and in-memory state, isolated by API URL.
+{{
+  exports.baseUrl = typeof baseUrl === "string" ? baseUrl : "http://localhost:8080";
+  exports.adminEmail = "test@test";
+  exports.adminPassword = "test@tesT@dev";
+  exports.driverEmail = "driver@example.com";
+  exports.driverPassword = "local-example-only-123";
+  $global.rentCars = $global.rentCars || {};
+  exports.state = $global.rentCars[exports.baseUrl] = $global.rentCars[exports.baseUrl] || {};
+}}
+
+### CSRF preparation (automatically referenced by session writes)
+# @name csrf
+GET {{baseUrl}}/csrf
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 204);
+  exports.csrfToken = response.headers["x-xsrf-token"];
+  assert.ok(exports.csrfToken);
+}}

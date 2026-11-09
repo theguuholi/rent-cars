@@ -1,0 +1,30 @@
+# @import ./common.http
+
+### Read deleted image
+# @name scenarios_images_deleted_image
+# @tag negative
+GET {{baseUrl}}/cars/{{state.carId}}?imageId={{state.imageId}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 404);
+}}
+
+### Reject fake JPEG contents
+# @name scenarios_images_invalid_upload
+# @tag negative
+PATCH {{baseUrl}}/cars/{{state.carId}}/images
+Authorization: Bearer {{state.adminToken}}
+Content-Type: multipart/form-data; boundary=CarImageBoundary
+
+--CarImageBoundary
+Content-Disposition: form-data; name="images"; filename="invalid-image.jpg"
+Content-Type: image/jpeg
+
+< ../fixtures/invalid-image.jpg
+--CarImageBoundary--
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 422);
+}}
