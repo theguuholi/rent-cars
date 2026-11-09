@@ -95,9 +95,8 @@ Open React and sign in with the development administrator:
 - Password: `test@tesT@dev`
 
 Browse cars, open the editor, and inspect categories/specifications. Car editing
-and image uploads require the administrator. Rental operations are currently
-implemented in the API and exercised through HTTP Yac; do not look for a rental
-page in React.
+and image uploads require the administrator. Sign in as a driver to rent and
+return a car from its detail page in React, or use the HTTP Yac examples below.
 
 To run the two applications separately, use two terminals instead of `make dev`:
 
@@ -288,7 +287,98 @@ Separate CLI invocations do not share runtime tokens or IDs.
 
 - [ ] Step 10 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
 
-## Step 11: Alternative: run everything in containers
+## Step 11: Verify the public API and catalog navigation with Playwright
+
+Run these commands from the repository root. Docker Desktop must be running;
+complete `make setup` from Step 2 once before running the test.
+
+1. In **terminal 1**, start the local stack (or keep the `make dev` process from
+   Step 3 running):
+
+   ```sh
+   make dev
+   ```
+
+   Wait for Spring to report that it started on port 8080 and Vite on port
+   5173. Confirm the public endpoint responds before starting Playwright:
+
+   ```sh
+   curl -i http://localhost:8080/cars
+   ```
+
+   Expect **200 OK** and a JSON array of development cars.
+
+2. In **terminal 2**, run the public API test:
+
+   ```sh
+   npm --prefix apps/web run test:public-api
+   ```
+
+   Expect `1 passed`. Leave terminal 1 running until the test finishes, then
+   continue to the browser test.
+
+3. Install Playwright's Chromium browser once, then run the catalog journey:
+
+   ```sh
+   cd apps/web
+   npx playwright install chromium
+   cd ../..
+   npm --prefix apps/web run test:browser
+   ```
+
+   Expect `1 passed`. The test opens the catalog, chooses a visible car, opens
+   its details and follows **Back to cars**. Press Ctrl+C in terminal 1 when
+   finished.
+
+This sends one unauthenticated **GET /cars** request to the Spring API at
+`http://localhost:8080`. The test checks status 200, JSON, the seeded catalog's
+basic fields and alphabetical order. Playwright uses its HTTP request fixture:
+the API test does **not** open a browser and needs neither a browser download
+nor a login. It expects at least one car, so use the seeded development API.
+
+To target an API listening on another port, set its root URL, for example:
+
+```sh
+RENT_CARS_API_URL=http://localhost:18080 npm --prefix apps/web run test:public-api
+```
+
+If the test reports a connection error, check that terminal 1 is still running
+and that `curl` succeeds. If it reports an empty catalog, check that the API is
+using the development profile and has completed its seed migration. The same
+tests run in the `Playwright public journeys` GitHub Actions workflow on relevant
+pull requests and pushes to master.
+
+For new API cases, keep each test focused on an observable HTTP contract. Use
+the isolated `request` fixture for public calls, avoid shared tokens and fixed
+database IDs, and assert response data instead of implementation details. Keep
+Playwright tests in `apps/web/e2e/` with the `.pw.ts` suffix so Vitest unit tests
+and browser checks run separately.
+
+The scenario name uses **Given / When / Then**, and `test.step` prints each real
+action or assertion while the test runs. Given names the prepared state, When
+performs the request, and Then checks the result. This gives a readable BDD
+sequence without a separate Gherkin parser. The catalog browser journey uses
+steps like these:
+
+```ts
+await test.step('When the guest opens that car', async () => {
+  await page.getByRole('link', { name: carName }).click()
+})
+await test.step('Then the car details and a way back are visible', async () => {
+  await expect(page.getByRole('heading', { name: carName, exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Back to cars' })).toBeVisible()
+})
+```
+
+Prefer visible roles and labels for clicks and form fields, then assert the
+result on screen. Keep setup and steps real; do not add empty narrative steps or
+fixed sleeps. See the [Playwright journey skill](../.agents/skills/rent-cars-playwright-journey/SKILL.md)
+when extending browser coverage. For another Vite host, set `RENT_CARS_WEB_URL`;
+for another API host, set `RENT_CARS_API_URL`.
+
+- [ ] Step 11 complete: I ran the public API and browser journey tests and checked that both passed.
+
+## Step 12: Alternative: run everything in containers
 
 You can skip running Java and React on the host in this mode. Docker builds both
 applications using their Dockerfiles; host Node is only needed for HTTP Yac CLI.
@@ -319,9 +409,9 @@ Inspect startup failures with:
 docker compose -f compose.stack.yaml logs --tail=100 api web postgres s3
 ```
 
-- [ ] Step 11 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
+- [ ] Step 12 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
 
-## Step 12: Alternative: Docker Desktop Kubernetes
+## Step 13: Alternative: Docker Desktop Kubernetes
 
 1. Enable Kubernetes in Docker Desktop and wait until it is ready.
 2. Verify the additional tools and the explicit context:
@@ -382,9 +472,9 @@ kubectl --context docker-desktop -n rent-cars logs deployment/fleet-api --tail=1
 kubectl --context docker-desktop -n rent-cars logs deployment/fleet-web --tail=100
 ```
 
-- [ ] Step 12 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
+- [ ] Step 13 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
 
-## Step 13: Choose the right URL
+## Step 14: Choose the right URL
 
 | Mode | React | HTTP Yac API base URL | Database and photos |
 | --- | --- | --- | --- |
@@ -395,9 +485,9 @@ kubectl --context docker-desktop -n rent-cars logs deployment/fleet-web --tail=1
 The `/api` prefix belongs to the web proxy. Direct Spring requests on port 8080
 do **not** include it. Each environment needs its own login and record IDs.
 
-- [ ] Step 13 complete: I followed the instructions and verified the results before continuing.
+- [ ] Step 14 complete: I followed the instructions and verified the results before continuing.
 
-## Step 14: Stop, reset and run checks
+## Step 15: Stop, reset and run checks
 
 For local development, press Ctrl+C in the application terminal, then:
 
@@ -441,9 +531,9 @@ Backend checks use isolated Testcontainers databases/storage; frontend checks
 run formatting, lint, coverage and build. Reports are in
 `apps/api/target/site/jacoco` and `apps/web/coverage`.
 
-- [ ] Step 14 complete: I followed the instructions and verified the results before continuing.
+- [ ] Step 15 complete: I followed the instructions and verified the results before continuing.
 
-## Step 15: Common problems
+## Step 16: Common problems
 
 | Symptom | What to check |
 | --- | --- |
@@ -468,4 +558,4 @@ You have completed onboarding when the React catalog opens, HTTP Yac confirms bo
 roles, you can create/edit a car, upload/read/delete its photos, and a driver can
 rent and return it with availability changing correctly.
 
-- [ ] Step 15 complete: I reviewed the troubleshooting guidance and resolved any issues encountered.
+- [ ] Step 16 complete: I reviewed the troubleshooting guidance and resolved any issues encountered.
