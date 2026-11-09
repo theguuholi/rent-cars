@@ -22,7 +22,7 @@ final class RentalPricing {
     try {
       return Math.addExact(
           Math.multiplyExact(days, dailyRateCents), Math.multiplyExact(lateDays, fineAmountCents));
-    } catch (ArithmeticException exception) {
+    } catch (ArithmeticException _) {
       throw new RentalException(
           RentalException.Reason.INVALID_RETURN, "Rental charge exceeds the supported amount");
     }

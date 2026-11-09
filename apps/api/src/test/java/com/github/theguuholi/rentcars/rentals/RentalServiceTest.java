@@ -41,7 +41,8 @@ class RentalServiceTest {
     void givenExistingOpenRentalWhenCreatingThenDoesNotRentOrSave() {
       when(cars.getForRental(carId)).thenReturn(car);
       when(repository.existsByAccountIdAndEndDateIsNull(accountId)).thenReturn(true);
-      assertThatThrownBy(() -> service.create(accountId, carId, now.plusSeconds(86400)))
+      var expectedReturn = now.plusSeconds(86400);
+      assertThatThrownBy(() -> service.create(accountId, carId, expectedReturn))
           .isInstanceOf(RentalException.class);
       verify(car, never()).rent();
       verify(repository, never()).saveAndFlush(any());

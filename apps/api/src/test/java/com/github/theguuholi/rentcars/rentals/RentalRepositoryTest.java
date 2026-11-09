@@ -65,7 +65,9 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
   class DatabaseGuarantees {
     @Test
     void givenMissingAccountWhenPersistingThenRollsBackCarAvailability() {
-      assertThatThrownBy(() -> service.create(UUID.randomUUID(), carId, NOW.plusSeconds(86400)))
+      var missingAccount = UUID.randomUUID();
+      var expectedReturn = NOW.plusSeconds(86400);
+      assertThatThrownBy(() -> service.create(missingAccount, carId, expectedReturn))
           .isInstanceOf(DataIntegrityViolationException.class);
       assertThat(available(carId)).isTrue();
       assertThat(jdbc.queryForObject("select count(*) from rentals", Integer.class)).isZero();
@@ -94,6 +96,7 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
     @Test
     void givenInconsistentReturnWhenWritingDirectlyThenCheckConstraintRejectsIt() {
       var rental = service.create(owner, carId, NOW.plusSeconds(86400));
+      var rentalId = rental.id();
       for (String update :
           List.of(
               "total_cents=0",
@@ -102,7 +105,7 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
               "end_date=start_date-interval '1 second',total_cents=0",
               "expected_return_date=start_date+interval '23 hours'")) {
         assertThatThrownBy(
-                () -> jdbc.update("update rentals set " + update + " where id=?", rental.id()))
+                () -> jdbc.update("update rentals set " + update + " where id=?", rentalId))
             .isInstanceOf(DataIntegrityViolationException.class);
       }
     }
@@ -200,7 +203,7 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
                                 return "committed";
                               } catch (RentalException
                                   | DataIntegrityViolationException
-                                  | com.github.theguuholi.rentcars.cars.CarUnavailableException e) {
+                                  | com.github.theguuholi.rentcars.cars.CarUnavailableException _) {
                                 return "conflict";
                               }
                             }))

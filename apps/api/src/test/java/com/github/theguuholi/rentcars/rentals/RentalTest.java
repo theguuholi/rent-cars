@@ -54,7 +54,8 @@ class RentalTest {
     void givenReturnedRentalWhenFinishingAgainThenPreservesOriginalReturn() {
       var rental = open();
       rental.finish(now, 100);
-      assertThatThrownBy(() -> rental.finish(now.plusSeconds(1), 200))
+      var secondReturn = now.plusSeconds(1);
+      assertThatThrownBy(() -> rental.finish(secondReturn, 200))
           .isInstanceOf(RentalException.class);
       assertThat(rental).extracting("endDate", "totalCents").containsExactly(now, 100L);
     }

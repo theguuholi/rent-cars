@@ -109,7 +109,6 @@ class CarTest {
   class Rent {
     @Test
     void givenAvailableCarWhenRentingThenRejectsAnotherRental() {
-      var car = new Car();
       car.rent();
       assertThat(car).extracting("available").isEqualTo(false);
       assertThatThrownBy(car::rent).isInstanceOf(CarUnavailableException.class);
@@ -120,7 +119,6 @@ class CarTest {
   class ReleaseAfterReturn {
     @Test
     void givenRentedCarWhenReturnedThenCanBeRentedAgain() {
-      var car = new Car();
       car.rent();
       car.releaseAfterReturn();
       assertThat(car).extracting("available").isEqualTo(true);
@@ -132,7 +130,6 @@ class CarTest {
   class RentalDailyRateCents {
     @Test
     void givenCatalogRateWhenReadingForRentalThenReturnsExactCentavos() {
-      var car = new Car();
       var input = new CarRequest();
       input.dailyRateCents = 15050;
       car.apply(input);
@@ -144,7 +141,6 @@ class CarTest {
   class RentalFineAmountCents {
     @Test
     void givenCatalogFineWhenReadingForRentalThenReturnsExactCentavos() {
-      var car = new Car();
       var input = new CarRequest();
       input.fineAmountCents = 325;
       car.apply(input);

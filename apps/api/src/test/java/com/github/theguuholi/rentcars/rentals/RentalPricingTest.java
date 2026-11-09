@@ -66,11 +66,12 @@ class RentalPricingTest {
 
     @Test
     void givenOverflowWhenCalculatingThenRejectsInsteadOfWrapping() {
+      var expectedReturn = Instant.MIN.plusSeconds(86400);
       assertThatThrownBy(
               () ->
                   RentalPricing.calculate(
                       Instant.MIN,
-                      Instant.MIN.plusSeconds(86400),
+                      expectedReturn,
                       Instant.MAX,
                       Integer.MAX_VALUE,
                       Integer.MAX_VALUE))
