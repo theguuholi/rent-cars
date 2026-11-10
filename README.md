@@ -6,7 +6,7 @@ New to the project? Follow the [step-by-step onboarding tutorial](docs/getting-s
 
 ## Run the full stack locally
 
-Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), 5432 (PostgreSQL), and 8333 (development S3) are available.
+Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), 5432 (PostgreSQL), 8333 (development S3), 8025 (email inbox) and 1025 (development SMTP) are available.
 
 ```sh
 git clone https://github.com/theguuholi/rent-cars.git
@@ -15,7 +15,21 @@ make setup
 make dev
 ```
 
-Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. `make dev` and `make api-dev` also start SeaweedFS, an S3-compatible object store with a persistent Docker volume and an automatically created `rent-cars-images` bucket. No cloud account or activation token is required. Press Ctrl+C to stop the applications and run `make infra-stop` to stop PostgreSQL and the S3-compatible development store.
+Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. `make dev` and `make api-dev` also start SeaweedFS, an S3-compatible object store with a persistent Docker volume and an automatically created `rent-cars-images` bucket. No cloud account or activation token is required. Press Ctrl+C to stop the applications and run `make infra-stop` to stop PostgreSQL, SeaweedFS and Mailpit.
+
+Password recovery emails are captured in Mailpit. Open the inbox that matches
+how you started the application:
+
+| Environment | Mailpit inbox |
+| --- | --- |
+| `make dev` or `make api-dev` | [http://localhost:8025](http://localhost:8025) |
+| `docker compose -f compose.stack.yaml up --build -d --wait` | [http://localhost:8026](http://localhost:8026) |
+| Kubernetes (`make k8s-up`) | Run `kubectl --context docker-desktop -n rent-cars port-forward svc/fleet-mailpit 8025:8025`, then open [http://localhost:8025](http://localhost:8025) |
+
+The local API sends email to Mailpit over SMTP on port 1025. Production uses
+the SMTP server configured in `application-prod.yaml` and the
+`MAIL_FROM`/`WEB_BASE_URL` variables. See the [recovery walkthrough](docs/getting-started.md#step-9a-recover-a-drivers-password)
+for the full flow.
 
 For container images and a local Kubernetes deployment, follow the [Docker and Helm guide](helm/README.md).
 

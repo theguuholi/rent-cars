@@ -89,7 +89,12 @@ class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers(cookieEndpoints)
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/users", "/sessions")
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/users",
+                        "/sessions",
+                        "/password-recovery",
+                        "/password-recovery/reset")
                     .permitAll()
                     .requestMatchers(
                         HttpMethod.GET,

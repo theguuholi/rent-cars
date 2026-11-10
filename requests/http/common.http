@@ -1,6 +1,7 @@
 # Shared defaults and in-memory state, isolated by API URL.
 {{
   exports.baseUrl = typeof baseUrl === "string" ? baseUrl : "http://localhost:8080";
+  exports.mailpitUrl = typeof mailpitUrl === "string" ? mailpitUrl : "http://localhost:8025";
   exports.adminEmail = "test@test";
   exports.adminPassword = "test@tesT@dev";
   exports.driverEmail = "driver@example.com";

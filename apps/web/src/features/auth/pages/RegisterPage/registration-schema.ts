@@ -1,13 +1,13 @@
 import { z } from 'zod'
 import type { RegistrationInput } from '../../auth-api'
+import { passwordSchema, passwordHint } from '../../password-schema'
 
 const firstNameError = 'Enter a first name of up to 80 characters.'
 const lastNameError = 'Enter a last name of up to 80 characters.'
 const userNameError = 'Use 3–40 letters, numbers, dots, underscores or hyphens.'
 const driveLicenseError = 'Enter the 11-digit CNH registration number.'
 const emailError = 'Enter a valid email address.'
-export const passwordHint = 'Use at least 12 characters and at most 72 UTF-8 bytes.'
-const passwordError = 'Choose a nonblank password. ' + passwordHint
+export { passwordHint }
 
 export const registrationSchema = z
   .object({
@@ -26,11 +26,7 @@ export const registrationSchema = z
       .string()
       .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, emailError)
       .max(254, emailError),
-    password: z
-      .string()
-      .min(12, passwordError)
-      .refine((value) => value.trim().length > 0, passwordError)
-      .refine((value) => new TextEncoder().encode(value).length <= 72, passwordError),
+    password: passwordSchema,
     passwordConfirmation: z.string(),
   })
   .refine(

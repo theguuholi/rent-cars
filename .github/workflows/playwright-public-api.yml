@@ -55,7 +55,7 @@ jobs:
           dev_pid=$!
           trap 'kill "$dev_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 180); do
-            if curl --fail --silent http://localhost:8080/cars > /dev/null && curl --fail --silent http://localhost:5173/cars > /dev/null; then
+            if curl --fail --silent http://localhost:8080/cars > /dev/null && curl --fail --silent http://localhost:5173/cars > /dev/null && curl --fail --silent http://localhost:8025/api/v1/messages > /dev/null; then
               break
             fi
             if ! kill -0 "$dev_pid" 2>/dev/null; then
@@ -64,7 +64,7 @@ jobs:
             fi
             sleep 2
           done
-          if ! curl --fail --silent http://localhost:8080/cars > /dev/null || ! curl --fail --silent http://localhost:5173/cars > /dev/null; then
+          if ! curl --fail --silent http://localhost:8080/cars > /dev/null || ! curl --fail --silent http://localhost:5173/cars > /dev/null || ! curl --fail --silent http://localhost:8025/api/v1/messages > /dev/null; then
             tail -100 "$RUNNER_TEMP/dev.log"
             exit 1
           fi

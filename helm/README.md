@@ -38,6 +38,7 @@ Run `make help` to list the commands.
 - Web: Nginx serving React and forwarding `/api` to the API.
 - PostgreSQL: persistent database volume.
 - SeaweedFS: S3-compatible storage with a persistent photo volume.
+- Mailpit: local SMTP sink and browser inbox for development mail.
 
 The chart defaults target local Docker Desktop: release `fleet`, port `8082`,
 demo data enabled and SeaweedFS storage. Images and storage settings are in
@@ -54,6 +55,7 @@ To disable demo data on a fresh database, set `api.flywayLocations` to
 ```sh
 kubectl --context docker-desktop -n rent-cars get pods,svc,pvc
 helm test fleet --kube-context docker-desktop -n rent-cars --logs
+kubectl --context docker-desktop -n rent-cars port-forward svc/fleet-mailpit 8025:8025
 ```
 
 Open a car, upload the two PNG files from `requests/fixtures`, and refresh.

@@ -66,7 +66,7 @@ check: check-api check-web
 
 .PHONY: infra-up infra-stop
 infra-up:
-	docker compose up -d --wait postgres s3
+	docker compose up -d --wait postgres s3 mailpit
 
 infra-stop:
-	docker compose stop postgres s3
+	docker compose stop postgres s3 mailpit

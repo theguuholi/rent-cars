@@ -39,7 +39,7 @@ Use a version manager or the installer to select the required Node version;
 there is no root `.nvmrc` to select it automatically.
 
 No global Maven installation is needed: `apps/api/mvnw` downloads the configured
-Maven version. No separate PostgreSQL, SeaweedFS, React or Spring installation
+Maven version. No separate PostgreSQL, SeaweedFS, Mailpit, React or Spring installation
 is needed. Docker supplies the data services and project dependencies supply
 the frameworks. Initial builds need network access to download dependencies/images.
 
@@ -67,7 +67,7 @@ root; the frontend package lives in `apps/web`.
 make dev
 ```
 
-Leave this terminal running. This starts PostgreSQL and SeaweedFS in Docker,
+Leave this terminal running. This starts PostgreSQL, SeaweedFS and Mailpit in Docker,
 then starts the Spring API and Vite/React on your machine. It supplies the local
 S3 credentials. Flyway creates/updates the schema and loads development catalogs
 and the development administrator automatically.
@@ -77,6 +77,7 @@ and the development administrator automatically.
 | React application | http://localhost:5173 |
 | Spring API | http://localhost:8080 |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
+| Local email inbox | http://localhost:8025 |
 | HTTP Yac environment | No environment needed (local default) |
 
 From a second terminal in the repository root:
@@ -86,7 +87,7 @@ docker compose ps
 curl -i http://localhost:8080/cars
 ```
 
-Both data services should be healthy. The API should return **200** and a JSON
+All three data services should be healthy. The API should return **200** and a JSON
 array. If it is still compiling or starting, wait for the API startup message.
 
 Open React and sign in with the development administrator:
@@ -111,7 +112,8 @@ make web-dev
 ```
 
 Do not run these alongside another instance of `make dev`: they use the same
-ports. PostgreSQL uses 5432 and the local S3 endpoint uses 8333.
+ports. PostgreSQL uses 5432, the local S3 endpoint uses 8333, and Mailpit uses
+8025 for its inbox and 1025 for SMTP.
 
 - [ ] Step 3 complete: I followed the instructions and verified the results before continuing.
 
@@ -270,6 +272,28 @@ logout invalidates the refresh session, not all previously issued access tokens.
 
 - [ ] Step 9 complete: I followed the instructions and verified the results before continuing.
 
+### Step 9a: Recover a driver's password
+
+This flow uses the Mailpit inbox started by `make dev`. Run it after Step 5,
+while the example driver still exists. Keep the browser and HTTP Yac open.
+
+| Step | Done | Action | Expected result |
+| --- | --- | --- | --- |
+| 1 | ☐ | In React, open **Sign in → Forgot password?**, enter `driver@example.com` and send | The page shows the same confirmation for existing and unknown addresses |
+| 2 | ☐ | Open http://localhost:8025 and read the latest message to that driver | The email has a **Reset password** link to the React application |
+| 3 | ☐ | Open the link, enter a new password twice and submit | The page confirms that the password changed |
+| 4 | ☐ | Sign in using the new password, then reopen the email link | Sign-in succeeds; the used link reports an invalid or expired token |
+| 5 | ☐ | Alternatively, send `password-recovery.http` requests top to bottom in HTTP Yac | **202** request, **200** inbox/message, **204** reset, then **400** on replay |
+
+The link expires after 30 minutes and only its hash is kept in PostgreSQL.
+Requesting another link replaces the earlier one. If you use the sample driver
+again in Step 5 or the HTTP Yac smoke flow, restore its original password by
+requesting a new reset link or register a different driver. In Compose, use the
+Mailpit inbox at http://localhost:8026 and select the `compose` HTTP Yac
+environment. In Kubernetes, forward `svc/fleet-mailpit` as shown below.
+
+- [ ] Step 9a complete: I requested, opened and used a reset link, then verified that it cannot be reused.
+
 ## Step 10: Run the normal workflow automatically
 
 With the API running, in a separate terminal:
@@ -322,8 +346,9 @@ complete `make setup` from Step 2 once before running the test.
    npm --prefix apps/web run test:e2e
    ```
 
-   Expect `12 passed`: one public API check, one catalog journey, five authentication journeys, two
-   complete-registration journeys, two administrator form journeys and one rental journey.
+   Expect `13 passed`: one public API check, one catalog journey, five authentication journeys, two
+   complete-registration journeys, two administrator form journeys, one rental journey and one
+   password-recovery journey that reads the reset link from Mailpit.
    The authentication tests cover driver registration and login, duplicate
    email, invalid admin credentials followed by a successful retry, session
    restore and sign out, redirect after admin login, and denial for a driver
@@ -346,6 +371,7 @@ complete `make setup` from Step 2 once before running the test.
    the car before finishing; the completed rental remains in its history. The
    administrator form journeys create and remove a car and a specification with
    unique test names.
+   The recovery journey creates a driver and leaves its completed email in Mailpit.
    Press Ctrl+C in terminal 1 when finished.
 
 The public API test sends one unauthenticated **GET /cars** request to the Spring API at
@@ -392,9 +418,10 @@ Prefer visible roles and labels for clicks and form fields, then assert the
 result on screen. Keep setup and steps real; do not add empty narrative steps or
 fixed sleeps. See the [Playwright journey skill](../.agents/skills/rent-cars-playwright-journey/SKILL.md)
 when extending browser coverage. For another Vite host, set `RENT_CARS_WEB_URL`;
-for another API host, set `RENT_CARS_API_URL`.
+for another API host, set `RENT_CARS_API_URL`; for another Mailpit inbox, set
+`RENT_CARS_MAILPIT_URL`.
 
-- [ ] Step 11 complete: I ran the public API and all seven browser journeys and checked that they passed.
+- [ ] Step 11 complete: I ran the public API and all twelve browser journeys and checked that they passed.
 
 ## Step 12: Alternative: run everything in containers
 
@@ -408,7 +435,8 @@ docker compose -f compose.stack.yaml ps
 curl -i http://localhost:8081/api/cars
 ```
 
-Open React at **http://localhost:8081**. Select `compose` with
+Open React at **http://localhost:8081** and the email inbox at
+**http://localhost:8026**. Select `compose` with
 **httpyac: Select Environment**, or use the CLI:
 
 ```sh
@@ -424,7 +452,7 @@ Inspect startup failures with:
 
 ```sh
 # Repository root:
-docker compose -f compose.stack.yaml logs --tail=100 api web postgres s3
+docker compose -f compose.stack.yaml logs --tail=100 api web postgres s3 mailpit
 ```
 
 - [ ] Step 12 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
@@ -452,10 +480,17 @@ kubectl --context docker-desktop -n rent-cars get pods,svc,pvc
 helm test fleet --kube-context docker-desktop -n rent-cars --logs
 ```
 
-Expect the API, web, PostgreSQL and SeaweedFS pods to become ready and their
+Expect the API, web, PostgreSQL, SeaweedFS and Mailpit pods to become ready and their
 persistent claims to be bound. Open React at **http://localhost:8082** and choose
 **k8s** in HTTP Yac. Its API base URL is **http://localhost:8082/api**. Repeat the
 same numbered HTTP Yac walkthrough with fresh logins and IDs.
+
+For the password-recovery inbox examples, keep this command running in a second
+terminal while sending `password-recovery.http`:
+
+```sh
+kubectl --context docker-desktop -n rent-cars port-forward svc/fleet-mailpit 8025:8025
+```
 
 ```sh
 # From requests/http:

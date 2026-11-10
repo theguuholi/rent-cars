@@ -1,5 +1,14 @@
 name: rent-cars-stack
 services:
+  mailpit:
+    image: axllent/mailpit:v1.32.0
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8026}:8025"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8025/api/v1/messages"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
   s3:
     image: chrislusf/seaweedfs:4.52
     command: [mini, -dir=/data, -ip=127.0.0.1, -ip.bind=0.0.0.0, -admin.ui=false, -webdav=false, -master.volumeSizeLimitMB=128, -volume.max=4]
@@ -33,12 +42,16 @@ services:
     build: ./apps/api
     image: ${API_IMAGE:-rent-cars-api:local}
     depends_on:
+      mailpit:
+        condition: service_healthy
       s3:
         condition: service_healthy
       postgres:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      SPRING_MAIL_HOST: mailpit
+      RENT_MAIL_WEB_BASE_URL: http://localhost:8081
       RENT_STORAGE_S3_ENDPOINT: http://s3:8333
       AWS_ACCESS_KEY_ID: rent-cars-dev
       AWS_SECRET_ACCESS_KEY: rent-cars-dev-secret

@@ -40,6 +40,14 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: local
+            - name: SPRING_MAIL_HOST
+              value: {{ .Release.Name }}-mailpit
+            - name: SPRING_MAIL_PORT
+              value: '1025'
+            - name: RENT_MAIL_FROM
+              value: {{ .Values.mail.from | quote }}
+            - name: RENT_MAIL_WEB_BASE_URL
+              value: {{ .Values.mail.webBaseUrl | quote }}
             - name: RENT_STORAGE_S3_BUCKET
               value: {{ .Values.storage.bucket | quote }}
             - name: RENT_STORAGE_S3_REGION

@@ -31,6 +31,8 @@ describe('Document title', () => {
     ['/specifications/new', 'New specification | Rent Cars'],
     ['/specifications/123/edit', 'Edit specification | Rent Cars'],
     ['/specifications/123/delete', 'Delete specification | Rent Cars'],
+    ['/forgot-password', 'Forgot password | Rent Cars'],
+    ['/reset-password', 'Reset password | Rent Cars'],
     ['/unknown', 'Page not found | Rent Cars'],
   ])('Given %s, when the route opens, then the browser title is %s', async (path, title) => {
     openCatalogRoute(path)

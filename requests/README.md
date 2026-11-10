@@ -26,6 +26,7 @@ them; session writes automatically run the CSRF helper first.
 | [cars.http](http/cars.http) | List, create, read and update a car |
 | [car-images.http](http/car-images.http) | Upload, read, append and delete photos |
 | [rentals.http](http/rentals.http) | Rent, list and return as driver |
+| [password-recovery.http](http/password-recovery.http) | Request a reset link, read the local email, reset the password and confirm one-time use |
 | `scenarios-*.http` | Expected errors; follow the prerequisites in the tutorial |
 
 Tokens, IDs and versions are shared across files through `$global.rentCars`,
@@ -37,6 +38,14 @@ Read a car again before editing if its version changed after image operations.
 Use **httpyac: Select Environment** for `compose` (8081/api) or `k8s` (8082/api).
 Environment URLs live in [http-client.env.json](http/http-client.env.json).
 The image examples read the existing PNG fixtures relative to each HTTP file.
+
+To test password recovery, first register the example driver in `auth.http`.
+Then send the requests in `password-recovery.http` from top to bottom. The
+Mailpit inbox is at http://localhost:8025 for local development and
+http://localhost:8026 for the Compose stack. The `compose` environment selects
+that inbox automatically. In Kubernetes, forward the Mailpit service to local
+port 8025 before sending the two inbox requests. The reset request responds
+with **202** even for an unknown email; the link works once for 30 minutes.
 
 ## Optional automated check
 
