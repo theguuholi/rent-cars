@@ -11,10 +11,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ci": "vitest run",
-    "test:public-api": "playwright test e2e/public-cars.pw.ts",
-    "test:browser": "playwright test e2e/catalog-navigation.pw.ts e2e/auth-journeys.pw.ts e2e/driver-registration.pw.ts e2e/rent-one-car.pw.ts",
-    "test:auth": "playwright test e2e/auth-journeys.pw.ts",
-    "test:rental": "playwright test e2e/rent-one-car.pw.ts",
+    "test:e2e": "playwright test",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lint:fix": "oxlint --fix",
@@ -27,7 +24,8 @@
     "@tanstack/react-query": "^5.105.2",
     "@tanstack/react-router": "^1.170.46",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",

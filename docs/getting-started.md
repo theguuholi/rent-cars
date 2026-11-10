@@ -312,25 +312,17 @@ complete `make setup` from Step 2 once before running the test.
 
    Expect **200 OK** and a JSON array of development cars.
 
-2. In **terminal 2**, run the public API test:
-
-   ```sh
-   npm --prefix apps/web run test:public-api
-   ```
-
-   Expect `1 passed`. Leave terminal 1 running until the test finishes, then
-   continue to the browser test.
-
-3. Install Playwright's Chromium browser once, then run the browser journeys:
+2. Install Playwright's Chromium browser once, then run every API and browser journey
+   in **terminal 2**:
 
    ```sh
    cd apps/web
    npx playwright install chromium
    cd ../..
-   npm --prefix apps/web run test:browser
+   npm --prefix apps/web run test:e2e
    ```
 
-   Expect `9 passed`: one catalog journey, five authentication journeys, two
+   Expect `10 passed`: one public API check, one catalog journey, five authentication journeys, two
    complete-registration journeys and one rental journey.
    The authentication tests cover driver registration and login, duplicate
    email, invalid admin credentials followed by a successful retry, session
@@ -339,16 +331,11 @@ complete `make setup` from Step 2 once before running the test.
    available car, confirms that it becomes unavailable, returns it and confirms
    that it becomes available again.
 
-   To run only the authentication journeys, use:
+   Playwright discovers all `*.pw.ts` files under `apps/web/e2e/`, so a new
+   journey needs no package script or CI change. To run one file, pass its path:
 
    ```sh
-   npm --prefix apps/web run test:auth
-   ```
-
-   To run only the rental journey, use:
-
-   ```sh
-   npm --prefix apps/web run test:rental
+   npm --prefix apps/web run test:e2e -- e2e/auth-journeys.pw.ts
    ```
 
    These tests use the seeded development administrator from Step 3. Set
@@ -368,7 +355,7 @@ nor a login. It expects at least one car, so use the seeded development API.
 To target an API listening on another port, set its root URL, for example:
 
 ```sh
-RENT_CARS_API_URL=http://localhost:18080 npm --prefix apps/web run test:public-api
+RENT_CARS_API_URL=http://localhost:18080 npm --prefix apps/web run test:e2e -- e2e/public-cars.pw.ts
 ```
 
 If the test reports a connection error, check that terminal 1 is still running

@@ -197,11 +197,30 @@ describe('RegisterPage', () => {
       ]
       for (const label of fields)
         expect(screen.getByLabelText(label, { exact: true })).toHaveValue('')
+      const controls = new Map(
+        fields.map((label) => [label, screen.getByLabelText(label, { exact: true })]),
+      )
       const form = screen.getByRole('button', { name: 'Create account' }).closest('form')!
       const event = new Event('submit', { bubbles: true, cancelable: true })
       fireEvent(form, event)
       expect(event.defaultPrevented).toBe(true)
       await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(fields.length))
+      expect(controls.get('First name')).toHaveAccessibleDescription(
+        'Enter a first name of up to 80 characters.',
+      )
+      expect(controls.get('Last name')).toHaveAccessibleDescription(
+        'Enter a last name of up to 80 characters.',
+      )
+      expect(controls.get('Username')).toHaveAccessibleDescription(
+        'Use 3–40 letters, numbers, dots, underscores or hyphens.',
+      )
+      expect(controls.get('CNH number')).toHaveAccessibleDescription(
+        'Enter the 11-digit CNH registration number.',
+      )
+      expect(controls.get('Email')).toHaveAccessibleDescription('Enter a valid email address.')
+      expect(controls.get('Confirm password')).toHaveAccessibleDescription(
+        'Passwords do not match.',
+      )
       expect(registerAccount).not.toHaveBeenCalled()
     },
   )

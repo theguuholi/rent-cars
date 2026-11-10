@@ -2,33 +2,8 @@ import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { Link } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
-import { registerAccount, type RegistrationInput } from '../../auth-api'
-
-const passwordHint = 'Use at least 12 characters and at most 72 UTF-8 bytes.'
-type FieldErrors = Partial<Record<keyof RegistrationInput, string>>
-
-function validate(input: RegistrationInput): FieldErrors {
-  const errors: FieldErrors = {}
-  if (!input.firstName.trim() || input.firstName.trim().length > 80)
-    errors.firstName = 'Enter a first name of up to 80 characters.'
-  if (!input.lastName.trim() || input.lastName.trim().length > 80)
-    errors.lastName = 'Enter a last name of up to 80 characters.'
-  if (!/^[a-z0-9._-]{3,40}$/.test(input.userName.trim().toLowerCase()))
-    errors.userName = 'Use 3–40 letters, numbers, dots, underscores or hyphens.'
-  if (!/^[0-9]{11}$/.test(input.driveLicense.trim()))
-    errors.driveLicense = 'Enter the 11-digit CNH registration number.'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email) || input.email.length > 254)
-    errors.email = 'Enter a valid email address.'
-  if (
-    !input.password.trim() ||
-    input.password.length < 12 ||
-    new TextEncoder().encode(input.password).length > 72
-  )
-    errors.password = 'Choose a nonblank password. ' + passwordHint
-  if (!input.passwordConfirmation || input.passwordConfirmation !== input.password)
-    errors.passwordConfirmation = 'Passwords do not match.'
-  return errors
-}
+import { registerAccount } from '../../auth-api'
+import { passwordHint, registrationErrors, type RegistrationErrors } from './registration-schema'
 
 export function RegisterPage() {
   const [created, setCreated] = useState(false)
@@ -48,7 +23,7 @@ export function RegisterPage() {
 
 function RegisterForm({ onCreated }: { onCreated: () => void }) {
   const [error, setError] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [fieldErrors, setFieldErrors] = useState<RegistrationErrors>({})
   const form = useForm({
     defaultValues: {
       firstName: '',
@@ -60,7 +35,7 @@ function RegisterForm({ onCreated }: { onCreated: () => void }) {
       passwordConfirmation: '',
     },
     onSubmit: async ({ value }) => {
-      const errors = validate(value)
+      const errors = registrationErrors(value)
       setFieldErrors(errors)
       if (Object.keys(errors).length) return
       setError('')

@@ -25,7 +25,7 @@ For persistence changes, add a versioned Flyway migration first, including const
 
 Every new or changed executable line must be exercised by an automated test, and every changed conditional outcome must have a meaningful assertion. This means behavior coverage, not one test per source line. Check the changed files in JaCoCo and Vitest coverage reports. Keep the existing coverage and mutation gates; do not lower thresholds or exclude code to make a check pass. If a path cannot be tested reliably, use the exception process in [AGENTS.md](../AGENTS.md).
 
-Run `make check` from the repository root for cross-stack changes; use `make check-web` or `make check-api` when the user requested only that layer. With `make dev` running, execute the relevant HTTP Yac requests and the targeted Playwright scenario, then the browser suite (`npm --prefix apps/web run test:browser`) when navigation or shared state changed. Run PIT for mutation-sensitive Java domain changes as described in the [API guide](../apps/api/README.md). Inspect failures and rerun affected checks after the last edit.
+Run `make check` from the repository root for cross-stack changes; use `make check-web` or `make check-api` when the user requested only that layer. With `make dev` running, execute the relevant HTTP Yac requests and the targeted Playwright scenario, then the full suite (`npm --prefix apps/web run test:e2e`) when navigation or shared state changed. Run PIT for mutation-sensitive Java domain changes as described in the [API guide](../apps/api/README.md). Inspect failures and rerun affected checks after the last edit.
 
 ## 6. Write a PR that a tester can follow
 
