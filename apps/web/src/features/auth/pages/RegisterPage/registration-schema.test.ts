@@ -1,5 +1,5 @@
 import { describe, expect, test as scenario } from 'vitest'
-import { registrationErrors, registrationSchema } from './registration-schema'
+import { parseRegistration, registrationSchema } from './registration-schema'
 
 const valid = {
   firstName: ' Test ',
@@ -19,12 +19,12 @@ describe('registrationSchema', () => {
       userName: 'test.driver',
       driveLicense: '01234567890',
     })
-    expect(registrationErrors(valid)).toEqual({})
+    expect(parseRegistration(valid)).toEqual({ data: registrationSchema.parse(valid), errors: {} })
   })
 
   scenario('Given multiple invalid fields, when checked, then return each field error', () => {
     expect(
-      registrationErrors({
+      parseRegistration({
         ...valid,
         firstName: ' ',
         lastName: ' ',
@@ -33,7 +33,7 @@ describe('registrationSchema', () => {
         email: 'bad',
         password: 'short',
         passwordConfirmation: 'different',
-      }),
+      }).errors,
     ).toEqual({
       firstName: 'Enter a first name of up to 80 characters.',
       lastName: 'Enter a last name of up to 80 characters.',
@@ -47,11 +47,11 @@ describe('registrationSchema', () => {
   })
 
   scenario('Given one field has multiple issues, when checked, then show one field message', () => {
-    const errors = registrationErrors({
+    const errors = parseRegistration({
       ...valid,
       password: ' '.repeat(11),
       passwordConfirmation: ' '.repeat(11),
-    })
+    }).errors
     expect(errors).toEqual({
       password:
         'Choose a nonblank password. Use at least 12 characters and at most 72 UTF-8 bytes.',

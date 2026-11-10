@@ -41,14 +41,14 @@ export const registrationSchema = z
 
 export type RegistrationErrors = Partial<Record<keyof RegistrationInput, string>>
 
-export function registrationErrors(input: RegistrationInput): RegistrationErrors {
+export function parseRegistration(input: RegistrationInput) {
   const result = registrationSchema.safeParse(input)
-  if (result.success) return {}
+  if (result.success) return { data: result.data, errors: {} as RegistrationErrors }
 
   const errors: RegistrationErrors = {}
   for (const issue of result.error.issues) {
     const field = issue.path[0] as keyof RegistrationInput
     errors[field] = issue.message
   }
-  return errors
+  return { data: null, errors }
 }

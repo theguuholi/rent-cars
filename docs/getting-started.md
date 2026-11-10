@@ -322,8 +322,8 @@ complete `make setup` from Step 2 once before running the test.
    npm --prefix apps/web run test:e2e
    ```
 
-   Expect `10 passed`: one public API check, one catalog journey, five authentication journeys, two
-   complete-registration journeys and one rental journey.
+   Expect `12 passed`: one public API check, one catalog journey, five authentication journeys, two
+   complete-registration journeys, two administrator form journeys and one rental journey.
    The authentication tests cover driver registration and login, duplicate
    email, invalid admin credentials followed by a successful retry, session
    restore and sign out, redirect after admin login, and denial for a driver
@@ -343,7 +343,9 @@ complete `make setup` from Step 2 once before running the test.
    differs. Each run registers four drivers with unique test emails in the
    development database; they do not depend on earlier runs or a fixed driver ID.
    The rental journey creates one additional driver. A successful run returns
-   the car before finishing; the completed rental remains in its history.
+   the car before finishing; the completed rental remains in its history. The
+   administrator form journeys create and remove a car and a specification with
+   unique test names.
    Press Ctrl+C in terminal 1 when finished.
 
 The public API test sends one unauthenticated **GET /cars** request to the Spring API at

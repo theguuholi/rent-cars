@@ -3,7 +3,7 @@ import { useForm } from '@tanstack/react-form'
 import { Link } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { registerAccount } from '../../auth-api'
-import { passwordHint, registrationErrors, type RegistrationErrors } from './registration-schema'
+import { passwordHint, parseRegistration, type RegistrationErrors } from './registration-schema'
 
 export function RegisterPage() {
   const [created, setCreated] = useState(false)
@@ -35,12 +35,12 @@ function RegisterForm({ onCreated }: { onCreated: () => void }) {
       passwordConfirmation: '',
     },
     onSubmit: async ({ value }) => {
-      const errors = registrationErrors(value)
+      const { data, errors } = parseRegistration(value)
       setFieldErrors(errors)
-      if (Object.keys(errors).length) return
+      if (!data) return
       setError('')
       try {
-        await registerAccount(value)
+        await registerAccount(data)
         onCreated()
       } catch (failure) {
         setError(failure instanceof Error ? failure.message : 'Could not create your account.')

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import type { Specification, SpecificationEdit } from '../../specifications-api'
+import { specificationDraftSchema, specificationFieldError } from './specification-draft-schema'
 
 type Props = {
   item?: Specification
@@ -14,7 +15,7 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
   const form = useForm({
     defaultValues: { name: original?.name ?? '', description: original?.description ?? '' },
     onSubmit: ({ value }) => {
-      const input = { name: value.name.trim(), description: value.description.trim() }
+      const input = specificationDraftSchema.parse(value)
       if (!original) return onSave(input)
       const changes: SpecificationEdit = {}
       for (const key of ['name', 'description'] as const) {
@@ -40,11 +41,7 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
         <form.Field
           name="name"
           validators={{
-            onChange: ({ value }) => {
-              if (!value.trim()) return 'Enter a name.'
-              if (value.trim().toUpperCase().length > 255)
-                return 'Use at most 255 characters after uppercase conversion.'
-            },
+            onChange: ({ value }) => specificationFieldError('name', value),
           }}
         >
           {(field) => (
@@ -72,7 +69,7 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
         <form.Field
           name="description"
           validators={{
-            onChange: ({ value }) => (value.trim() ? undefined : 'Enter a description.'),
+            onChange: ({ value }) => specificationFieldError('description', value),
           }}
         >
           {(field) => (

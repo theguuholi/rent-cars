@@ -168,10 +168,6 @@ describe('RegisterPage', () => {
     { password: 'a'.repeat(12), passwordConfirmation: 'a'.repeat(12) },
     { password: 'a'.repeat(72), passwordConfirmation: 'a'.repeat(72) },
     { password: 'é'.repeat(36), passwordConfirmation: 'é'.repeat(36) },
-    { firstName: ` ${'a'.repeat(80)} ` },
-    { lastName: ` ${'a'.repeat(80)} ` },
-    { userName: ' Test.Driver ' },
-    { driveLicense: ' 12345678901 ' },
   ])('Given a valid boundary value, when registering, then submit %s', async (input) => {
     openCatalogRoute('/register', undefined, null)
     await fill(input)
@@ -180,6 +176,29 @@ describe('RegisterPage', () => {
       expect(registerAccount).toHaveBeenCalledExactlyOnceWith({ ...valid, ...input }),
     )
   })
+
+  scenario(
+    'Given padded registration values, when submitting, then send the schema output',
+    async () => {
+      openCatalogRoute('/register', undefined, null)
+      await fill({
+        firstName: ' Test ',
+        lastName: ' Driver ',
+        userName: ' Test.Driver ',
+        driveLicense: ' 12345678901 ',
+      })
+      submit()
+      await waitFor(() =>
+        expect(registerAccount).toHaveBeenCalledExactlyOnceWith({
+          ...valid,
+          firstName: 'Test',
+          lastName: 'Driver',
+          userName: 'test.driver',
+          driveLicense: '12345678901',
+        }),
+      )
+    },
+  )
 
   scenario(
     'Given a new form, when submitting empty fields, then show required errors without navigating',
