@@ -81,23 +81,22 @@ class SessionController {
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
       summary = "Register a driver",
-      description = "Creates a USER account with a unique, case-insensitive email.")
+      description =
+          "Creates a USER account with a private driver profile and unique email, username and CNH number.")
   @ApiResponse(
       responseCode = "201",
       description = "Public profile of the registered driver",
       useReturnTypeSchema = true)
   @ApiResponse(
       responseCode = "409",
-      description = "Email already registered",
+      description = "An account identifier is already registered",
       content = @Content(schema = @Schema(implementation = Errors.class)))
   @ApiResponse(
       responseCode = "422",
-      description = "Invalid credentials format",
+      description = "Invalid driver registration details",
       content = @Content(schema = @Schema(implementation = Errors.class)))
-  UserProfile register(@Valid @RequestBody Credentials input) {
-    return accounts
-        .saveAndFlush(new Account(input.email(), passwords.encode(input.password())))
-        .profile();
+  UserProfile register(@Valid @RequestBody RegistrationRequest input) {
+    return accounts.saveAndFlush(new Account(input, passwords.encode(input.password()))).profile();
   }
 
   @ApiResponse(

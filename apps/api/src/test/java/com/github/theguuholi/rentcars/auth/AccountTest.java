@@ -21,7 +21,8 @@ class AccountTest {
     @DisplayName(
         "Given a new driver, when building the public profile, then it contains the identifier, email and USER role")
     void projection() {
-      assertThat(account.profile()).isEqualTo(new UserProfile(id, "driver@example.com", "USER"));
+      assertThat(account.profile())
+          .isEqualTo(new UserProfile(id, "driver@example.com", "USER", null, null, null));
     }
   }
 

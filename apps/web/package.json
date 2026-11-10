@@ -12,7 +12,7 @@
     "test": "vitest",
     "test:ci": "vitest run",
     "test:public-api": "playwright test e2e/public-cars.pw.ts",
-    "test:browser": "playwright test e2e/catalog-navigation.pw.ts e2e/auth-journeys.pw.ts e2e/rent-one-car.pw.ts",
+    "test:browser": "playwright test e2e/catalog-navigation.pw.ts e2e/auth-journeys.pw.ts e2e/driver-registration.pw.ts e2e/rent-one-car.pw.ts",
     "test:auth": "playwright test e2e/auth-journeys.pw.ts",
     "test:rental": "playwright test e2e/rent-one-car.pw.ts",
     "format": "oxfmt --write .",

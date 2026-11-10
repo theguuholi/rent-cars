@@ -12,8 +12,18 @@ function newDriverEmail() {
 
 async function registerDriver(page: Page, email: string) {
   await page.goto(`${webBaseUrl}/register`)
+  await page.getByLabel('First name').fill('Test')
+  await page.getByLabel('Last name').fill('Driver')
+  await page.getByLabel('Username').fill(`qa-${randomUUID().slice(0, 20)}`)
+  await page.getByLabel('CNH number').fill(
+    BigInt(`0x${randomUUID().replaceAll('-', '').slice(0, 12)}`)
+      .toString()
+      .padStart(11, '0')
+      .slice(0, 11),
+  )
   await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(driverPassword)
+  await page.getByLabel('Password', { exact: true }).fill(driverPassword)
+  await page.getByLabel('Confirm password').fill(driverPassword)
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page.getByRole('status')).toHaveText('Your account is ready. Sign in to continue.')
 }
@@ -38,8 +48,18 @@ test('Given a guest, when they register and sign in, then the driver session sur
   })
 
   await test.step('When the guest registers a driver account', async () => {
+    await page.getByLabel('First name').fill('Test')
+    await page.getByLabel('Last name').fill('Driver')
+    await page.getByLabel('Username').fill(`qa-${randomUUID().slice(0, 20)}`)
+    await page.getByLabel('CNH number').fill(
+      BigInt(`0x${randomUUID().replaceAll('-', '').slice(0, 12)}`)
+        .toString()
+        .padStart(11, '0')
+        .slice(0, 11),
+    )
     await page.getByLabel('Email').fill(email)
-    await page.getByLabel('Password').fill(driverPassword)
+    await page.getByLabel('Password', { exact: true }).fill(driverPassword)
+    await page.getByLabel('Confirm password').fill(driverPassword)
     await page.getByRole('button', { name: 'Create account' }).click()
     await expect(page.getByRole('status')).toHaveText('Your account is ready. Sign in to continue.')
   })
@@ -81,15 +101,27 @@ test('Given an existing driver, when registration reuses the email with differen
 
   await test.step('When the guest registers the same email in uppercase', async () => {
     await page.goto(`${webBaseUrl}/register`)
+    await page.getByLabel('First name').fill('Test')
+    await page.getByLabel('Last name').fill('Driver')
+    await page.getByLabel('Username').fill(`qa-${randomUUID().slice(0, 20)}`)
+    await page.getByLabel('CNH number').fill(
+      BigInt(`0x${randomUUID().replaceAll('-', '').slice(0, 12)}`)
+        .toString()
+        .padStart(11, '0')
+        .slice(0, 11),
+    )
     await page.getByLabel('Email').fill(email.toUpperCase())
-    await page.getByLabel('Password').fill(driverPassword)
+    await page.getByLabel('Password', { exact: true }).fill(driverPassword)
+    await page.getByLabel('Confirm password').fill(driverPassword)
     await page.getByRole('button', { name: 'Create account' }).click()
   })
 
   await test.step('Then the conflict is visible and the form values remain', async () => {
-    await expect(page.getByRole('alert')).toHaveText('This email is already registered.')
+    await expect(page.getByRole('alert')).toHaveText(
+      'An account with these details already exists.',
+    )
     await expect(page.getByLabel('Email')).toHaveValue(email.toUpperCase())
-    await expect(page.getByLabel('Password')).toHaveValue(driverPassword)
+    await expect(page.getByLabel('Password', { exact: true })).toHaveValue(driverPassword)
   })
 })
 

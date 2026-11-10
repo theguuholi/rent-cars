@@ -157,7 +157,7 @@ Run these in order:
 
 | Step | Done | Request | Expected result |
 | --- | --- | --- | --- |
-| 1 | ☐ | `auth.http → auth_register_driver` | **201** creates `driver@example.com`; **409** is allowed if that email already exists |
+| 1 | ☐ | `auth.http → auth_register_driver` | **201** creates the driver with name, username, CNH number and matching passwords; **409** is allowed if an identifier already exists |
 | 2 | ☐ | `auth.http → auth_login_admin` | **200** captures `adminToken` |
 | 3 | ☐ | `auth.http → auth_me_admin` | **200**, role `ADMIN` |
 | 4 | ☐ | `auth.http → auth_login_driver` | **200** captures `driverToken` without replacing `adminToken` |
@@ -167,6 +167,10 @@ Run these in order:
 
 The example driver password is `local-example-only-123`. These credentials are
 for development only. Registration does not reset an existing account's password.
+The example CNH number is a placeholder for local testing. To register another
+driver, change the email, username and CNH number together. You can run
+`scenarios-auth.http → scenarios_auth_registration_password_mismatch` to see
+the API reject a confirmation that differs from the password with **422**.
 
 - [ ] Step 5 complete: I followed the instructions and verified the results before continuing.
 
@@ -326,8 +330,8 @@ complete `make setup` from Step 2 once before running the test.
    npm --prefix apps/web run test:browser
    ```
 
-   Expect `7 passed`: one catalog journey, five authentication journeys and
-   one rental journey.
+   Expect `9 passed`: one catalog journey, five authentication journeys, two
+   complete-registration journeys and one rental journey.
    The authentication tests cover driver registration and login, duplicate
    email, invalid admin credentials followed by a successful retry, session
    restore and sign out, redirect after admin login, and denial for a driver
@@ -349,7 +353,7 @@ complete `make setup` from Step 2 once before running the test.
 
    These tests use the seeded development administrator from Step 3. Set
    `RENT_CARS_ADMIN_EMAIL` and `RENT_CARS_ADMIN_PASSWORD` if your local seed
-   differs. Each run registers three drivers with unique test emails in the
+   differs. Each run registers four drivers with unique test emails in the
    development database; they do not depend on earlier runs or a fixed driver ID.
    The rental journey creates one additional driver. A successful run returns
    the car before finishing; the completed rental remains in its history.

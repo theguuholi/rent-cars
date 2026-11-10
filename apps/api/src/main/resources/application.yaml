@@ -14,6 +14,11 @@ spring:
     hibernate:
       ddl-auto: validate
 
+  datasource:
+    hikari:
+      data-source-properties:
+        logServerErrorDetail: false
+
 rent:
   auth:
     private-key: ${RENT_AUTH_PRIVATE_KEY}
