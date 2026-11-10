@@ -36,7 +36,7 @@ class PasswordRecovery {
               String secret = tokens.issue(account.id());
               try {
                 sender.send(email.message(address, secret));
-              } catch (MailException failure) {
+              } catch (MailException _) {
                 // The public response must not reveal whether this address belongs to an account.
                 tokens.invalidate(account.id());
               }

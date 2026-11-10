@@ -234,7 +234,7 @@ class PasswordRecoveryControllerTest {
     @DisplayName(
         "Given a short, mismatched or oversized password, when resetting, then validation rejects the request")
     void invalidPassword() throws Exception {
-      for (String[] passwords :
+      for (String[] invalidPasswords :
           new String[][] {
             {"short", "short"},
             {"replacement-password-123", "different-password-123"},
@@ -247,9 +247,9 @@ class PasswordRecoveryControllerTest {
                         "token",
                         "invalid",
                         "password",
-                        passwords[0],
+                        invalidPasswords[0],
                         "passwordConfirmation",
-                        passwords[1])))
+                        invalidPasswords[1])))
             .andExpect(status().isUnprocessableContent());
       }
       postJson(

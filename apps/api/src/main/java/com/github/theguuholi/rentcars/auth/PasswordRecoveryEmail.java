@@ -14,7 +14,11 @@ class PasswordRecoveryEmail {
   private final String html;
 
   PasswordRecoveryEmail(@Value("${rent.mail.web-base-url}") String webBaseUrl) throws IOException {
-    this.webBaseUrl = webBaseUrl.replaceAll("/+$", "");
+    String normalized = webBaseUrl;
+    while (normalized.endsWith("/")) {
+      normalized = normalized.substring(0, normalized.length() - 1);
+    }
+    this.webBaseUrl = normalized;
     this.text =
         new ClassPathResource("mail/auth/password-recovery.txt")
             .getContentAsString(StandardCharsets.UTF_8);

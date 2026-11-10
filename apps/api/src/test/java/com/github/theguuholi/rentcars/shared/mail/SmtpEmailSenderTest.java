@@ -44,9 +44,8 @@ class SmtpEmailSenderTest {
     when(mail.createMimeMessage())
         .thenReturn(new MimeMessage(Session.getInstance(new Properties())));
     var sender = new SmtpEmailSender(mail, "no-reply@example.test");
-    assertThatThrownBy(
-            () -> sender.send(new EmailMessage("bad address", "Reset", "Text", "<p>HTML</p>")))
-        .isInstanceOf(MailSendException.class);
+    var invalidMessage = new EmailMessage("bad address", "Reset", "Text", "<p>HTML</p>");
+    assertThatThrownBy(() -> sender.send(invalidMessage)).isInstanceOf(MailSendException.class);
     verify(mail, never()).send(any(MimeMessage.class));
   }
 }

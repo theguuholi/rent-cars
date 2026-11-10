@@ -11,7 +11,7 @@ class PasswordRecoveryEmailTest {
   @DisplayName(
       "Given an address and token, when rendering the recovery email, then both formats contain the configured link")
   void message() throws IOException {
-    var email = new PasswordRecoveryEmail("http://localhost:5173/");
+    var email = new PasswordRecoveryEmail("http://localhost:5173///");
     var message = email.message("driver@example.test", "sample-token");
     assertThat(message.to()).isEqualTo("driver@example.test");
     assertThat(message.subject()).isEqualTo("Reset your Rent Cars password");
