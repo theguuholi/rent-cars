@@ -1,6 +1,12 @@
 import { createRouter, type RouterHistory } from '@tanstack/react-router'
 import { session } from './features/auth/session'
-import { loginRoute, registerRoute, forbiddenRoute } from './features/auth/routes'
+import {
+  loginRoute,
+  registerRoute,
+  forbiddenRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
+} from './features/auth/routes'
 import { carRoutes } from './features/cars/routes'
 import { categoriesRoute } from './features/categories/routes'
 import { specificationRoutes } from './features/specifications/routes'
@@ -10,6 +16,8 @@ const tree = rootRoute.addChildren([
   homeRoute,
   loginRoute,
   registerRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
   forbiddenRoute,
   categoriesRoute,
   ...carRoutes,

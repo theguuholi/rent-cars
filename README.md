@@ -6,7 +6,7 @@ New to the project? Follow the [step-by-step onboarding tutorial](docs/getting-s
 
 ## Run the full stack locally
 
-Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), 5432 (PostgreSQL), and 8333 (development S3) are available.
+Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), 5432 (PostgreSQL), 8333 (development S3), 8025 (email inbox) and 1025 (development SMTP) are available.
 
 ```sh
 git clone https://github.com/theguuholi/rent-cars.git
@@ -16,6 +16,10 @@ make dev
 ```
 
 Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. `make dev` and `make api-dev` also start SeaweedFS, an S3-compatible object store with a persistent Docker volume and an automatically created `rent-cars-images` bucket. No cloud account or activation token is required. Press Ctrl+C to stop the applications and run `make infra-stop` to stop PostgreSQL and the S3-compatible development store.
+
+Password recovery emails are captured locally in [Mailpit](http://localhost:8025).
+The API sends them through SMTP on port 1025; production uses the SMTP server
+configured in `application-prod.yaml` and the `MAIL_FROM`/`WEB_BASE_URL` variables.
 
 For container images and a local Kubernetes deployment, follow the [Docker and Helm guide](helm/README.md).
 

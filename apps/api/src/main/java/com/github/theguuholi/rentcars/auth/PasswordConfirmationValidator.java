@@ -4,11 +4,11 @@ import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 public class PasswordConfirmationValidator
-    implements ConstraintValidator<PasswordConfirmed, RegistrationRequest> {
+    implements ConstraintValidator<PasswordConfirmed, PasswordPair> {
   public PasswordConfirmationValidator() {}
 
   @Override
-  public boolean isValid(RegistrationRequest input, ConstraintValidatorContext context) {
+  public boolean isValid(PasswordPair input, ConstraintValidatorContext context) {
     if (input == null
         || input.password() == null
         || input.passwordConfirmation() == null

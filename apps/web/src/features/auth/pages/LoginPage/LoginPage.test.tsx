@@ -42,6 +42,10 @@ describe('LoginPage', () => {
       expect(screen.getByText('Account')).toBeVisible()
       expect(screen.getByText('Use your Rent Cars account.')).toBeVisible()
       expect(document.title).toBe('Sign in | Rent Cars')
+      expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveAttribute(
+        'href',
+        '/forgot-password',
+      )
       fireEvent.change(email, { target: { value: identity.user.email } })
       fireEvent.change(password, { target: { value: 'incorrect' } })
       const submit = screen.getByRole('button', { name: 'Sign in' })

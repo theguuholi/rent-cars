@@ -57,6 +57,19 @@ s3Emulator:
     limits:
       memory: 512Mi
 
+mailpit:
+  image: axllent/mailpit:v1.32.0
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+mail:
+  from: no-reply@rent-cars.local
+  webBaseUrl: http://localhost:8082
+
 storage:
   bucket: rent-cars-images
   region: us-east-1

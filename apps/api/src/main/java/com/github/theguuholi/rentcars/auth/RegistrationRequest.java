@@ -19,7 +19,8 @@ record RegistrationRequest(
     @NotBlank @Pattern(regexp = "[0-9]{11}") String driveLicense,
     @NotBlank @Email @Size(max = 254) String email,
     @NotBlank @Size(min = 12, max = 72) @Schema(format = "password") String password,
-    @NotBlank @Size(max = 72) @Schema(format = "password") String passwordConfirmation) {
+    @NotBlank @Size(max = 72) @Schema(format = "password") String passwordConfirmation)
+    implements PasswordPair {
   RegistrationRequest {
     if (firstName != null) firstName = firstName.strip();
     if (lastName != null) lastName = lastName.strip();

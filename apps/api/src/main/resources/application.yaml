@@ -2,6 +2,12 @@ spring:
   application:
     name: rent-cars-api
 
+  mail:
+    properties:
+      '[mail.smtp.connectiontimeout]': 5000
+      '[mail.smtp.timeout]': 5000
+      '[mail.smtp.writetimeout]': 5000
+
   servlet:
     multipart:
       max-file-size: 5MB
@@ -20,6 +26,9 @@ spring:
         logServerErrorDetail: false
 
 rent:
+  mail:
+    from: ${RENT_MAIL_FROM:no-reply@rent-cars.local}
+    web-base-url: ${RENT_MAIL_WEB_BASE_URL:http://localhost:5173}
   auth:
     private-key: ${RENT_AUTH_PRIVATE_KEY}
     public-key: ${RENT_AUTH_PUBLIC_KEY}

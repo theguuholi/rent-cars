@@ -51,6 +51,14 @@ class Account {
     this.driverProfile = new DriverProfile(this, input);
   }
 
+  UUID id() {
+    return id;
+  }
+
+  void changePassword(String encodedPassword) {
+    this.passwordHash = encodedPassword;
+  }
+
   /** Supplies Spring Security with the account ID, encoded password and granted role. */
   UserDetails principal() {
     return User.withUsername(id.toString()).password(passwordHash).roles(role).build();

@@ -1,4 +1,12 @@
 spring:
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      '[mail.smtp.auth]': true
+      '[mail.smtp.starttls.enable]': true
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
@@ -7,6 +15,9 @@ spring:
     locations: classpath:db/migration
 
 rent:
+  mail:
+    from: ${MAIL_FROM}
+    web-base-url: ${WEB_BASE_URL}
   storage:
     s3:
       bucket: ${S3_BUCKET}

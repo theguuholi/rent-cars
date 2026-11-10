@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test as scenario, vi } from 'vitest'
-import { registerAccount, signIn } from './auth-api'
+import { registerAccount, requestPasswordReset, resetPassword, signIn } from './auth-api'
 const email = 'driver@example.test',
   password = 'local-dev-123',
   csrf = 'csrf-token'
@@ -132,4 +132,90 @@ describe('Driver registration', () => {
       await expect(registerAccount(registration)).rejects.toThrow(message)
     },
   )
+})
+
+describe('Password recovery', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  scenario(
+    'Given an email, when recovery is requested, then send JSON with CSRF and accept an empty response',
+    async () => {
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce(bootstrap())
+        .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      vi.stubGlobal('fetch', fetch)
+      await expect(requestPasswordReset(email)).resolves.toBeUndefined()
+      expect(fetch.mock.calls).toEqual([
+        ['/api/csrf'],
+        [
+          '/api/password-recovery',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrf },
+            body: JSON.stringify({ email }),
+          },
+        ],
+      ])
+    },
+  )
+
+  scenario(
+    'Given a failed request, when asking for recovery, then show a retry error',
+    async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockResolvedValueOnce(bootstrap())
+          .mockResolvedValueOnce(new Response(null, { status: 500 })),
+      )
+      await expect(requestPasswordReset(email)).rejects.toThrow(
+        'Could not request a reset link. Try again.',
+      )
+    },
+  )
+
+  const reset = {
+    token: 'one-time-token',
+    password: 'replacement-password-123',
+    passwordConfirmation: 'replacement-password-123',
+  }
+  scenario(
+    'Given a token and new password, when resetting, then send JSON with CSRF and accept 204',
+    async () => {
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce(bootstrap())
+        .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      vi.stubGlobal('fetch', fetch)
+      await expect(resetPassword(reset)).resolves.toBeUndefined()
+      expect(fetch.mock.calls).toEqual([
+        ['/api/csrf'],
+        [
+          '/api/password-recovery/reset',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrf },
+            body: JSON.stringify(reset),
+          },
+        ],
+      ])
+    },
+  )
+
+  scenario.each([
+    [400, 'Reset link is invalid or expired. Request a new one.'],
+    [422, 'Check the new password and try again.'],
+    [500, 'Could not reset your password. Try again.'],
+  ] as const)('Given reset status %i, when submitting, then show %s', async (status, message) => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(bootstrap())
+        .mockResolvedValueOnce(new Response(null, { status })),
+    )
+    await expect(resetPassword(reset)).rejects.toThrow(message)
+  })
 })

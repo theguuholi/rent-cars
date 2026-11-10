@@ -80,6 +80,11 @@ export function LoginPage() {
           Create an account
         </Link>
       </p>
+      <p className="mt-2">
+        <Link className="underline" to="/forgot-password">
+          Forgot password?
+        </Link>
+      </p>
     </PageSection>
   )
 }
