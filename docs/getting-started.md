@@ -287,7 +287,7 @@ Separate CLI invocations do not share runtime tokens or IDs.
 
 - [ ] Step 10 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
 
-## Step 11: Verify API, catalog and authentication with Playwright
+## Step 11: Verify the API, catalog, authentication and rental with Playwright
 
 Run these commands from the repository root. Docker Desktop must be running;
 complete `make setup` from Step 2 once before running the test.
@@ -326,11 +326,14 @@ complete `make setup` from Step 2 once before running the test.
    npm --prefix apps/web run test:browser
    ```
 
-   Expect `6 passed`: one catalog journey and five authentication journeys.
+   Expect `7 passed`: one catalog journey, five authentication journeys and
+   one rental journey.
    The authentication tests cover driver registration and login, duplicate
    email, invalid admin credentials followed by a successful retry, session
    restore and sign out, redirect after admin login, and denial for a driver
-   opening an admin page. Press Ctrl+C in terminal 1 when finished.
+   opening an admin page. The rental journey registers a new driver, rents one
+   available car, confirms that it becomes unavailable, returns it and confirms
+   that it becomes available again.
 
    To run only the authentication journeys, use:
 
@@ -338,10 +341,19 @@ complete `make setup` from Step 2 once before running the test.
    npm --prefix apps/web run test:auth
    ```
 
+   To run only the rental journey, use:
+
+   ```sh
+   npm --prefix apps/web run test:rental
+   ```
+
    These tests use the seeded development administrator from Step 3. Set
    `RENT_CARS_ADMIN_EMAIL` and `RENT_CARS_ADMIN_PASSWORD` if your local seed
    differs. Each run registers three drivers with unique test emails in the
    development database; they do not depend on earlier runs or a fixed driver ID.
+   The rental journey creates one additional driver. A successful run returns
+   the car before finishing; the completed rental remains in its history.
+   Press Ctrl+C in terminal 1 when finished.
 
 The public API test sends one unauthenticated **GET /cars** request to the Spring API at
 `http://localhost:8080`. The test checks status 200, JSON, the seeded catalog's
@@ -389,7 +401,7 @@ fixed sleeps. See the [Playwright journey skill](../.agents/skills/rent-cars-pla
 when extending browser coverage. For another Vite host, set `RENT_CARS_WEB_URL`;
 for another API host, set `RENT_CARS_API_URL`.
 
-- [ ] Step 11 complete: I ran the public API and browser journey tests and checked that all passed.
+- [ ] Step 11 complete: I ran the public API and all seven browser journeys and checked that they passed.
 
 ## Step 12: Alternative: run everything in containers
 

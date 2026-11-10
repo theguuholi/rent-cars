@@ -92,7 +92,7 @@ export function CarImages({ car, canUpload }: { car: CarWithCatalog; canUpload: 
                     }}
                   />
                   <p id="car-photos-error" role="alert">
-                    {field.state.meta.errors.join(' ')}
+                    {field.state.meta.errors[0]}
                   </p>
                   <ul>
                     {field.state.value.map((file, index) => (
