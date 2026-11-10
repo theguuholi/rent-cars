@@ -17,12 +17,11 @@ function validate(input: RegistrationInput): FieldErrors {
     errors.userName = 'Use 3–40 letters, numbers, dots, underscores or hyphens.'
   if (!/^[0-9]{11}$/.test(input.driveLicense.trim()))
     errors.driveLicense = 'Enter the 11-digit CNH registration number.'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim()) || input.email.trim().length > 254)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email) || input.email.length > 254)
     errors.email = 'Enter a valid email address.'
   if (
     !input.password.trim() ||
     input.password.length < 12 ||
-    input.password.length > 72 ||
     new TextEncoder().encode(input.password).length > 72
   )
     errors.password = 'Choose a nonblank password. ' + passwordHint

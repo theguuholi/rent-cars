@@ -92,24 +92,116 @@ describe('RegisterPage', () => {
   )
 
   scenario.each([
-    [{ firstName: '  ' }, 'Enter a first name'],
-    [{ lastName: '  ' }, 'Enter a last name'],
-    [{ userName: 'x' }, 'Use 3–40'],
-    [{ driveLicense: '123' }, '11-digit CNH'],
-    [{ email: 'bad' }, 'valid email'],
-    [{ password: 'short', passwordConfirmation: 'short' }, 'Choose a nonblank password'],
+    [{ firstName: '  ' }, 'First name', 'Enter a first name of up to 80 characters.'],
+    [{ firstName: 'a'.repeat(81) }, 'First name', 'Enter a first name of up to 80 characters.'],
+    [{ lastName: '  ' }, 'Last name', 'Enter a last name of up to 80 characters.'],
+    [{ lastName: 'a'.repeat(81) }, 'Last name', 'Enter a last name of up to 80 characters.'],
+    [{ userName: 'ab' }, 'Username', 'Use 3–40 letters, numbers, dots, underscores or hyphens.'],
+    [
+      { userName: 'a'.repeat(41) },
+      'Username',
+      'Use 3–40 letters, numbers, dots, underscores or hyphens.',
+    ],
+    [{ userName: 'ab c' }, 'Username', 'Use 3–40 letters, numbers, dots, underscores or hyphens.'],
+    [{ userName: '@abc' }, 'Username', 'Use 3–40 letters, numbers, dots, underscores or hyphens.'],
+    [{ userName: 'abc@' }, 'Username', 'Use 3–40 letters, numbers, dots, underscores or hyphens.'],
+    [{ driveLicense: '1234567890' }, 'CNH number', 'Enter the 11-digit CNH registration number.'],
+    [{ driveLicense: '123456789012' }, 'CNH number', 'Enter the 11-digit CNH registration number.'],
+    [{ driveLicense: 'a1234567890' }, 'CNH number', 'Enter the 11-digit CNH registration number.'],
+    [{ driveLicense: '1234567890a' }, 'CNH number', 'Enter the 11-digit CNH registration number.'],
+    [{ email: 'bad' }, 'Email', 'Enter a valid email address.'],
+    [{ email: 'bad@example.test extra' }, 'Email', 'Enter a valid email address.'],
+    [{ email: 'invalid foo@example.test' }, 'Email', 'Enter a valid email address.'],
+    [{ email: '@example.test' }, 'Email', 'Enter a valid email address.'],
+    [{ email: 'bad@.test' }, 'Email', 'Enter a valid email address.'],
+    [{ email: 'bad@example.' }, 'Email', 'Enter a valid email address.'],
+    [{ email: `${'a'.repeat(245)}@example.test` }, 'Email', 'Enter a valid email address.'],
+    [
+      { password: ' '.repeat(12), passwordConfirmation: ' '.repeat(12) },
+      'Password',
+      'Choose a nonblank password. Use at least 12 characters and at most 72 UTF-8 bytes.',
+    ],
+    [
+      { password: 'a'.repeat(11), passwordConfirmation: 'a'.repeat(11) },
+      'Password',
+      'Choose a nonblank password. Use at least 12 characters and at most 72 UTF-8 bytes.',
+    ],
+    [
+      { password: 'a'.repeat(73), passwordConfirmation: 'a'.repeat(73) },
+      'Password',
+      'Choose a nonblank password. Use at least 12 characters and at most 72 UTF-8 bytes.',
+    ],
     [
       { password: 'é'.repeat(37), passwordConfirmation: 'é'.repeat(37) },
-      'Choose a nonblank password',
+      'Password',
+      'Choose a nonblank password. Use at least 12 characters and at most 72 UTF-8 bytes.',
     ],
-    [{ passwordConfirmation: 'different-password-123' }, 'Passwords do not match.'],
+    [
+      { passwordConfirmation: 'different-password-123' },
+      'Confirm password',
+      'Passwords do not match.',
+    ],
   ] as const)(
     'Given invalid registration data, when submitting, then explain %s before sending',
-    async (input, message) => {
+    async (input, field, message) => {
       openCatalogRoute('/register', undefined, null)
       await fill(input)
       submit()
-      expect(await screen.findByRole('alert', { name: '' })).toHaveTextContent(message)
+      const control = screen.getByLabelText(field, { exact: true })
+      await waitFor(() => expect(control).toHaveAttribute('aria-invalid', 'true'))
+      expect(control).toHaveAccessibleDescription(
+        field === 'Password'
+          ? `Use at least 12 characters and at most 72 UTF-8 bytes. ${message}`
+          : message,
+      )
+      expect(screen.getByRole('alert')).toHaveTextContent(message)
+      expect(registerAccount).not.toHaveBeenCalled()
+    },
+  )
+
+  scenario.each([
+    { firstName: 'a'.repeat(80) },
+    { lastName: 'a'.repeat(80) },
+    { userName: 'a'.repeat(40) },
+    { driveLicense: '1'.repeat(11) },
+    { email: `${'a'.repeat(241)}@example.test` },
+    { password: 'a'.repeat(12), passwordConfirmation: 'a'.repeat(12) },
+    { password: 'a'.repeat(72), passwordConfirmation: 'a'.repeat(72) },
+    { password: 'é'.repeat(36), passwordConfirmation: 'é'.repeat(36) },
+    { firstName: ` ${'a'.repeat(80)} ` },
+    { lastName: ` ${'a'.repeat(80)} ` },
+    { userName: ' Test.Driver ' },
+    { driveLicense: ' 12345678901 ' },
+  ])('Given a valid boundary value, when registering, then submit %s', async (input) => {
+    openCatalogRoute('/register', undefined, null)
+    await fill(input)
+    submit()
+    await waitFor(() =>
+      expect(registerAccount).toHaveBeenCalledExactlyOnceWith({ ...valid, ...input }),
+    )
+  })
+
+  scenario(
+    'Given a new form, when submitting empty fields, then show required errors without navigating',
+    async () => {
+      openCatalogRoute('/register', undefined, null)
+      await screen.findByLabelText('First name')
+      const fields = [
+        'First name',
+        'Last name',
+        'Username',
+        'CNH number',
+        'Email',
+        'Password',
+        'Confirm password',
+      ]
+      for (const label of fields)
+        expect(screen.getByLabelText(label, { exact: true })).toHaveValue('')
+      const form = screen.getByRole('button', { name: 'Create account' }).closest('form')!
+      const event = new Event('submit', { bubbles: true, cancelable: true })
+      fireEvent(form, event)
+      expect(event.defaultPrevented).toBe(true)
+      await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(fields.length))
       expect(registerAccount).not.toHaveBeenCalled()
     },
   )

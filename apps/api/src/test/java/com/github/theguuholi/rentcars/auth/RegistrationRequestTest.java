@@ -65,7 +65,7 @@ class RegistrationRequestTest {
         assertThat(validator.validate(request("my-password-123", "my-password-123"))).isEmpty();
         assertThat(validator.validate(request("my-password-123", "my-password-123 ")))
             .extracting(v -> v.getPropertyPath().toString())
-            .contains("passwordConfirmation");
+            .containsExactly("passwordConfirmation");
       }
       var check = new PasswordConfirmationValidator();
       assertThat(check.isValid(null, null)).isTrue();
