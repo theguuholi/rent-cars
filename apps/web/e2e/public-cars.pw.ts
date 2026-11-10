@@ -10,9 +10,12 @@ test('Given seeded cars, when a guest lists them, then public summaries are orde
   const catalog = await test.step('Then the API returns a nonempty JSON catalog', async () => {
     expect(response.status()).toBe(200)
     expect(response.headers()['content-type']).toContain('application/json')
-    const cars: unknown = await response.json()
-    expect(Array.isArray(cars)).toBe(true)
-    const result = cars as Array<Record<string, unknown>>
+    const page = (await response.json()) as {
+      content: Array<Record<string, unknown>>
+      totalElements: number
+    }
+    expect(page.totalElements).toBeGreaterThan(0)
+    const result = page.content
     expect(result.length).toBeGreaterThan(0)
     return result
   })
@@ -26,6 +29,7 @@ test('Given seeded cars, when a guest lists them, then public summaries are orde
           available: expect.any(Boolean),
         }),
       )
+      expect(car.available).toBe(true)
     }
   })
 

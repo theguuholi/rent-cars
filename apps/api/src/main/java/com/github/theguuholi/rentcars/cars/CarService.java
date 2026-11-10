@@ -10,11 +10,16 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import javax.imageio.ImageIO;
 import javax.imageio.stream.MemoryCacheImageInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -42,8 +47,38 @@ class CarService {
     this.entities = entities;
   }
 
-  List<Car> list() {
-    return cars.findAll(Sort.by("name", "id"));
+  CarPage list(
+      boolean availableOnly, String name, String brand, String category, Pageable pageable) {
+    if (pageable.getPageSize() < 1 || pageable.getPageSize() > 100)
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Page size must be between 1 and 100");
+    Set<String> allowedSorts = Set.of("name", "brand", "id");
+    for (Sort.Order order : pageable.getSort()) {
+      if (!allowedSorts.contains(order.getProperty()))
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported car sort field");
+    }
+    Sort sort = pageable.getSort().isUnsorted() ? Sort.by("name") : pageable.getSort();
+    if (sort.getOrderFor("id") == null) sort = sort.and(Sort.by("id"));
+    Page<Car> page =
+        cars.search(
+            availableOnly,
+            pattern(name),
+            pattern(brand),
+            category == null ? "" : category.strip().toUpperCase(Locale.ROOT),
+            PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort));
+    return CarPage.from(page);
+  }
+
+  private static String pattern(String value) {
+    if (value == null || value.isBlank()) return "%";
+    return "%"
+        + value
+            .strip()
+            .toLowerCase(Locale.ROOT)
+            .replace("!", "!!")
+            .replace("%", "!%")
+            .replace("_", "!_")
+        + "%";
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)

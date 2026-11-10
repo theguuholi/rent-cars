@@ -188,7 +188,7 @@ describe('Session transitions and navigation', () => {
         ...adminSession,
         user: { ...adminSession.user, role: 'USER' },
       })
-      expect(await screen.findByText('No cars yet.')).toBeVisible()
+      expect(await screen.findByText('No matching cars.')).toBeVisible()
       for (const name of ['New car', 'Categories', 'Specifications'])
         expect(screen.queryByRole('link', { name })).not.toBeInTheDocument()
       await act(async () => session.set(adminSession))

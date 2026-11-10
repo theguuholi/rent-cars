@@ -3,14 +3,34 @@
 ### Browse public fleet
 # @name cars_list
 # @tag smoke
-GET {{baseUrl}}/cars
+GET {{baseUrl}}/cars?page=0&size=12&sort=name,asc
 
 {{
   const assert = require("node:assert/strict");
   assert.equal(response.statusCode, 200);
 
-  test("Fleet is an array", () => assert.ok(Array.isArray(response.parsedBody)));
+  test("Fleet is paged and only contains available cars", () => {
+    assert.ok(Array.isArray(response.parsedBody.content));
+    assert.ok(response.parsedBody.content.every(car => car.available));
+    assert.equal(response.parsedBody.number, 0);
+  });
 }}
+
+### Search public fleet by name, brand and category
+# @name cars_search
+# @tag manual
+GET {{baseUrl}}/cars?name=Argo&brand=Fiat&category=HATCHBACK&page=0&size=6&sort=name,asc
+
+### Browse all cars as an admin, including unavailable ones
+# @name cars_manage
+# @tag manual
+GET {{baseUrl}}/cars/manage?page=0&size=12&sort=name,asc
+Authorization: Bearer {{state.adminToken}}
+
+### Reject an excessive page size
+# @name cars_invalid_page_size
+# @tag manual
+GET {{baseUrl}}/cars?size=101
 
 ### Create example Argo
 # @name cars_create

@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.net.URI;
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,20 +23,21 @@ class CarControllerTest {
   @DisplayName("list()")
   class ListCars {
     @Test
-    @DisplayName("Given an empty fleet, when listing, then no cars are returned")
+    @DisplayName("Given an empty fleet, when listing, then the public filters reach the service")
     void emptyFleet() {
-      when(service.list()).thenReturn(List.of());
-      assertThat(controller.list()).isEmpty();
-      verify(service).list();
+      var pageable = PageRequest.of(0, 12);
+      var empty = new CarPage(java.util.List.of(), 0, 12, 0, 0);
+      when(service.list(true, "Argo", "Fiat", "HATCHBACK", pageable)).thenReturn(empty);
+      assertThat(controller.list("Argo", "Fiat", "HATCHBACK", pageable)).isSameAs(empty);
     }
 
     @Test
-    @DisplayName("Given ordered cars, when listing, then the service order is preserved")
-    void populatedFleet() {
-      var first = new Car();
-      var second = new Car();
-      when(service.list()).thenReturn(List.of(second, first));
-      assertThat(controller.list()).containsExactly(second, first);
+    @DisplayName("Given an admin, when listing, then unavailable cars are included")
+    void manageFleet() {
+      var pageable = PageRequest.of(0, 12);
+      var page = new CarPage(java.util.List.of(new Car()), 0, 12, 1, 1);
+      when(service.list(false, null, null, null, pageable)).thenReturn(page);
+      assertThat(controller.manage(null, null, null, pageable)).isSameAs(page);
     }
   }
 

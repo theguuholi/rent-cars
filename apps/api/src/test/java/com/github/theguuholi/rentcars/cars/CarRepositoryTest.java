@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -37,6 +39,31 @@ class CarRepositoryTest {
   }
 
   @Autowired EntityManagerFactory entityManagerFactory;
+
+  @Nested
+  class Search {
+    @Test
+    @Transactional
+    @DisplayName(
+        "Given mixed availability and categories, when searching, then filtering precedes pagination")
+    void filtersBeforePagination() {
+      UUID first = sedan("SEARCH01");
+      UUID second = sedan("SEARCH02");
+      jdbc.update("update cars set name='Argo', brand='SearchBrand' where id=?", first);
+      jdbc.update(
+          "update cars set name='Bravo', brand='SearchBrand', available=false where id=?", second);
+      var pageable = PageRequest.of(0, 1, Sort.by("name", "id"));
+      var publicPage = cars.search(true, "%a%", "%searchbrand%", "SEDAN", pageable);
+      assertThat(publicPage.getTotalElements()).isEqualTo(1);
+      assertThat(publicPage.getContent()).extracting(Car::id).containsExactly(first);
+      var adminPage = cars.search(false, "%", "%searchbrand%", "SEDAN", pageable);
+      assertThat(adminPage.getTotalElements()).isEqualTo(2);
+      assertThat(adminPage.getTotalPages()).isEqualTo(2);
+      assertThat(adminPage.getContent()).extracting(Car::id).containsExactly(first);
+      assertThat(cars.search(false, "%", "%searchbrand%", "SUV", pageable).getTotalElements())
+          .isZero();
+    }
+  }
 
   @Nested
   class FindDetailedById {

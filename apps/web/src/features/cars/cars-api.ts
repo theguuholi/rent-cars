@@ -15,6 +15,23 @@ export interface CarInput {
 export type CarPatch = Partial<Omit<CarInput, 'licensePlate'>>
 export type Car = CarInput & { id: string; version: number }
 
+export type CarSearch = {
+  name: string
+  brand: string
+  category: string
+  page: number
+  size: number
+  sort: string
+}
+
+export type CarPage = {
+  content: Car[]
+  number: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
 export interface CarImage {
   id: string
   contentType: string
@@ -86,8 +103,21 @@ async function request(
   return response
 }
 
-export async function listCars(signal?: AbortSignal): Promise<Car[]> {
-  return (await request(collection, { signal })).json()
+export async function listCars(
+  search: CarSearch,
+  isAdmin: boolean,
+  signal?: AbortSignal,
+): Promise<CarPage> {
+  const params = new URLSearchParams({
+    page: String(search.page),
+    size: String(search.size),
+    sort: search.sort,
+  })
+  for (const field of ['name', 'brand', 'category'] as const) {
+    if (search[field].trim()) params.set(field, search[field].trim())
+  }
+  const url = `${collection}${isAdmin ? '/manage' : ''}?${params}`
+  return (await request(url, { signal }, isAdmin ? protectedFetch : fetch)).json()
 }
 
 export async function getCar(id: string, signal?: AbortSignal): Promise<CarWithCatalog> {

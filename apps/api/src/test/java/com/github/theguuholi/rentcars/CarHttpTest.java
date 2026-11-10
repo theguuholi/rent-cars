@@ -284,11 +284,14 @@ class CarHttpTest {
     @DisplayName("Given an empty fleet, when listing cars, then the collection is empty")
     @Test
     void emptyFleet() throws Exception {
-      mvc.perform(get("/cars")).andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+      mvc.perform(get("/cars"))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content").isEmpty())
+          .andExpect(jsonPath("$.totalElements").value(0));
     }
 
     @DisplayName(
-        "Given two cars, when listing, then both appear in name order with their specifications")
+        "Given available and unavailable cars, when listing, then the public sees only the available one")
     @Test
     void givenTwoCarsWhenListingThenReturnsBothInNameOrder() throws Exception {
       givenCar();
@@ -298,10 +301,50 @@ class CarHttpTest {
       create(car).andExpect(status().isCreated()).andExpect(jsonPath("$.available").value(false));
       mvc.perform(get("/cars"))
           .andExpect(status().isOk())
-          .andExpect(jsonPath("$[*].name").value(org.hamcrest.Matchers.contains("Accord", "Civic")))
-          .andExpect(jsonPath("$[*].category").doesNotHaveJsonPath())
-          .andExpect(jsonPath("$[*].specifications").doesNotHaveJsonPath())
-          .andExpect(jsonPath("$[0].specificationIds").value(containsInAnyOrder(gps)));
+          .andExpect(jsonPath("$.content[*].name").value(org.hamcrest.Matchers.contains("Civic")))
+          .andExpect(jsonPath("$.content[0].category").doesNotHaveJsonPath())
+          .andExpect(jsonPath("$.content[0].specifications").doesNotHaveJsonPath());
+      mvc.perform(get("/cars/manage"))
+          .andExpect(status().isOk())
+          .andExpect(
+              jsonPath("$.content[*].name")
+                  .value(org.hamcrest.Matchers.contains("Accord", "Civic")))
+          .andExpect(jsonPath("$.content[0].specificationIds").value(containsInAnyOrder(gps)));
+    }
+
+    @Test
+    @DisplayName(
+        "Given cars in two categories, when filtering and paginating, then totals and order match the database")
+    void filtersAndPages() throws Exception {
+      givenCar();
+      create(input().put("name", "Accord").put("licensePlate", "FIL1234"))
+          .andExpect(status().isCreated());
+      create(
+              input()
+                  .put("name", "Argo")
+                  .put("brand", "Fiat")
+                  .put("categoryId", suv)
+                  .put("licensePlate", "FIL5678"))
+          .andExpect(status().isCreated());
+      mvc.perform(
+              get("/cars")
+                  .param("brand", "hon")
+                  .param("category", "sedan")
+                  .param("page", "1")
+                  .param("size", "1"))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[0].name").value("Civic"))
+          .andExpect(jsonPath("$.number").value(1))
+          .andExpect(jsonPath("$.size").value(1))
+          .andExpect(jsonPath("$.totalElements").value(2))
+          .andExpect(jsonPath("$.totalPages").value(2));
+      mvc.perform(get("/cars").param("name", "arg"))
+          .andExpect(jsonPath("$.content[0].name").value("Argo"));
+      mvc.perform(get("/cars").param("sort", "brand,desc").param("size", "1"))
+          .andExpect(jsonPath("$.content[0].brand").value("Honda"));
+      mvc.perform(get("/cars").param("size", "101")).andExpect(status().isBadRequest());
+      mvc.perform(get("/cars").param("sort", "licensePlate,asc"))
+          .andExpect(status().isBadRequest());
     }
   }
 
@@ -337,7 +380,7 @@ class CarHttpTest {
           .andExpect(status().isBadRequest())
           .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
           .andExpect(jsonPath("$.detail").isString());
-      mvc.perform(get("/cars")).andExpect(jsonPath("$").isEmpty());
+      mvc.perform(get("/cars")).andExpect(jsonPath("$.content").isEmpty());
     }
 
     @DisplayName("Given a missing required field, when creating, then the fleet stays empty")
@@ -356,7 +399,7 @@ class CarHttpTest {
       var car = input();
       car.remove(field);
       create(car).andExpect(status().is(422));
-      mvc.perform(get("/cars")).andExpect(jsonPath("$").isEmpty());
+      mvc.perform(get("/cars")).andExpect(jsonPath("$.content").isEmpty());
     }
 
     @DisplayName("Given blank text, when creating, then validation rejects the car")
@@ -375,7 +418,7 @@ class CarHttpTest {
     @CsvSource({"name,100", "brand,80", "licensePlate,20", "description,255"})
     void enforcesTextLength(String field, int max) throws Exception {
       create(input().put(field, "X".repeat(max + 1))).andExpect(status().is(422));
-      mvc.perform(get("/cars")).andExpect(jsonPath("$").isEmpty());
+      mvc.perform(get("/cars")).andExpect(jsonPath("$.content").isEmpty());
       create(input().put(field, "X".repeat(max)))
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$." + field).value("X".repeat(max)));
@@ -392,7 +435,7 @@ class CarHttpTest {
       var badSpecs = input();
       badSpecs.putArray("specificationIds").add(gps).add(missing);
       create(badSpecs).andExpect(status().isBadRequest());
-      mvc.perform(get("/cars")).andExpect(jsonPath("$").isEmpty());
+      mvc.perform(get("/cars")).andExpect(jsonPath("$.content").isEmpty());
     }
 
     @Test
@@ -430,8 +473,8 @@ class CarHttpTest {
             .containsExactlyInAnyOrder(201, 409);
       }
       mvc.perform(get("/cars"))
-          .andExpect(jsonPath("$.length()").value(1))
-          .andExpect(jsonPath("$[0].licensePlate").value("XYZ1234"));
+          .andExpect(jsonPath("$.content.length()").value(1))
+          .andExpect(jsonPath("$.content[0].licensePlate").value("XYZ1234"));
     }
   }
 
@@ -796,8 +839,8 @@ class CarHttpTest {
               jsonPath("$.paths['/cars'].post.responses['201'].content.*.schema['$ref']")
                   .value(org.hamcrest.Matchers.contains("#/components/schemas/Car_Summary")))
           .andExpect(
-              jsonPath("$.paths['/cars'].get.responses['200'].content.*.schema.items['$ref']")
-                  .value(org.hamcrest.Matchers.contains("#/components/schemas/Car_Summary")));
+              jsonPath("$.paths['/cars'].get.responses['200'].content.*.schema['$ref']")
+                  .value(org.hamcrest.Matchers.contains("#/components/schemas/CarPage_Summary")));
       docs.andExpect(
           jsonPath("$.paths['/cars/{id}'].get.responses['200'].content.*.schema['$ref']")
               .value(org.hamcrest.Matchers.contains("#/components/schemas/Car_Detail")));
