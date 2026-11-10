@@ -12,8 +12,18 @@ test('Given a new driver and an available car, when the car is rented and return
 
   await test.step('Given a new driver registers', async () => {
     await page.goto(`${webBaseUrl}/register`)
+    await page.getByLabel('First name').fill('Test')
+    await page.getByLabel('Last name').fill('Driver')
+    await page.getByLabel('Username').fill(`qa-${randomUUID().slice(0, 20)}`)
+    await page.getByLabel('CNH number').fill(
+      BigInt(`0x${randomUUID().replaceAll('-', '').slice(0, 12)}`)
+        .toString()
+        .padStart(11, '0')
+        .slice(0, 11),
+    )
     await page.getByLabel('Email').fill(email)
-    await page.getByLabel('Password').fill(driverPassword)
+    await page.getByLabel('Password', { exact: true }).fill(driverPassword)
+    await page.getByLabel('Confirm password').fill(driverPassword)
     await page.getByRole('button', { name: 'Create account' }).click()
     await expect(page.getByRole('status')).toHaveText('Your account is ready. Sign in to continue.')
   })

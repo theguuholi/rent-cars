@@ -68,5 +68,4 @@ jobs:
             tail -100 "$RUNNER_TEMP/dev.log"
             exit 1
           fi
-          npm --prefix apps/web run test:public-api
-          npm --prefix apps/web run test:browser
+          npm --prefix apps/web run test:e2e

@@ -1,11 +1,13 @@
 package com.github.theguuholi.rentcars.auth;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
 import org.springframework.security.core.userdetails.User;
@@ -34,11 +36,19 @@ class Account {
   @Column(nullable = false, length = 5)
   private String role = "USER";
 
+  @OneToOne(mappedBy = "account", cascade = CascadeType.ALL)
+  private DriverProfile driverProfile;
+
   protected Account() {}
 
   Account(String email, String passwordHash) {
     this.email = email;
     this.passwordHash = passwordHash;
+  }
+
+  Account(RegistrationRequest input, String passwordHash) {
+    this(input.email(), passwordHash);
+    this.driverProfile = new DriverProfile(this, input);
   }
 
   /** Supplies Spring Security with the account ID, encoded password and granted role. */
@@ -47,6 +57,12 @@ class Account {
   }
 
   UserProfile profile() {
-    return new UserProfile(id, email, role);
+    return new UserProfile(
+        id,
+        email,
+        role,
+        driverProfile == null ? null : driverProfile.firstName(),
+        driverProfile == null ? null : driverProfile.lastName(),
+        driverProfile == null ? null : driverProfile.userName());
   }
 }

@@ -1,13 +1,9 @@
 import { useForm } from '@tanstack/react-form'
 import type { Category } from '../../../categories/categories-api'
 import type { Specification } from '../../../specifications/specifications-api'
-import { formatBrlInput, parseBrl } from '../../brl'
+import { formatBrlInput } from '../../brl'
 import type { Car, CarInput } from '../../cars-api'
-
-type CarDraft = Omit<CarInput, 'dailyRateCents' | 'fineAmountCents'> & {
-  dailyRate: string
-  fineAmount: string
-}
+import { carDraftSchema, carFieldError, type CarDraft } from './car-draft-schema'
 
 type Props = {
   car?: Car
@@ -19,10 +15,10 @@ type Props = {
 }
 
 const textFields = [
-  ['name', 'Name', 100],
-  ['description', 'Description', 255],
-  ['brand', 'Brand', 80],
-  ['licensePlate', 'License plate', 20],
+  ['name', 'Name'],
+  ['description', 'Description'],
+  ['brand', 'Brand'],
+  ['licensePlate', 'License plate'],
 ] as const
 const rates = [
   ['dailyRate', 'Daily rate (BRL)'],
@@ -43,18 +39,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
   }
   const form = useForm({
     defaultValues,
-    onSubmit: ({ value }) =>
-      onSave({
-        name: value.name.trim(),
-        description: value.description.trim(),
-        brand: value.brand.trim(),
-        licensePlate: value.licensePlate.trim().toUpperCase(),
-        available: value.available,
-        categoryId: value.categoryId,
-        specificationIds: value.specificationIds,
-        dailyRateCents: parseBrl(value.dailyRate)!,
-        fineAmountCents: parseBrl(value.fineAmount)!,
-      }),
+    onSubmit: ({ value }) => onSave(carDraftSchema.parse(value)),
   })
   return (
     <form
@@ -66,17 +51,12 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
       }}
     >
       <fieldset className="grid min-w-0 gap-5 sm:grid-cols-2" disabled={busy}>
-        {textFields.map(([name, label, maxLength]) => (
+        {textFields.map(([name, label]) => (
           <form.Field
             key={name}
             name={name}
             validators={{
-              onChange: ({ value }) => {
-                const normalized =
-                  name === 'licensePlate' ? value.trim().toUpperCase() : value.trim()
-                if (!normalized) return `Enter a ${label.toLowerCase()}.`
-                if (normalized.length > maxLength) return `Use at most ${maxLength} characters.`
-              },
+              onChange: ({ value }) => carFieldError(name, value),
             }}
           >
             {(field) => (
@@ -103,10 +83,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
             name={name}
             key={name}
             validators={{
-              onChange: ({ value }) =>
-                parseBrl(value) === null
-                  ? 'Enter a nonnegative BRL amount with up to two decimal places.'
-                  : undefined,
+              onChange: ({ value }) => carFieldError(name, value),
             }}
           >
             {(field) => (
@@ -130,7 +107,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
         ))}
         <form.Field
           name="categoryId"
-          validators={{ onChange: ({ value }) => (value ? undefined : 'Select a category.') }}
+          validators={{ onChange: ({ value }) => carFieldError('categoryId', value) }}
         >
           {(field) => (
             <div>

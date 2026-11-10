@@ -57,9 +57,38 @@ class SessionControllerTest {
     return json.writeValueAsString(Map.of("email", email, "password", password));
   }
 
+  String registration(String email, String password) {
+    return registration(
+        email,
+        password,
+        "qa-" + UUID.randomUUID().toString().substring(0, 12),
+        String.valueOf(
+            java.util.concurrent.ThreadLocalRandom.current()
+                .nextLong(10_000_000_000L, 100_000_000_000L)));
+  }
+
+  String registration(String email, String password, String userName, String driveLicense) {
+    return json.writeValueAsString(
+        Map.of(
+            "firstName",
+            "Test",
+            "lastName",
+            "Driver",
+            "userName",
+            userName,
+            "driveLicense",
+            driveLicense,
+            "email",
+            email,
+            "password",
+            password,
+            "passwordConfirmation",
+            password));
+  }
+
   String register() throws Exception {
     var response =
-        send("/users", credentials(email, password)).andExpect(status().isCreated()).andReturn();
+        send("/users", registration(email, password)).andExpect(status().isCreated()).andReturn();
     return json.readTree(response.getResponse().getContentAsString()).get("id").asString();
   }
 
@@ -287,7 +316,7 @@ class SessionControllerTest {
               post("/users")
                   .header("Sec-Fetch-Site", "cross-site")
                   .contentType(MediaType.APPLICATION_JSON)
-                  .content(credentials(email, password)))
+                  .content(registration(email, password)))
           .andExpect(status().isForbidden());
     }
 
@@ -299,7 +328,7 @@ class SessionControllerTest {
               post("/users")
                   .cookie(new jakarta.servlet.http.Cookie("JSESSIONID", "example"))
                   .contentType(MediaType.APPLICATION_JSON)
-                  .content(credentials(email, password)))
+                  .content(registration(email, password)))
           .andExpect(status().isForbidden());
       assertThat(
               jdbc.queryForObject(
@@ -314,9 +343,19 @@ class SessionControllerTest {
       var body =
           json.writeValueAsString(
               Map.of(
+                  "firstName",
+                  " Test ",
+                  "lastName",
+                  " Driver ",
+                  "userName",
+                  " QA-" + UUID.randomUUID().toString().substring(0, 12) + " ",
+                  "driveLicense",
+                  "12345678901",
                   "email",
                   " " + email.toUpperCase(Locale.ROOT) + " ",
                   "password",
+                  password,
+                  "passwordConfirmation",
                   password,
                   "role",
                   "ADMIN"));
@@ -327,7 +366,16 @@ class SessionControllerTest {
               .andExpect(jsonPath("$.email").value(email))
               .andReturn();
       assertThat(json.readTree(result.getResponse().getContentAsString()).propertyNames())
-          .containsExactlyInAnyOrder("id", "email", "role");
+          .containsExactlyInAnyOrder("id", "email", "role", "firstName", "lastName", "userName");
+      assertThat(
+              json.readTree(result.getResponse().getContentAsString()).get("firstName").asString())
+          .isEqualTo("Test");
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from driver_profiles where account_id=(select id from accounts where email=?) and first_name='Test' and last_name='Driver' and drive_license='12345678901'",
+                  Integer.class,
+                  email))
+          .isOne();
       assertThat(
               passwords.matches(
                   password,
@@ -341,13 +389,133 @@ class SessionControllerTest {
         "Given a registered email, when registering another casing, then PostgreSQL preserves one account and the API returns conflict")
     void duplicate() throws Exception {
       register();
-      send("/users", credentials(email.toUpperCase(Locale.ROOT), password))
+      send("/users", registration(email.toUpperCase(Locale.ROOT), password))
           .andExpect(status().isConflict())
           .andExpect(jsonPath("$.errors.conflict").isArray());
       assertThat(
               jdbc.queryForObject(
                   "select count(*) from accounts where email=?", Integer.class, email))
           .isOne();
+    }
+
+    @ParameterizedTest(
+        name = "Given an existing {0}, when registering again, then the database keeps one driver")
+    @ValueSource(strings = {"user_name", "drive_license"})
+    void duplicateDriverIdentifier(String column) throws Exception {
+      var id = UUID.fromString(register());
+      var existing =
+          jdbc.queryForObject(
+              "select " + column + " from driver_profiles where account_id=?", String.class, id);
+      var username =
+          column.equals("user_name")
+              ? existing.toUpperCase(Locale.ROOT)
+              : "qa-" + UUID.randomUUID().toString().substring(0, 12);
+      var license = column.equals("drive_license") ? existing : "98765432109";
+      send("/users", registration("another-" + email, password, username, license))
+          .andExpect(status().isConflict())
+          .andExpect(
+              jsonPath("$.errors.conflict[0]")
+                  .value("A record with the same unique value already exists"));
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from driver_profiles where " + column + "=?",
+                  Integer.class,
+                  existing))
+          .isOne();
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from accounts where email=?", Integer.class, "another-" + email))
+          .isZero();
+    }
+
+    @ParameterizedTest(
+        name =
+            "Given simultaneous registrations with the same {0}, when both save, then one succeeds and one conflicts")
+    @ValueSource(strings = {"user_name", "drive_license"})
+    void concurrentIdentifier(String column) throws Exception {
+      var sharedUsername = "race-" + UUID.randomUUID().toString().substring(0, 12);
+      var sharedLicense =
+          String.valueOf(
+              java.util.concurrent.ThreadLocalRandom.current()
+                  .nextLong(10_000_000_000L, 100_000_000_000L));
+      var start = new java.util.concurrent.CyclicBarrier(2);
+      try (var workers = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        java.util.concurrent.Callable<Integer> first =
+            () -> {
+              start.await(10, java.util.concurrent.TimeUnit.SECONDS);
+              return send(
+                      "/users",
+                      registration("one-" + email, password, sharedUsername, sharedLicense))
+                  .andReturn()
+                  .getResponse()
+                  .getStatus();
+            };
+        java.util.concurrent.Callable<Integer> second =
+            () -> {
+              start.await(10, java.util.concurrent.TimeUnit.SECONDS);
+              return send(
+                      "/users",
+                      registration(
+                          "two-" + email,
+                          password,
+                          column.equals("user_name") ? sharedUsername : "other-" + sharedUsername,
+                          column.equals("drive_license") ? sharedLicense : "98765432108"))
+                  .andReturn()
+                  .getResponse()
+                  .getStatus();
+            };
+        var a = workers.submit(first);
+        var b = workers.submit(second);
+        assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(201, 409);
+      }
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from driver_profiles where " + column + "=?",
+                  Integer.class,
+                  column.equals("user_name") ? sharedUsername : sharedLicense))
+          .isOne();
+    }
+
+    @Test
+    @DisplayName(
+        "Given different passwords, when registering, then the API rejects confirmation without saving either record")
+    void confirmationMismatch() throws Exception {
+      var body =
+          registration(email, password)
+              .replace(
+                  "\"passwordConfirmation\":\"" + password + "\"",
+                  "\"passwordConfirmation\":\"different-password-123\"");
+      var response =
+          send("/users", body)
+              .andExpect(status().isUnprocessableContent())
+              .andExpect(jsonPath("$.errors.passwordConfirmation").isArray())
+              .andReturn()
+              .getResponse();
+      assertThat(json.readTree(response.getContentAsString()).get("errors").propertyNames())
+          .containsExactly("passwordConfirmation");
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from accounts where email=?", Integer.class, email))
+          .isZero();
+    }
+
+    @ParameterizedTest(name = "Given invalid {0}, when registering, then the API rejects the field")
+    @CsvSource({
+      "firstName,Test,'   '",
+      "lastName,Driver,'   '",
+      "userName,valid.name,x",
+      "driveLicense,12345678901,123",
+      "email,valid@example.test,bad"
+    })
+    void invalidDriverField(String field, String original, String invalid) throws Exception {
+      String body =
+          registration("valid@example.test", password, "valid.name", "12345678901")
+              .replace(
+                  "\"" + field + "\":\"" + original + "\"",
+                  "\"" + field + "\":\"" + invalid + "\"");
+      send("/users", body)
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(jsonPath("$.errors." + field).isArray());
     }
 
     @ParameterizedTest(name = "Given {0}, when registering, then validation rejects the request")
@@ -365,9 +533,9 @@ class SessionControllerTest {
     @DisplayName(
         "Given multibyte passwords at and above the BCrypt limit, when registering, then only the 72-byte password succeeds")
     void byteBoundary() throws Exception {
-      send("/users", credentials(email, "é".repeat(37)))
+      send("/users", registration(email, "é".repeat(37)))
           .andExpect(status().isUnprocessableContent());
-      send("/users", credentials(email, "é".repeat(36))).andExpect(status().isCreated());
+      send("/users", registration(email, "é".repeat(36))).andExpect(status().isCreated());
     }
   }
 
@@ -449,6 +617,11 @@ class SessionControllerTest {
       String token = login();
       jdbc.update("update accounts set role='ADMIN' where email=?", email);
       String original = email;
+      String username =
+          jdbc.queryForObject(
+              "select user_name from driver_profiles where account_id=?",
+              String.class,
+              UUID.fromString(id));
       email = "another-" + email;
       register();
       mvc.perform(get("/sessions/me").header("Authorization", "Bearer " + token))
@@ -456,7 +629,20 @@ class SessionControllerTest {
           .andExpect(
               content()
                   .json(
-                      json.writeValueAsString(Map.of("id", id, "role", "ADMIN", "email", original)),
+                      json.writeValueAsString(
+                          Map.of(
+                              "id",
+                              id,
+                              "role",
+                              "ADMIN",
+                              "email",
+                              original,
+                              "firstName",
+                              "Test",
+                              "lastName",
+                              "Driver",
+                              "userName",
+                              username)),
                       JsonCompareMode.STRICT));
     }
 
@@ -513,9 +699,17 @@ class SessionControllerTest {
               jsonPath("$.components.schemas.Credentials.properties.password.format")
                   .value("password"))
           .andExpect(
+              jsonPath("$.components.schemas.RegistrationRequest.properties.firstName").exists())
+          .andExpect(
+              jsonPath(
+                      "$.components.schemas.RegistrationRequest.properties.passwordConfirmation.format")
+                  .value("password"))
+          .andExpect(
               jsonPath("$.components.schemas.UserProfile.properties.id.format").value("uuid"))
           .andExpect(
-              jsonPath("$.components.schemas.UserProfile.properties.passwordHash").doesNotExist());
+              jsonPath("$.components.schemas.UserProfile.properties.passwordHash").doesNotExist())
+          .andExpect(
+              jsonPath("$.components.schemas.UserProfile.properties.driveLicense").doesNotExist());
     }
   }
 }

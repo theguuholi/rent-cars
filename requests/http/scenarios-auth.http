@@ -1,5 +1,28 @@
 # @import ./common.http
 
+### Reject mismatched driver passwords
+# @name scenarios_auth_registration_password_mismatch
+# @tag negative
+# @forceRef csrf
+POST {{baseUrl}}/users
+X-XSRF-TOKEN: {{csrfToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Example",
+  "lastName": "Driver",
+  "userName": "example.driver",
+  "driveLicense": "01234567890",
+  "email": "{{driverEmail}}",
+  "password": "{{driverPassword}}",
+  "passwordConfirmation": "different-password-123"
+}
+
+{{
+  const assert = require("node:assert/strict");
+  test("Confirmation mismatch is rejected", () => assert.equal(response.statusCode, 422));
+}}
+
 ### Reject ended session refresh
 # @name scenarios_auth_refresh_after_logout
 # @tag negative

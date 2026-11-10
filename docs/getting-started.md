@@ -157,7 +157,7 @@ Run these in order:
 
 | Step | Done | Request | Expected result |
 | --- | --- | --- | --- |
-| 1 | ☐ | `auth.http → auth_register_driver` | **201** creates `driver@example.com`; **409** is allowed if that email already exists |
+| 1 | ☐ | `auth.http → auth_register_driver` | **201** creates the driver with name, username, CNH number and matching passwords; **409** is allowed if an identifier already exists |
 | 2 | ☐ | `auth.http → auth_login_admin` | **200** captures `adminToken` |
 | 3 | ☐ | `auth.http → auth_me_admin` | **200**, role `ADMIN` |
 | 4 | ☐ | `auth.http → auth_login_driver` | **200** captures `driverToken` without replacing `adminToken` |
@@ -167,6 +167,10 @@ Run these in order:
 
 The example driver password is `local-example-only-123`. These credentials are
 for development only. Registration does not reset an existing account's password.
+The example CNH number is a placeholder for local testing. To register another
+driver, change the email, username and CNH number together. You can run
+`scenarios-auth.http → scenarios_auth_registration_password_mismatch` to see
+the API reject a confirmation that differs from the password with **422**.
 
 - [ ] Step 5 complete: I followed the instructions and verified the results before continuing.
 
@@ -308,26 +312,18 @@ complete `make setup` from Step 2 once before running the test.
 
    Expect **200 OK** and a JSON array of development cars.
 
-2. In **terminal 2**, run the public API test:
-
-   ```sh
-   npm --prefix apps/web run test:public-api
-   ```
-
-   Expect `1 passed`. Leave terminal 1 running until the test finishes, then
-   continue to the browser test.
-
-3. Install Playwright's Chromium browser once, then run the browser journeys:
+2. Install Playwright's Chromium browser once, then run every API and browser journey
+   in **terminal 2**:
 
    ```sh
    cd apps/web
    npx playwright install chromium
    cd ../..
-   npm --prefix apps/web run test:browser
+   npm --prefix apps/web run test:e2e
    ```
 
-   Expect `7 passed`: one catalog journey, five authentication journeys and
-   one rental journey.
+   Expect `12 passed`: one public API check, one catalog journey, five authentication journeys, two
+   complete-registration journeys, two administrator form journeys and one rental journey.
    The authentication tests cover driver registration and login, duplicate
    email, invalid admin credentials followed by a successful retry, session
    restore and sign out, redirect after admin login, and denial for a driver
@@ -335,24 +331,21 @@ complete `make setup` from Step 2 once before running the test.
    available car, confirms that it becomes unavailable, returns it and confirms
    that it becomes available again.
 
-   To run only the authentication journeys, use:
+   Playwright discovers all `*.pw.ts` files under `apps/web/e2e/`, so a new
+   journey needs no package script or CI change. To run one file, pass its path:
 
    ```sh
-   npm --prefix apps/web run test:auth
-   ```
-
-   To run only the rental journey, use:
-
-   ```sh
-   npm --prefix apps/web run test:rental
+   npm --prefix apps/web run test:e2e -- e2e/auth-journeys.pw.ts
    ```
 
    These tests use the seeded development administrator from Step 3. Set
    `RENT_CARS_ADMIN_EMAIL` and `RENT_CARS_ADMIN_PASSWORD` if your local seed
-   differs. Each run registers three drivers with unique test emails in the
+   differs. Each run registers four drivers with unique test emails in the
    development database; they do not depend on earlier runs or a fixed driver ID.
    The rental journey creates one additional driver. A successful run returns
-   the car before finishing; the completed rental remains in its history.
+   the car before finishing; the completed rental remains in its history. The
+   administrator form journeys create and remove a car and a specification with
+   unique test names.
    Press Ctrl+C in terminal 1 when finished.
 
 The public API test sends one unauthenticated **GET /cars** request to the Spring API at
@@ -364,7 +357,7 @@ nor a login. It expects at least one car, so use the seeded development API.
 To target an API listening on another port, set its root URL, for example:
 
 ```sh
-RENT_CARS_API_URL=http://localhost:18080 npm --prefix apps/web run test:public-api
+RENT_CARS_API_URL=http://localhost:18080 npm --prefix apps/web run test:e2e -- e2e/public-cars.pw.ts
 ```
 
 If the test reports a connection error, check that terminal 1 is still running

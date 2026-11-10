@@ -10,4 +10,7 @@ public record UserProfile(
     @Schema(
             description = "Current account role.",
             allowableValues = {"USER", "ADMIN"})
-        String role) {}
+        String role,
+    @Schema(description = "Driver's first name, when a profile exists.") String firstName,
+    @Schema(description = "Driver's last name, when a profile exists.") String lastName,
+    @Schema(description = "Normalized driver username, when a profile exists.") String userName) {}

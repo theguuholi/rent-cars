@@ -4,6 +4,15 @@ const email = 'driver@example.test',
   password = 'local-dev-123',
   csrf = 'csrf-token'
 const user = { id: 'driver', email, role: 'USER' }
+const registration = {
+  firstName: 'Test',
+  lastName: 'Driver',
+  userName: 'test.driver',
+  driveLicense: '01234567890',
+  email,
+  password,
+  passwordConfirmation: password,
+}
 const bootstrap = () => new Response(null, { status: 204, headers: { 'X-XSRF-TOKEN': csrf } })
 describe('signIn', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -84,14 +93,14 @@ describe('signIn', () => {
 describe('Driver registration', () => {
   afterEach(() => vi.unstubAllGlobals())
   scenario(
-    'Given a CSRF token, when registering, then POST only the credentials with the matching header and leave login to the driver',
+    'Given a CSRF token, when registering, then POST the complete driver details with the matching header',
     async () => {
       const fetch = vi
         .fn()
         .mockResolvedValueOnce(bootstrap())
         .mockResolvedValueOnce(new Response(null, { status: 201 }))
       vi.stubGlobal('fetch', fetch)
-      await expect(registerAccount(email, password)).resolves.toBeUndefined()
+      await expect(registerAccount(registration)).resolves.toBeUndefined()
       expect(fetch.mock.calls).toEqual([
         ['/api/csrf'],
         [
@@ -99,15 +108,15 @@ describe('Driver registration', () => {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrf },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify(registration),
           },
         ],
       ])
     },
   )
   scenario.each([
-    [409, 'This email is already registered.'],
-    [422, 'Check the email and password requirements.'],
+    [409, 'An account with these details already exists.'],
+    [422, 'Check the registration fields and try again.'],
     [403, 'Could not create your account. Try again.'],
     [500, 'Could not create your account. Try again.'],
   ] as const)(
@@ -120,7 +129,7 @@ describe('Driver registration', () => {
           .mockResolvedValueOnce(bootstrap())
           .mockResolvedValueOnce(new Response(null, { status })),
       )
-      await expect(registerAccount(email, password)).rejects.toThrow(message)
+      await expect(registerAccount(registration)).rejects.toThrow(message)
     },
   )
 })
