@@ -48,5 +48,5 @@ export type CarField = keyof typeof carFieldSchemas
 
 export function carFieldError(field: CarField, value: string): string | undefined {
   const result = carFieldSchemas[field].safeParse(value)
-  return result.success ? undefined : result.error.issues[0]?.message
+  return result.success ? undefined : result.error.issues[0].message
 }

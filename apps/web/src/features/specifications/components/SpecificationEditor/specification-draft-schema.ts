@@ -19,5 +19,5 @@ export function specificationFieldError(
   value: string,
 ): string | undefined {
   const result = specificationFields[field].safeParse(value)
-  return result.success ? undefined : result.error.issues[0]?.message
+  return result.success ? undefined : result.error.issues[0].message
 }
