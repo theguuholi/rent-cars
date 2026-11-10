@@ -485,9 +485,14 @@ class SessionControllerTest {
               .replace(
                   "\"passwordConfirmation\":\"" + password + "\"",
                   "\"passwordConfirmation\":\"different-password-123\"");
-      send("/users", body)
-          .andExpect(status().isUnprocessableContent())
-          .andExpect(jsonPath("$.errors.passwordConfirmation").isArray());
+      var response =
+          send("/users", body)
+              .andExpect(status().isUnprocessableContent())
+              .andExpect(jsonPath("$.errors.passwordConfirmation").isArray())
+              .andReturn()
+              .getResponse();
+      assertThat(json.readTree(response.getContentAsString()).get("errors").propertyNames())
+          .containsExactly("passwordConfirmation");
       assertThat(
               jdbc.queryForObject(
                   "select count(*) from accounts where email=?", Integer.class, email))
