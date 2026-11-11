@@ -8,15 +8,7 @@ import type { CarSearch } from '../../cars-api'
 
 export function CarsPage() {
   const isAdmin = useSession()?.user.role === 'ADMIN'
-  const routeSearch = useSearch({ from: '/cars' })
-  const search: CarSearch = {
-    name: routeSearch.name ?? '',
-    brand: routeSearch.brand ?? '',
-    category: routeSearch.category ?? '',
-    page: routeSearch.page ?? 0,
-    size: routeSearch.size ?? 12,
-    sort: routeSearch.sort ?? 'name,asc',
-  }
+  const search: CarSearch = useSearch({ from: '/cars' })
   const navigate = useNavigate({ from: '/cars' })
   const cars = useQuery({
     queryKey: ['cars', isAdmin, search],

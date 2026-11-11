@@ -20,7 +20,7 @@ GET {{baseUrl}}/cars?page=0&size=12&sort=name,asc
 ### Search public fleet by name, brand and category
 # @name cars_search
 # @tag manual
-GET {{baseUrl}}/cars?name=Argo&brand=Fiat&category=HATCHBACK&page=0&size=6&sort=name,asc
+GET {{baseUrl}}/cars?name=Argo&brand=Fiat&category=HATCH&page=0&size=6&sort=name,asc
 
 {{
   const assert = require("node:assert/strict");

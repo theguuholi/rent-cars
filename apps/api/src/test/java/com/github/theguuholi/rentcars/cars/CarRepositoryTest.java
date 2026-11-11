@@ -53,15 +53,17 @@ class CarRepositoryTest {
       jdbc.update(
           "update cars set name='Bravo', brand='SearchBrand', available=false where id=?", second);
       var pageable = PageRequest.of(0, 1, Sort.by("name", "id"));
-      var publicPage = cars.search(true, "%a%", "%searchbrand%", "SEDAN", pageable);
+      var publicPage = cars.search(true, "%a%", "%searchbrand%", "%sedan%", pageable);
       assertThat(publicPage.getTotalElements()).isEqualTo(1);
       assertThat(publicPage.getContent()).extracting(Car::id).containsExactly(first);
-      var adminPage = cars.search(false, "%", "%searchbrand%", "SEDAN", pageable);
+      var adminPage = cars.search(false, "%", "%searchbrand%", "%sedan%", pageable);
       assertThat(adminPage.getTotalElements()).isEqualTo(2);
       assertThat(adminPage.getTotalPages()).isEqualTo(2);
       assertThat(adminPage.getContent()).extracting(Car::id).containsExactly(first);
-      assertThat(cars.search(false, "%", "%searchbrand%", "SUV", pageable).getTotalElements())
+      assertThat(cars.search(false, "%", "%searchbrand%", "%suv%", pageable).getTotalElements())
           .isZero();
+      assertThat(cars.search(false, "%", "%searchbrand%", "%eda%", pageable).getTotalElements())
+          .isEqualTo(2);
     }
   }
 

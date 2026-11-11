@@ -4,31 +4,25 @@ import { rootRoute } from '../../routes/root'
 import { CarsPage } from './pages/CarsPage/CarsPage'
 import { CarRecord } from './pages/CarRecord/CarRecord'
 import { CarFormPage } from './pages/CarFormPage/CarFormPage'
+import { z } from 'zod'
 import type { CarSearch } from './cars-api'
+
+const carSearchSchema: z.ZodType<CarSearch> = z.object({
+  name: z.string().catch(''),
+  brand: z.string().catch(''),
+  category: z.string().catch(''),
+  page: z.coerce.number().int().nonnegative().catch(0),
+  size: z.coerce
+    .number()
+    .refine((size) => [1, 6, 12, 24].includes(size))
+    .catch(12),
+  sort: z.enum(['name,asc', 'name,desc', 'brand,asc', 'brand,desc']).catch('name,asc'),
+})
 
 const list = createRoute({
   getParentRoute: () => rootRoute,
   path: '/cars',
-  validateSearch: (search: Record<string, unknown>): Partial<CarSearch> => {
-    const validated: Partial<CarSearch> = {}
-    if (typeof search.name === 'string' && search.name) validated.name = search.name
-    if (typeof search.brand === 'string' && search.brand) validated.brand = search.brand
-    if (typeof search.category === 'string' && search.category) validated.category = search.category
-    if (
-      search.page !== undefined &&
-      Number.isInteger(Number(search.page)) &&
-      Number(search.page) >= 0
-    )
-      validated.page = Number(search.page)
-    if (search.size !== undefined && [1, 6, 12, 24].includes(Number(search.size)))
-      validated.size = Number(search.size)
-    if (
-      search.sort !== undefined &&
-      ['name,asc', 'name,desc', 'brand,asc', 'brand,desc'].includes(String(search.sort))
-    )
-      validated.sort = String(search.sort)
-    return validated
-  },
+  validateSearch: carSearchSchema,
   staticData: { title: 'Cars' },
   component: CarsPage,
 })

@@ -14,13 +14,13 @@ interface CarRepository extends JpaRepository<Car, UUID> {
       where (:availableOnly = false or c.available = true)
         and lower(c.name) like :namePattern escape '!'
         and lower(c.brand) like :brandPattern escape '!'
-        and (:categoryName = '' or upper(category.name) = :categoryName)
+        and lower(category.name) like :categoryPattern escape '!'
       """)
   Page<Car> search(
       boolean availableOnly,
       String namePattern,
       String brandPattern,
-      String categoryName,
+      String categoryPattern,
       Pageable pageable);
 
   @EntityGraph(

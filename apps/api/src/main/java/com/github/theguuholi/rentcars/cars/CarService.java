@@ -64,7 +64,7 @@ class CarService {
             availableOnly,
             pattern(name),
             pattern(brand),
-            category == null ? "" : category.strip().toUpperCase(Locale.ROOT),
+            pattern(category),
             PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort));
     return CarPage.from(page);
   }

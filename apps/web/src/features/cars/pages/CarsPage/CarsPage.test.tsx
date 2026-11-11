@@ -20,6 +20,19 @@ describe('CarsPage', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   scenario(
+    'Given invalid catalog URL options, when opening the page, then safe defaults are sent to the API',
+    async () => {
+      openCatalogRoute('/cars?page=-1&size=101&sort=price,asc')
+      await screen.findByText('No matching cars.')
+      expect(api.listCars).toHaveBeenCalledWith(
+        { name: '', brand: '', category: '', page: 0, size: 12, sort: 'name,asc' },
+        true,
+        expect.any(AbortSignal),
+      )
+    },
+  )
+
+  scenario(
     'Given a pending fleet request, when it fails and the visitor retries, then an empty fleet offers registration',
     async () => {
       let reject!: (error: Error) => void

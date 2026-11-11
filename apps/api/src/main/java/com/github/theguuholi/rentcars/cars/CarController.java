@@ -42,7 +42,7 @@ public class CarController {
   @Operation(
       summary = "Search available cars",
       description =
-          "Filters are optional. Page numbering starts at zero; page size is limited to 100. Sort supports name, brand and id.")
+          "Name, brand and category filters match case-insensitive text fragments. Page numbering starts at zero; page size is limited to 100. Sort supports name, brand and id.")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
   @ApiResponse(responseCode = "400", description = "Invalid page size or sort")
   public CarPage list(

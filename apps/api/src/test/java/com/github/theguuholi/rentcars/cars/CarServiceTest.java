@@ -60,7 +60,7 @@ class CarServiceTest {
     void givenMatchingNamesWhenListingThenUsesIdAsTieBreaker() {
       var rows = List.of(new Car(), new Car());
       var query = PageRequest.of(0, 12, Sort.by("name", "id"));
-      when(repository.search(true, "%argo%", "%fiat%", "HATCHBACK", query))
+      when(repository.search(true, "%argo%", "%fiat%", "%hatchback%", query))
           .thenReturn(new PageImpl<>(rows, query, 2));
       assertThat(
               service
@@ -73,7 +73,7 @@ class CarServiceTest {
     @Test
     void givenEmptyCatalogWhenListingThenReturnsNoCars() {
       var query = PageRequest.of(1, 5, Sort.by("brand", "id"));
-      when(repository.search(false, "%", "%", "", query))
+      when(repository.search(false, "%", "%", "%", query))
           .thenReturn(new PageImpl<>(List.of(), query, 0));
       assertThat(
               service.list(false, " ", null, "", PageRequest.of(1, 5, Sort.by("brand"))).content())
@@ -109,7 +109,7 @@ class CarServiceTest {
         "Given wildcard characters in a name, when searching, then they are treated as text")
     void escapesWildcards() {
       var query = PageRequest.of(0, 12, Sort.by("name", "id"));
-      when(repository.search(true, "%a!%!_!!%", "%", "", query))
+      when(repository.search(true, "%a!%!_!!%", "%", "%", query))
           .thenReturn(new PageImpl<>(List.of(), query, 0));
       assertThat(service.list(true, "A%_!", null, null, PageRequest.of(0, 12)).content()).isEmpty();
     }
@@ -118,10 +118,10 @@ class CarServiceTest {
     @DisplayName("Given ID as the requested sort, when listing, then it is not duplicated")
     void preservesIdSort() {
       var query = PageRequest.of(0, 12, Sort.by(Sort.Order.desc("id")));
-      when(repository.search(true, "%", "%", "", query))
+      when(repository.search(true, "%", "%", "%", query))
           .thenReturn(new PageImpl<>(List.of(), query, 0));
       assertThat(service.list(true, null, null, null, query).content()).isEmpty();
-      verify(repository).search(true, "%", "%", "", query);
+      verify(repository).search(true, "%", "%", "%", query);
     }
   }
 
