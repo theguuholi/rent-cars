@@ -23,8 +23,9 @@ through Vite's `/otel` proxy. No external account is needed.
    `{service_name="rent-cars-api"}` to see API logs. Open a log line with a
    `trace_id` to correlate it with a trace.
 
-Opening and returning a rental also creates `rental.start` and `rental.return`
-observations. Search these names in Tempo to inspect the operation, or query
+Spring Boot applies Micrometer `@Observed` to the rental service's create and
+return operations, producing `rental.start` and `rental.return` observations.
+Search these names in Tempo to inspect the operation, or query
 `rental_start_milliseconds_count` and `rental_return_milliseconds_count` in
 Prometheus. Failed attempts are recorded by the observation
 and the enclosing HTTP request; no account, car or rental ID is used as a

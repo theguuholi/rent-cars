@@ -44,6 +44,9 @@ server:
     max-swallow-size: 32MB
 
 management:
+  observations:
+    annotations:
+      enabled: true
   endpoints:
     web:
       exposure:

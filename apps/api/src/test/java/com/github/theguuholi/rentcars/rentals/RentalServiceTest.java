@@ -5,9 +5,6 @@ import static org.mockito.Mockito.*;
 
 import com.github.theguuholi.rentcars.cars.Car;
 import com.github.theguuholi.rentcars.cars.CarRentalAccess;
-import io.micrometer.core.instrument.observation.DefaultMeterObservationHandler;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.micrometer.observation.ObservationRegistry;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -25,14 +22,8 @@ class RentalServiceTest {
   final Car car = mock();
   final UUID carId = UUID.randomUUID(), accountId = UUID.randomUUID(), rentalId = UUID.randomUUID();
   final Instant now = Instant.parse("2026-11-06T15:00:00.123456789Z");
-  final SimpleMeterRegistry meters = new SimpleMeterRegistry();
-  final ObservationRegistry observations = ObservationRegistry.create();
   final RentalService service =
-      new RentalService(repository, cars, Clock.fixed(now, ZoneOffset.UTC), observations);
-
-  RentalServiceTest() {
-    observations.observationConfig().observationHandler(new DefaultMeterObservationHandler(meters));
-  }
+      new RentalService(repository, cars, Clock.fixed(now, ZoneOffset.UTC));
 
   @Nested
   class Create {
@@ -44,7 +35,6 @@ class RentalServiceTest {
       verify(car).rent();
       assertThat(rental.startDate()).isEqualTo(Instant.parse("2026-11-06T15:00:00.123456Z"));
       assertThat(rental.expectedReturnDate()).isEqualTo(rental.startDate().plusSeconds(86400));
-      assertThat(meters.get("rental.start").timer().count()).isEqualTo(1);
     }
 
     @Test
@@ -56,7 +46,6 @@ class RentalServiceTest {
           .isInstanceOf(RentalException.class);
       verify(car, never()).rent();
       verify(repository, never()).saveAndFlush(any());
-      assertThat(meters.get("rental.start").timer().count()).isEqualTo(1);
     }
   }
 
@@ -86,7 +75,6 @@ class RentalServiceTest {
       assertThat(service.returnCar(rentalId, accountId)).isSameAs(rental);
       assertThat(rental).extracting("totalCents").isEqualTo(330L);
       verify(car).releaseAfterReturn();
-      assertThat(meters.get("rental.return").timer().count()).isEqualTo(1);
     }
 
     @Test
@@ -96,7 +84,6 @@ class RentalServiceTest {
               ResponseStatusException.class,
               e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
       verifyNoInteractions(cars);
-      assertThat(meters.get("rental.return").timer().count()).isEqualTo(1);
     }
 
     @Test
@@ -108,7 +95,6 @@ class RentalServiceTest {
           .isInstanceOf(RentalException.class);
       verifyNoInteractions(cars);
       verify(car, never()).releaseAfterReturn();
-      assertThat(meters.get("rental.return").timer().count()).isEqualTo(1);
     }
   }
 }
