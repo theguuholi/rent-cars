@@ -1,4 +1,16 @@
 services:
+  observability:
+    image: grafana/otel-lgtm:0.37.0
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - observability_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
   mailpit:
     image: axllent/mailpit:v1.32.0
     ports:
@@ -43,5 +55,6 @@ services:
       retries: 30
 
 volumes:
+  observability_data:
   postgres_data:
   s3_data:

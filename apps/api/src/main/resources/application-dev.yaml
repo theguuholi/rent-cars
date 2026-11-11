@@ -20,3 +20,17 @@ rent:
       path-style: true
   auth:
     secure-cookie: false
+
+management:
+  tracing:
+    export:
+      otlp:
+        enabled: ${RENT_OBSERVABILITY_ENABLED:true}
+  logging:
+    export:
+      otlp:
+        enabled: ${RENT_OBSERVABILITY_ENABLED:true}
+  otlp:
+    metrics:
+      export:
+        enabled: ${RENT_OBSERVABILITY_ENABLED:true}

@@ -2,6 +2,8 @@ package com.github.theguuholi.rentcars.rentals;
 
 import com.github.theguuholi.rentcars.cars.Car;
 import com.github.theguuholi.rentcars.cars.CarRentalAccess;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -18,26 +20,37 @@ class RentalService {
   private final RentalRepository rentals;
   private final CarRentalAccess cars;
   private final Clock clock;
+  private final ObservationRegistry observations;
 
-  RentalService(RentalRepository rentals, CarRentalAccess cars, Clock clock) {
+  RentalService(
+      RentalRepository rentals,
+      CarRentalAccess cars,
+      Clock clock,
+      ObservationRegistry observations) {
     this.rentals = rentals;
     this.cars = cars;
     this.clock = clock;
+    this.observations = observations;
   }
 
   @Transactional
   Rental create(UUID accountId, UUID carId, Instant expectedReturnDate) {
-    // PostgreSQL stores microseconds. Use that same precision at the business boundary.
-    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
-    Car car = cars.getForRental(carId);
-    Rental rental =
-        Rental.start(accountId, car, now, expectedReturnDate.truncatedTo(ChronoUnit.MICROS));
-    if (rentals.existsByAccountIdAndEndDateIsNull(accountId)) {
-      throw new RentalException(
-          RentalException.Reason.ALREADY_RENTING, "Account already has an open rental");
-    }
-    car.rent();
-    return rentals.saveAndFlush(rental);
+    return Observation.createNotStarted("rental.start", observations)
+        .observe(
+            () -> {
+              // PostgreSQL stores microseconds. Use that same precision at the business boundary.
+              Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+              Car car = cars.getForRental(carId);
+              Rental rental =
+                  Rental.start(
+                      accountId, car, now, expectedReturnDate.truncatedTo(ChronoUnit.MICROS));
+              if (rentals.existsByAccountIdAndEndDateIsNull(accountId)) {
+                throw new RentalException(
+                    RentalException.Reason.ALREADY_RENTING, "Account already has an open rental");
+              }
+              car.rent();
+              return rentals.saveAndFlush(rental);
+            });
   }
 
   List<Rental> list(UUID accountId) {
@@ -46,23 +59,29 @@ class RentalService {
 
   @Transactional
   Rental returnCar(UUID id, UUID accountId) {
-    Rental rental =
-        rentals
-            .findForReturn(id, accountId)
-            .orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rental not found"));
-    rental.requireOpen();
-    Car car = cars.getForRental(rental.carId());
-    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
-    long total =
-        RentalPricing.calculate(
-            rental.startDate(),
-            rental.expectedReturnDate(),
-            now,
-            car.rentalDailyRateCents(),
-            car.rentalFineAmountCents());
-    rental.finish(now, total);
-    car.releaseAfterReturn();
-    return rentals.saveAndFlush(rental);
+    return Observation.createNotStarted("rental.return", observations)
+        .observe(
+            () -> {
+              Rental rental =
+                  rentals
+                      .findForReturn(id, accountId)
+                      .orElseThrow(
+                          () ->
+                              new ResponseStatusException(
+                                  HttpStatus.NOT_FOUND, "Rental not found"));
+              rental.requireOpen();
+              Car car = cars.getForRental(rental.carId());
+              Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+              long total =
+                  RentalPricing.calculate(
+                      rental.startDate(),
+                      rental.expectedReturnDate(),
+                      now,
+                      car.rentalDailyRateCents(),
+                      car.rentalFineAmountCents());
+              rental.finish(now, total);
+              car.releaseAfterReturn();
+              return rentals.saveAndFlush(rental);
+            });
   }
 }

@@ -16,7 +16,8 @@ describe('Application startup', () => {
       const mount = vi.spyOn(QueryClient.prototype, 'mount')
       const createRoot = vi.mocked(ReactDOM.createRoot)
       localStorage.setItem('rent-cars.login', 'device')
-      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Offline')))
+      const fetchMock = vi.fn().mockRejectedValue(new Error('Offline'))
+      vi.stubGlobal('fetch', fetchMock)
       const listener = vi.spyOn(window, 'addEventListener')
 
       try {
@@ -33,7 +34,7 @@ describe('Application startup', () => {
         expect((mount.mock.instances[0] as QueryClient).getDefaultOptions().queries?.retry).toBe(
           retryQuery,
         )
-        expect(fetch).toHaveBeenCalledExactlyOnceWith('/api/csrf')
+        expect(fetchMock).toHaveBeenCalledExactlyOnceWith('/api/csrf')
         expect(createRoot).toHaveBeenCalledWith(container)
       } finally {
         const root = createRoot.mock.results[0]?.value

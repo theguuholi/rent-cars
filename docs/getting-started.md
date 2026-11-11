@@ -67,7 +67,8 @@ root; the frontend package lives in `apps/web`.
 make dev
 ```
 
-Leave this terminal running. This starts PostgreSQL, SeaweedFS and Mailpit in Docker,
+Leave this terminal running. This starts PostgreSQL, SeaweedFS, Mailpit and the local
+Grafana observability stack in Docker,
 then starts the Spring API and Vite/React on your machine. It supplies the local
 S3 credentials. Flyway creates/updates the schema and loads development catalogs
 and the development administrator automatically.
@@ -78,6 +79,7 @@ and the development administrator automatically.
 | Spring API | http://localhost:8080 |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | Local email inbox | http://localhost:8025 |
+| Grafana (local telemetry) | http://localhost:3000 (admin / admin) |
 | HTTP Yac environment | No environment needed (local default) |
 
 From a second terminal in the repository root:
@@ -87,7 +89,7 @@ docker compose ps
 curl -i http://localhost:8080/cars
 ```
 
-All three data services should be healthy. The API should return **200** and a JSON
+All four infrastructure services should be healthy. The API should return **200** and a JSON
 array. If it is still compiling or starting, wait for the API startup message.
 
 Open React and sign in with the development administrator:
@@ -112,8 +114,9 @@ make web-dev
 ```
 
 Do not run these alongside another instance of `make dev`: they use the same
-ports. PostgreSQL uses 5432, the local S3 endpoint uses 8333, and Mailpit uses
-8025 for its inbox and 1025 for SMTP.
+ports. PostgreSQL uses 5432, the local S3 endpoint uses 8333, Mailpit uses
+8025 for its inbox and 1025 for SMTP, and Grafana uses 3000. See
+[Observe the application](observability.md) for the three signals and a short verification flow.
 
 - [ ] Step 3 complete: I followed the instructions and verified the results before continuing.
 

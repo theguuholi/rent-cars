@@ -42,3 +42,38 @@ springdoc:
 server:
   tomcat:
     max-swallow-size: 32MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  tracing:
+    sampling:
+      probability: ${RENT_TRACING_SAMPLE_RATE:0.1}
+    export:
+      otlp:
+        enabled: ${RENT_OBSERVABILITY_ENABLED:false}
+  logging:
+    export:
+      otlp:
+        enabled: ${RENT_OBSERVABILITY_ENABLED:false}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+    logging:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:http://localhost:4318/v1/logs}
+  otlp:
+    metrics:
+      export:
+        enabled: ${RENT_OBSERVABILITY_ENABLED:false}
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
+
+logging:
+  structured:
+    format:
+      console: logstash

@@ -123,6 +123,7 @@ class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers(
                         HttpMethod.GET,
+                        "/actuator/health",
                         "/csrf",
                         "/swagger-ui.html",
                         "/swagger-ui/**",

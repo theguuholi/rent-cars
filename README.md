@@ -4,6 +4,8 @@ Rent Cars is a fleet management application. Register vehicles, assign their cat
 
 New to the project? Follow the [step-by-step onboarding tutorial](docs/getting-started.md): tools, React/Java startup, HTTP Yac requests, containers and Kubernetes.
 
+The local stack also includes [Grafana observability](docs/observability.md) for API logs, metrics and traces and browser request traces.
+
 ## Run the full stack locally
 
 Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), 5432 (PostgreSQL), 8333 (development S3), 8025 (email inbox) and 1025 (development SMTP) are available.
