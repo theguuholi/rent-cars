@@ -41,7 +41,7 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
         working-directory: apps/web
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
         working-directory: apps/web
       - name: Generate local API signing keys
         run: |
