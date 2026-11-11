@@ -13,10 +13,15 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 @TestConfiguration(proxyBeanMethods = false)
 public class AdminRequests {
   @Bean
-  MockMvcBuilderCustomizer adminCatalogRequests(AccessTokenService tokens) {
+  MockMvcBuilderCustomizer adminCatalogRequests(
+      AccessTokenService tokens, AccountRepository accounts) {
+    String email = "qa-admin-" + UUID.randomUUID() + "@example.test";
+    var account = new Account(email, "unused");
+    account.manage(email, "ADMIN");
+    UUID id = accounts.saveAndFlush(account).id();
     var admin =
         UsernamePasswordAuthenticationToken.authenticated(
-            UUID.randomUUID().toString(), null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+            id.toString(), null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
     return builder ->
         builder.defaultRequest(
             get("/").header("Authorization", "Bearer " + tokens.issue(admin).accessToken()));

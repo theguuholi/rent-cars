@@ -55,6 +55,19 @@ class Account {
     return id;
   }
 
+  String role() {
+    return role;
+  }
+
+  DriverProfile driverProfile() {
+    return driverProfile;
+  }
+
+  void manage(String email, String role) {
+    this.email = email;
+    this.role = role;
+  }
+
   void changePassword(String encodedPassword) {
     this.passwordHash = encodedPassword;
   }

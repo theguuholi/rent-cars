@@ -28,6 +28,7 @@ export function Layout() {
               <>
                 <Link to="/categories">Categories</Link>
                 <Link to="/specifications">Specifications</Link>
+                <Link to="/users">Users</Link>
               </>
             )}
             {identity ? (

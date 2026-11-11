@@ -10,6 +10,7 @@ import {
 import { carRoutes } from './features/cars/routes'
 import { categoriesRoute } from './features/categories/routes'
 import { specificationRoutes } from './features/specifications/routes'
+import { userRoutes } from './features/users/routes'
 import { rootRoute, homeRoute, unknownRoute } from './routes/root'
 
 const tree = rootRoute.addChildren([
@@ -22,6 +23,7 @@ const tree = rootRoute.addChildren([
   categoriesRoute,
   ...carRoutes,
   ...specificationRoutes,
+  ...userRoutes,
   unknownRoute,
 ])
 

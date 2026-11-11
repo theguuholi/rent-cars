@@ -28,6 +28,7 @@ Content-Type: application/json
 ### Sign in as admin
 # @name auth_login_admin
 # @tag smoke
+# @tag users
 # @forceRef csrf
 {{
   delete state.adminToken;

@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
@@ -31,9 +32,15 @@ class CarImageMultipartLimitTest {
   int port;
 
   @Autowired JwtEncoder encoder;
+  @Autowired JdbcTemplate jdbc;
 
   int upload(int count, int size) throws Exception {
     var now = Instant.now();
+    UUID admin =
+        jdbc.queryForObject(
+            "insert into accounts(email,password_hash,role) values (?, 'unused', 'ADMIN') returning id",
+            UUID.class,
+            "limit-admin-" + UUID.randomUUID() + "@example.test");
     String token =
         encoder
             .encode(
@@ -41,7 +48,7 @@ class CarImageMultipartLimitTest {
                     JwtClaimsSet.builder()
                         .issuer("rent-cars")
                         .audience(List.of("rent-cars-api"))
-                        .subject(UUID.randomUUID().toString())
+                        .subject(admin.toString())
                         .issuedAt(now)
                         .expiresAt(now.plusSeconds(60))
                         .claim("roles", List.of("ADMIN"))

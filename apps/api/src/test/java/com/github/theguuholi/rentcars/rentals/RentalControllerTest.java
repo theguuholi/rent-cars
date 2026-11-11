@@ -285,20 +285,25 @@ class RentalControllerTest extends RentalIntegrationSupport {
 
   @Nested
   class CatalogIntegration {
+    private String adminToken() {
+      jdbc.update("update accounts set role='ADMIN' where id=?", owner);
+      return token(owner, "ADMIN");
+    }
+
     @Test
     void givenActiveRentalWhenAdminMakesAvailableThenRejectsEvenWithCurrentVersion()
         throws Exception {
       rent();
       mvc.perform(
               patch("/cars/{id}", carId)
-                  .header("Authorization", token(owner, "ADMIN"))
+                  .header("Authorization", adminToken())
                   .contentType("application/json")
                   .content("{\"available\":true,\"expectedVersion\":1}"))
           .andExpect(status().isConflict());
       assertThat(available(carId)).isFalse();
       mvc.perform(
               patch("/cars/{id}", carId)
-                  .header("Authorization", token(owner, "ADMIN"))
+                  .header("Authorization", adminToken())
                   .contentType("application/json")
                   .content("{\"dailyRateCents\":12000,\"expectedVersion\":1}"))
           .andExpect(status().isOk());
@@ -312,11 +317,11 @@ class RentalControllerTest extends RentalIntegrationSupport {
     void givenClosedRentalWhenDeletingCarThenPreservesHistory() throws Exception {
       UUID id = rent();
       giveBack(id, owner).andExpect(status().isOk());
-      mvc.perform(delete("/cars/{id}", carId).header("Authorization", token(owner, "ADMIN")))
+      mvc.perform(delete("/cars/{id}", carId).header("Authorization", adminToken()))
           .andExpect(status().isConflict());
       mvc.perform(
               patch("/cars/{id}", carId)
-                  .header("Authorization", token(owner, "ADMIN"))
+                  .header("Authorization", adminToken())
                   .contentType("application/json")
                   .content("{\"available\":true,\"expectedVersion\":2}"))
           .andExpect(status().isOk());
@@ -327,7 +332,7 @@ class RentalControllerTest extends RentalIntegrationSupport {
       rent();
       mvc.perform(
               patch("/cars/{id}", carId)
-                  .header("Authorization", token(owner, "ADMIN"))
+                  .header("Authorization", adminToken())
                   .contentType("application/json")
                   .content("{\"available\":true,\"expectedVersion\":0}"))
           .andExpect(status().isConflict());
