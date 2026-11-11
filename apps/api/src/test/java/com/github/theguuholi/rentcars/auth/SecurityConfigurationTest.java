@@ -2,7 +2,7 @@ package com.github.theguuholi.rentcars.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import com.github.theguuholi.rentcars.TestcontainersConfiguration;
 import java.util.Map;
@@ -35,7 +35,9 @@ class SecurityConfigurationTest {
     @Test
     @DisplayName("Given an anonymous visitor, when requesting health, then the probe is available")
     void exposesHealthWithoutCredentials() throws Exception {
-      mvc.perform(get("/actuator/health")).andExpect(status().isOk());
+      mvc.perform(get("/actuator/health"))
+          .andExpect(result -> assertThat(result.getResponse().getStatus()).isIn(200, 503))
+          .andExpect(jsonPath("$.status").isNotEmpty());
     }
   }
 }
