@@ -46,20 +46,12 @@ class ManagedUsers {
     }
     DriverProfile driver = account.driverProfile();
     if (driver != null) {
-      if (input.firstName() == null
-          || input.firstName().isBlank()
-          || input.lastName() == null
-          || input.lastName().isBlank()
-          || input.userName() == null
-          || input.driveLicense() == null) {
+      if (!input.hasDriverDetails()) {
         throw new ResponseStatusException(
             HttpStatus.UNPROCESSABLE_CONTENT, "Driver details are required");
       }
       driver.manage(input.firstName(), input.lastName(), input.userName(), input.driveLicense());
-    } else if (input.firstName() != null
-        || input.lastName() != null
-        || input.userName() != null
-        || input.driveLicense() != null) {
+    } else if (input.hasAnyDriverDetail()) {
       throw new ResponseStatusException(
           HttpStatus.UNPROCESSABLE_CONTENT, "This account has no driver profile");
     }

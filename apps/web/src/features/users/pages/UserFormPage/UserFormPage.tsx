@@ -3,26 +3,21 @@ import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
+import { UserTextField } from '../../components/UserTextField/UserTextField'
 import { passwordHint } from '../../../auth/password-schema'
 import { createUser, updateUser, type ManagedUser } from '../../users-api'
-import { editedUserSchema, newUserSchema } from './user-form-schema'
-
-type Draft = {
-  firstName: string
-  lastName: string
-  userName: string
-  driveLicense: string
-  email: string
-  role: 'USER' | 'ADMIN'
-  password: string
-  passwordConfirmation: string
-}
+import { editedUserSchema, newUserSchema, type UserDraft } from './user-form-schema'
 
 export function UserFormPage({ user }: { user?: ManagedUser }) {
   const [error, setError] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof Draft, string>>>({})
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof UserDraft, string>>>({})
   const navigate = useNavigate()
   const client = useQueryClient()
+  const showValidationErrors = (issues: { path: PropertyKey[]; message: string }[]) => {
+    const errors: Partial<Record<keyof UserDraft, string>> = {}
+    for (const issue of issues) errors[issue.path[0] as keyof UserDraft] = issue.message
+    setFieldErrors(errors)
+  }
   const form = useForm({
     defaultValues: {
       firstName: user?.firstName ?? '',
@@ -33,40 +28,38 @@ export function UserFormPage({ user }: { user?: ManagedUser }) {
       role: user?.role ?? ('USER' as const),
       password: '',
       passwordConfirmation: '',
-    } as Draft,
+    } satisfies UserDraft,
     onSubmit: async ({ value }) => {
-      const input = user
-        ? {
-            email: value.email,
-            role: value.role,
-            firstName: user.firstName === null ? null : value.firstName,
-            lastName: user.lastName === null ? null : value.lastName,
-            userName: user.userName === null ? null : value.userName,
-            driveLicense: user.driveLicense === null ? null : value.driveLicense,
-          }
-        : value
-      const parsed = user ? editedUserSchema.safeParse(input) : newUserSchema.safeParse(input)
-      if (!parsed.success) {
-        const errors: Partial<Record<keyof Draft, string>> = {}
-        for (const issue of parsed.error.issues)
-          errors[issue.path[0] as keyof Draft] = issue.message
-        setFieldErrors(errors)
-        return
-      }
-      setFieldErrors({})
-      setError('')
-      try {
-        if (user) {
-          const saved = await updateUser(user.id, editedUserSchema.parse(input))
+      if (user) {
+        const parsed = editedUserSchema.safeParse({
+          email: value.email,
+          role: value.role,
+          firstName: user.firstName === null ? null : value.firstName,
+          lastName: user.lastName === null ? null : value.lastName,
+          userName: user.userName === null ? null : value.userName,
+          driveLicense: user.driveLicense === null ? null : value.driveLicense,
+        })
+        if (!parsed.success) return showValidationErrors(parsed.error.issues)
+        setFieldErrors({})
+        setError('')
+        try {
+          const saved = await updateUser(user.id, parsed.data)
           await client.invalidateQueries({ queryKey: ['managedUsers'] })
           client.setQueryData(['managedUser', user.id], saved)
           await navigate({ to: '/users/$id', params: { id: user.id } })
-        } else {
-          const created = newUserSchema.parse(input)
-          await createUser(created, created.role)
-          await client.invalidateQueries({ queryKey: ['managedUsers'] })
-          await navigate({ to: '/users' })
+        } catch (failure) {
+          setError(failure instanceof Error ? failure.message : 'Could not save this user.')
         }
+        return
+      }
+      const parsed = newUserSchema.safeParse(value)
+      if (!parsed.success) return showValidationErrors(parsed.error.issues)
+      setFieldErrors({})
+      setError('')
+      try {
+        await createUser(parsed.data, parsed.data.role)
+        await client.invalidateQueries({ queryKey: ['managedUsers'] })
+        await navigate({ to: '/users' })
       } catch (failure) {
         setError(failure instanceof Error ? failure.message : 'Could not save this user.')
       }
@@ -87,93 +80,78 @@ export function UserFormPage({ user }: { user?: ManagedUser }) {
           <>
             <form.Field name="firstName">
               {(field) => (
-                <label>
-                  First name
-                  <input
-                    aria-label="First name"
-                    className="control"
-                    required
-                    maxLength={80}
-                    value={field.state.value}
-                    aria-invalid={!!fieldErrors.firstName}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  {fieldErrors.firstName && <span role="alert">{fieldErrors.firstName}</span>}
-                </label>
+                <UserTextField
+                  label="First name"
+                  error={fieldErrors.firstName}
+                  input={{
+                    required: true,
+                    maxLength: 80,
+                    value: field.state.value,
+                    onChange: (e) => field.handleChange(e.target.value),
+                  }}
+                />
               )}
             </form.Field>
             <form.Field name="lastName">
               {(field) => (
-                <label>
-                  Last name
-                  <input
-                    aria-label="Last name"
-                    className="control"
-                    required
-                    maxLength={80}
-                    value={field.state.value}
-                    aria-invalid={!!fieldErrors.lastName}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  {fieldErrors.lastName && <span role="alert">{fieldErrors.lastName}</span>}
-                </label>
+                <UserTextField
+                  label="Last name"
+                  error={fieldErrors.lastName}
+                  input={{
+                    required: true,
+                    maxLength: 80,
+                    value: field.state.value,
+                    onChange: (e) => field.handleChange(e.target.value),
+                  }}
+                />
               )}
             </form.Field>
             <form.Field name="userName">
               {(field) => (
-                <label>
-                  Username
-                  <input
-                    aria-label="Username"
-                    className="control"
-                    required
-                    minLength={3}
-                    maxLength={40}
-                    value={field.state.value}
-                    aria-invalid={!!fieldErrors.userName}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  {fieldErrors.userName && <span role="alert">{fieldErrors.userName}</span>}
-                </label>
+                <UserTextField
+                  label="Username"
+                  error={fieldErrors.userName}
+                  input={{
+                    required: true,
+                    minLength: 3,
+                    maxLength: 40,
+                    value: field.state.value,
+                    onChange: (e) => field.handleChange(e.target.value),
+                  }}
+                />
               )}
             </form.Field>
             <form.Field name="driveLicense">
               {(field) => (
-                <label>
-                  CNH number
-                  <input
-                    aria-label="CNH number"
-                    className="control"
-                    required
-                    inputMode="numeric"
-                    minLength={11}
-                    maxLength={11}
-                    value={field.state.value}
-                    aria-invalid={!!fieldErrors.driveLicense}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  {fieldErrors.driveLicense && <span role="alert">{fieldErrors.driveLicense}</span>}
-                </label>
+                <UserTextField
+                  label="CNH number"
+                  error={fieldErrors.driveLicense}
+                  input={{
+                    required: true,
+                    inputMode: 'numeric',
+                    minLength: 11,
+                    maxLength: 11,
+                    value: field.state.value,
+                    onChange: (e) => field.handleChange(e.target.value),
+                  }}
+                />
               )}
             </form.Field>
           </>
         )}
         <form.Field name="email">
           {(field) => (
-            <label>
-              Email
-              <input
-                aria-label="Email"
-                className="control"
-                type="email"
-                required
-                maxLength={254}
-                value={field.state.value}
-                aria-invalid={!!fieldErrors.email}
-                onChange={(e) => field.handleChange(e.target.value)}
-              />
-              {fieldErrors.email && <span role="alert">{fieldErrors.email}</span>}
-            </label>
+            <UserTextField
+              label="Email"
+              error={fieldErrors.email}
+              input={{
+                type: 'email',
+                required: true,
+                maxLength: 254,
+                value: field.state.value,
+                onChange: (e) => field.handleChange(e.target.value),
+              }}
+            />
           )}
         </form.Field>
         <form.Field name="role">
@@ -183,7 +161,7 @@ export function UserFormPage({ user }: { user?: ManagedUser }) {
               <select
                 className="control"
                 value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value as Draft['role'])}
+                onChange={(e) => field.handleChange(e.target.value as UserDraft['role'])}
               >
                 <option value="USER">Driver</option>
                 <option value="ADMIN">Administrator</option>
@@ -195,41 +173,33 @@ export function UserFormPage({ user }: { user?: ManagedUser }) {
           <>
             <form.Field name="password">
               {(field) => (
-                <label>
-                  Password
-                  <input
-                    aria-label="Password"
-                    className="control"
-                    type="password"
-                    required
-                    minLength={12}
-                    maxLength={72}
-                    value={field.state.value}
-                    aria-invalid={!!fieldErrors.password}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  {fieldErrors.password && <span role="alert">{fieldErrors.password}</span>}
-                </label>
+                <UserTextField
+                  label="Password"
+                  error={fieldErrors.password}
+                  input={{
+                    type: 'password',
+                    required: true,
+                    minLength: 12,
+                    maxLength: 72,
+                    value: field.state.value,
+                    onChange: (e) => field.handleChange(e.target.value),
+                  }}
+                />
               )}
             </form.Field>
             <p>{passwordHint}</p>
             <form.Field name="passwordConfirmation">
               {(field) => (
-                <label>
-                  Confirm password
-                  <input
-                    aria-label="Confirm password"
-                    className="control"
-                    type="password"
-                    required
-                    value={field.state.value}
-                    aria-invalid={!!fieldErrors.passwordConfirmation}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  {fieldErrors.passwordConfirmation && (
-                    <span role="alert">{fieldErrors.passwordConfirmation}</span>
-                  )}
-                </label>
+                <UserTextField
+                  label="Confirm password"
+                  error={fieldErrors.passwordConfirmation}
+                  input={{
+                    type: 'password',
+                    required: true,
+                    value: field.state.value,
+                    onChange: (e) => field.handleChange(e.target.value),
+                  }}
+                />
               )}
             </form.Field>
           </>

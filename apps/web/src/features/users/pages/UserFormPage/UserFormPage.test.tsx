@@ -96,4 +96,44 @@ describe('UserFormPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Cannot remove your own admin role')
     expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue('USER')
   })
+
+  test('Given an existing driver, when edit details are invalid, then keep the draft without calling the API', async () => {
+    vi.mocked(api.getUser).mockResolvedValue(user)
+    openCatalogRoute('/users/user-1/edit')
+    await screen.findByRole('heading', { name: 'Edit user' })
+    fill('First name', ' ')
+    fireEvent.click(screen.getByRole('button', { name: 'Save user' }))
+    expect(await screen.findByRole('alert')).toBeVisible()
+    expect(screen.getByLabelText('First name')).toHaveValue(' ')
+    expect(api.updateUser).not.toHaveBeenCalled()
+  })
+
+  test('Given an admin without a driver profile, when editing, then submit only account details', async () => {
+    const admin = {
+      ...user,
+      role: 'ADMIN' as const,
+      firstName: null,
+      lastName: null,
+      userName: null,
+      driveLicense: null,
+    }
+    vi.mocked(api.getUser)
+      .mockResolvedValueOnce(admin)
+      .mockResolvedValue({ ...admin, email: 'new@example.test' })
+    vi.mocked(api.updateUser).mockResolvedValue({ ...admin, email: 'new@example.test' })
+    openCatalogRoute('/users/user-1/edit')
+    await screen.findByRole('heading', { name: 'Edit user' })
+    expect(screen.queryByLabelText('First name')).toBeNull()
+    fill('Email', 'new@example.test')
+    fireEvent.click(screen.getByRole('button', { name: 'Save user' }))
+    expect(await screen.findByRole('heading', { name: 'new@example.test' })).toBeVisible()
+    expect(api.updateUser).toHaveBeenCalledWith('user-1', {
+      email: 'new@example.test',
+      role: 'ADMIN',
+      firstName: null,
+      lastName: null,
+      userName: null,
+      driveLicense: null,
+    })
+  })
 })

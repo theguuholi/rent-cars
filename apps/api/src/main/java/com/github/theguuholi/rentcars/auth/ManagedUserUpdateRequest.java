@@ -13,8 +13,8 @@ import java.util.Locale;
 record ManagedUserUpdateRequest(
     @NotBlank @Email @Size(max = 254) String email,
     @NotBlank @Pattern(regexp = "USER|ADMIN") String role,
-    @Size(max = 80) String firstName,
-    @Size(max = 80) String lastName,
+    @Size(min = 1, max = 80) String firstName,
+    @Size(min = 1, max = 80) String lastName,
     @Pattern(regexp = "[a-z0-9._-]{3,40}") String userName,
     @Pattern(regexp = "[0-9]{11}") String driveLicense) {
   ManagedUserUpdateRequest {
@@ -23,5 +23,13 @@ record ManagedUserUpdateRequest(
     if (lastName != null) lastName = lastName.strip();
     if (userName != null) userName = userName.strip().toLowerCase(Locale.ROOT);
     if (driveLicense != null) driveLicense = driveLicense.strip();
+  }
+
+  boolean hasDriverDetails() {
+    return firstName != null && lastName != null && userName != null && driveLicense != null;
+  }
+
+  boolean hasAnyDriverDetail() {
+    return firstName != null || lastName != null || userName != null || driveLicense != null;
   }
 }

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { registrationSchema } from '../../../auth/pages/RegisterPage/registration-schema'
 
 export const newUserSchema = registrationSchema.safeExtend({ role: z.enum(['USER', 'ADMIN']) })
+export type UserDraft = z.input<typeof newUserSchema>
 
 export const editedUserSchema = z.object({
   email: z.email().max(254),
