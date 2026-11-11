@@ -1,4 +1,5 @@
 # @import ./common.http
+# @import ./auth.http
 
 ### Browse public fleet
 # @name cars_list
@@ -21,16 +22,38 @@ GET {{baseUrl}}/cars?page=0&size=12&sort=name,asc
 # @tag manual
 GET {{baseUrl}}/cars?name=Argo&brand=Fiat&category=HATCHBACK&page=0&size=6&sort=name,asc
 
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  test("Only matching available Argo cars are returned", () => {
+    assert.ok(response.parsedBody.content.length > 0);
+    assert.ok(response.parsedBody.content.every(car => car.available && car.name.includes("Argo") && car.brand === "Fiat"));
+  });
+}}
+
 ### Browse all cars as an admin, including unavailable ones
 # @name cars_manage
 # @tag manual
+# @forceRef auth_login_admin
 GET {{baseUrl}}/cars/manage?page=0&size=12&sort=name,asc
 Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  test("Administrative fleet is paged", () => assert.ok(Array.isArray(response.parsedBody.content)));
+}}
 
 ### Reject an excessive page size
 # @name cars_invalid_page_size
 # @tag manual
 GET {{baseUrl}}/cars?size=101
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 400);
+  test("Page size limit is explained", () => assert.equal(response.parsedBody.detail, "Page size must be between 1 and 100"));
+}}
 
 ### Create example Argo
 # @name cars_create
