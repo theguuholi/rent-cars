@@ -8,5 +8,6 @@
   "reporters": ["clear-text", "html", "json"],
   "thresholds": { "high": 100, "low": 100, "break": 100 },
   "concurrency": 2,
+  "ignoreStatic": true,
   "ignorePatterns": ["/tsconfig.json", "/coverage", "/dist"]
 }
