@@ -217,6 +217,7 @@ class SessionControllerTest {
             "Given a catalog route {0} {1}, when called anonymously or by a driver, then it returns 401 or 403 respectively")
     @CsvSource({
       "POST,/cars",
+      "GET,/cars/manage",
       "PATCH,/cars/{id}",
       "DELETE,/cars/{id}",
       "GET,/categories",
@@ -283,7 +284,7 @@ class SessionControllerTest {
               .getHeader("Location");
       mvc.perform(get("/cars"))
           .andExpect(status().isOk())
-          .andExpect(jsonPath("$[*].licensePlate").value(Matchers.hasItem("JWT1234")));
+          .andExpect(jsonPath("$.content[*].licensePlate").value(Matchers.hasItem("JWT1234")));
       mvc.perform(get(location))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.licensePlate").value("JWT1234"))

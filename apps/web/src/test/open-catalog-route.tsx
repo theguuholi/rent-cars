@@ -19,7 +19,15 @@ export function openCatalogRoute(
   const router = createAppRouter(history)
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockImplementation(async () => Response.json([])),
+    vi
+      .fn()
+      .mockImplementation(async (url: string) =>
+        Response.json(
+          url.startsWith('/api/cars?') || url.startsWith('/api/cars/manage?')
+            ? { content: [], number: 0, size: 12, totalElements: 0, totalPages: 0 }
+            : [],
+        ),
+      ),
   )
   renderWithQuery(<RouterProvider router={router} />, client)
   return history

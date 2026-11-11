@@ -9,6 +9,7 @@ import {
   carImageUrl,
   type CarInput,
 } from './cars-api'
+import { session } from '../auth/session'
 
 const input: CarInput = {
   name: 'Argo',
@@ -29,15 +30,55 @@ function mockResponse(response: Response) {
 }
 
 describe('Cars HTTP client', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    session.set(null)
+  })
 
   scenario(
     'Given registered cars, when listing, then the client forwards cancellation and decodes the catalog',
     async () => {
-      const fetch = mockResponse(Response.json([car]))
+      const page = { content: [car], number: 0, size: 12, totalElements: 1, totalPages: 1 }
+      const fetch = mockResponse(Response.json(page))
       const signal = new AbortController().signal
-      await expect(listCars(signal)).resolves.toEqual([car])
-      expect(fetch).toHaveBeenCalledWith('/api/cars', { signal })
+      await expect(
+        listCars(
+          { name: '', brand: '', category: '', page: 0, size: 12, sort: 'name,asc' },
+          false,
+          signal,
+        ),
+      ).resolves.toEqual(page)
+      expect(fetch).toHaveBeenCalledWith('/api/cars?page=0&size=12&sort=name%2Casc', { signal })
+    },
+  )
+
+  scenario(
+    'Given an admin search, when listing cars, then filters reach the protected fleet endpoint',
+    async () => {
+      session.set({
+        accessToken: 'test-admin',
+        user: { id: 'admin', email: 'admin@example.test', role: 'ADMIN' },
+      })
+      const fetch = mockResponse(
+        Response.json({ content: [], number: 1, size: 6, totalElements: 0, totalPages: 0 }),
+      )
+      await listCars(
+        {
+          name: ' Argo ',
+          brand: 'Fiat',
+          category: 'HATCHBACK',
+          page: 1,
+          size: 6,
+          sort: 'brand,desc',
+        },
+        true,
+      )
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/cars/manage?page=1&size=6&sort=brand%2Cdesc&name=Argo&brand=Fiat&category=HATCHBACK',
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer test-admin' }),
+        }),
+      )
     },
   )
 

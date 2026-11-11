@@ -14,7 +14,13 @@ vi.mock('../../../specifications/specifications-api')
 describe('CarRecord', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(api.listCars).mockResolvedValue([])
+    vi.mocked(api.listCars).mockResolvedValue({
+      content: [],
+      number: 0,
+      size: 12,
+      totalElements: 0,
+      totalPages: 0,
+    })
     vi.mocked(api.getCar).mockResolvedValue(car)
     vi.mocked(listCategories).mockResolvedValue(categories)
     vi.mocked(listSpecifications).mockResolvedValue(specifications)
@@ -93,7 +99,7 @@ describe('CarRecord', () => {
       await waitFor(() => expect(screen.getByText('Confirm deletion')).toBeDisabled())
       expect(screen.getByText('Cancel')).not.toHaveAttribute('href')
       await act(async () => resolve())
-      expect(await screen.findByText('No cars yet.')).toBeVisible()
+      expect(await screen.findByText('No matching cars.')).toBeVisible()
       expect(history.location.pathname).toBe('/cars')
       expect(api.deleteCar).toHaveBeenCalledTimes(2)
       expect(api.deleteCar).toHaveBeenLastCalledWith('second')

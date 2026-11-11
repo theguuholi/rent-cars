@@ -13,10 +13,13 @@ vi.mock('../specifications/specifications-api')
 describe('Car routes', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(api.listCars).mockResolvedValue([
-      { ...car, id: 'first', name: 'Civic', available: true },
-      car,
-    ])
+    vi.mocked(api.listCars).mockResolvedValue({
+      content: [{ ...car, id: 'first', name: 'Civic', available: true }, car],
+      number: 0,
+      size: 12,
+      totalElements: 2,
+      totalPages: 1,
+    })
     vi.mocked(api.getCar).mockResolvedValue(car)
     vi.mocked(listCategories).mockResolvedValue(categories)
     vi.mocked(listSpecifications).mockResolvedValue(specifications)

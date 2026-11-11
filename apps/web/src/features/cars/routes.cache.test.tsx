@@ -15,7 +15,16 @@ function cachedFleet() {
   const client = new QueryClient({
     defaultOptions: { queries: { staleTime: Infinity, retry: false } },
   })
-  client.setQueryData(['cars'], [car])
+  client.setQueryData(
+    ['cars', true, { name: '', brand: '', category: '', page: 0, size: 12, sort: 'name,asc' }],
+    {
+      content: [car],
+      number: 0,
+      size: 12,
+      totalElements: 1,
+      totalPages: 1,
+    },
+  )
   client.setQueryData(['car', car.id], car)
   client.setQueryData(['categories'], categories)
   client.setQueryData(['specifications'], specifications)
@@ -35,7 +44,13 @@ describe('Fleet navigation with fresh cached records', () => {
       const saved = { ...car, name: 'Updated Corolla' }
       vi.mocked(api.updateCar).mockResolvedValue(saved)
       vi.mocked(api.getCar).mockResolvedValue(saved)
-      vi.mocked(api.listCars).mockResolvedValue([saved])
+      vi.mocked(api.listCars).mockResolvedValue({
+        content: [saved],
+        number: 0,
+        size: 12,
+        totalElements: 1,
+        totalPages: 1,
+      })
       const history = openCatalogRoute('/cars', client)
 
       fireEvent.click(await screen.findByRole('link', { name: car.name }))
@@ -65,7 +80,13 @@ describe('Fleet navigation with fresh cached records', () => {
       const childKey = ['car', car.id, 'rental-history']
       client.setQueryData(childKey, ['prior rental'])
       vi.mocked(api.deleteCar).mockResolvedValue(undefined)
-      vi.mocked(api.listCars).mockResolvedValue([other])
+      vi.mocked(api.listCars).mockResolvedValue({
+        content: [other],
+        number: 0,
+        size: 12,
+        totalElements: 1,
+        totalPages: 1,
+      })
       const history = openCatalogRoute('/cars/' + car.id + '/delete', client)
 
       fireEvent.click(await screen.findByRole('button', { name: 'Confirm deletion' }))

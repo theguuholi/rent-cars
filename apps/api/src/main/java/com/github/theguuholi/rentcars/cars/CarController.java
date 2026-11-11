@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,10 +39,33 @@ public class CarController {
 
   @JsonView(JsonViews.Summary.class)
   @GetMapping
-  @Operation(summary = "List all cars alphabetically")
+  @Operation(
+      summary = "Search available cars",
+      description =
+          "Name, brand and category filters match case-insensitive text fragments. Page numbering starts at zero; page size is limited to 100. Sort supports name, brand and id.")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
-  public List<Car> list() {
-    return cars.list();
+  @ApiResponse(responseCode = "400", description = "Invalid page size or sort")
+  public CarPage list(
+      @RequestParam(required = false) String name,
+      @RequestParam(required = false) String brand,
+      @RequestParam(required = false) String category,
+      @PageableDefault(size = 12, sort = "name") Pageable pageable) {
+    return cars.list(true, name, brand, category, pageable);
+  }
+
+  @SecurityRequirement(name = "bearerAuth")
+  @JsonView(JsonViews.Summary.class)
+  @GetMapping("/manage")
+  @Operation(
+      summary = "Search all cars for fleet administration",
+      description = "Includes available and unavailable cars. Requires an administrator token.")
+  @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
+  public CarPage manage(
+      @RequestParam(required = false) String name,
+      @RequestParam(required = false) String brand,
+      @RequestParam(required = false) String category,
+      @PageableDefault(size = 12, sort = "name") Pageable pageable) {
+    return cars.list(false, name, brand, category, pageable);
   }
 
   @JsonView(JsonViews.Detail.class)

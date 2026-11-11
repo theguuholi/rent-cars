@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.*;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -51,19 +54,73 @@ class CarServiceTest {
   @Nested
   @DisplayName("list")
   class ListCars {
-    @DisplayName("Given cars with matching names, when listing the fleet, then ID breaks ties")
+    @DisplayName(
+        "Given filters, when listing the public fleet, then ID breaks ties and only available cars are queried")
     @Test
     void givenMatchingNamesWhenListingThenUsesIdAsTieBreaker() {
       var rows = List.of(new Car(), new Car());
-      when(repository.findAll(Sort.by("name", "id"))).thenReturn(rows);
-      assertThat(service.list()).containsExactlyElementsOf(rows);
+      var query = PageRequest.of(0, 12, Sort.by("name", "id"));
+      when(repository.search(true, "%argo%", "%fiat%", "%hatchback%", query))
+          .thenReturn(new PageImpl<>(rows, query, 2));
+      assertThat(
+              service
+                  .list(true, " Argo ", "Fiat", "HATCHBACK", PageRequest.of(0, 12, Sort.by("name")))
+                  .content())
+          .containsExactlyElementsOf(rows);
     }
 
-    @DisplayName("Given an empty catalog, when listing the fleet, then no cars are returned")
+    @DisplayName("Given an empty catalog, when listing all cars, then blank filters match all rows")
     @Test
     void givenEmptyCatalogWhenListingThenReturnsNoCars() {
-      when(repository.findAll(Sort.by("name", "id"))).thenReturn(List.of());
-      assertThat(service.list()).isEmpty();
+      var query = PageRequest.of(1, 5, Sort.by("brand", "id"));
+      when(repository.search(false, "%", "%", "%", query))
+          .thenReturn(new PageImpl<>(List.of(), query, 0));
+      assertThat(
+              service.list(false, " ", null, "", PageRequest.of(1, 5, Sort.by("brand"))).content())
+          .isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an excessive page size, when listing, then the request is rejected")
+    void invalidSize() {
+      Pageable tooLarge = PageRequest.of(0, 101);
+      assertThatExceptionOfType(ResponseStatusException.class)
+          .isThrownBy(() -> service.list(true, null, null, null, tooLarge))
+          .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+      Pageable invalid = mock(Pageable.class);
+      when(invalid.getPageSize()).thenReturn(0);
+      assertThatExceptionOfType(ResponseStatusException.class)
+          .isThrownBy(() -> service.list(true, null, null, null, invalid))
+          .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    @DisplayName("Given an unsupported sort, when listing, then the request is rejected")
+    void invalidSort() {
+      Pageable unsupportedSort = PageRequest.of(0, 12, Sort.by("licensePlate"));
+      assertThatExceptionOfType(ResponseStatusException.class)
+          .isThrownBy(() -> service.list(true, null, null, null, unsupportedSort))
+          .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    @DisplayName(
+        "Given wildcard characters in a name, when searching, then they are treated as text")
+    void escapesWildcards() {
+      var query = PageRequest.of(0, 12, Sort.by("name", "id"));
+      when(repository.search(true, "%a!%!_!!%", "%", "%", query))
+          .thenReturn(new PageImpl<>(List.of(), query, 0));
+      assertThat(service.list(true, "A%_!", null, null, PageRequest.of(0, 12)).content()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given ID as the requested sort, when listing, then it is not duplicated")
+    void preservesIdSort() {
+      var query = PageRequest.of(0, 12, Sort.by(Sort.Order.desc("id")));
+      when(repository.search(true, "%", "%", "%", query))
+          .thenReturn(new PageImpl<>(List.of(), query, 0));
+      assertThat(service.list(true, null, null, null, query).content()).isEmpty();
+      verify(repository).search(true, "%", "%", "%", query);
     }
   }
 
