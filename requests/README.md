@@ -21,6 +21,7 @@ them; session writes automatically run the CSRF helper first.
 | --- | --- |
 | [common.http](http/common.http) | URL, credentials, shared in-memory state and CSRF |
 | [auth.http](http/auth.http) | Register driver; admin login/identity; driver login/identity; refresh/identity |
+| [admin-users.http](http/admin-users.http) | Admin list, create, read, update and delete accounts |
 | [categories.http](http/categories.http) | List and capture SEDAN category ID |
 | [specifications.http](http/specifications.http) | List, create, read, replace and patch equipment |
 | [cars.http](http/cars.http) | List, create, read and update a car |
@@ -54,6 +55,13 @@ With Node 24 and the API running:
 ```sh
 cd requests/http
 npx --yes httpyac@6.16.7 send auth.http categories.http specifications.http cars.http car-images.http rentals.http --tag smoke --bail --output short
+```
+
+To validate the administrative user CRUD independently, run:
+
+```sh
+cd requests/http
+npx --yes httpyac@6.16.7 send auth.http admin-users.http --tag users --bail --output short
 ```
 
 Add `--env compose` or `--env k8s` for another deployment. This runs 24 workflow

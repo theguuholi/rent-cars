@@ -1,0 +1,91 @@
+# @import ./common.http
+
+### List accounts (admin only)
+# @name admin_users_list
+# @tag users
+GET {{baseUrl}}/admin/users
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  assert.ok(Array.isArray(response.parsedBody));
+}}
+
+### Create a driver account as admin
+# @name admin_users_create
+# @tag users
+{{
+  const suffix = Date.now().toString(36) + Math.floor(Math.random() * 10000).toString(36);
+  state.managedEmail = `managed.${suffix}@example.test`;
+  state.managedUserName = `managed.${suffix}`;
+  state.managedLicense = String(Date.now()).slice(-11);
+}}
+POST {{baseUrl}}/admin/users
+Authorization: Bearer {{state.adminToken}}
+Content-Type: application/json
+
+{
+  "role": "USER",
+  "user": {
+    "firstName": "Managed",
+    "lastName": "Driver",
+    "userName": "{{state.managedUserName}}",
+    "driveLicense": "{{state.managedLicense}}",
+    "email": "{{state.managedEmail}}",
+    "password": "example-password-123",
+    "passwordConfirmation": "example-password-123"
+  }
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 201);
+  if (response.statusCode === 201) state.managedUserId = response.parsedBody.id;
+}}
+
+### Read the created account
+# @name admin_users_get
+# @tag users
+GET {{baseUrl}}/admin/users/{{state.managedUserId}}
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.parsedBody.id, state.managedUserId);
+}}
+
+### Update editable details; password changes use recovery
+# @name admin_users_update
+# @tag users
+PUT {{baseUrl}}/admin/users/{{state.managedUserId}}
+Authorization: Bearer {{state.adminToken}}
+Content-Type: application/json
+
+{
+  "email": "{{state.managedEmail}}",
+  "role": "ADMIN",
+  "firstName": "Updated",
+  "lastName": "Driver",
+  "userName": "{{state.managedUserName}}",
+  "driveLicense": "{{state.managedLicense}}"
+}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.parsedBody.firstName, "Updated");
+  assert.equal(response.parsedBody.role, "ADMIN");
+}}
+
+### Delete the account (409 if it has rental history)
+# @name admin_users_delete
+# @tag users
+DELETE {{baseUrl}}/admin/users/{{state.managedUserId}}
+Authorization: Bearer {{state.adminToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 204);
+}}

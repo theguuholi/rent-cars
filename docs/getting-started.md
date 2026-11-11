@@ -176,6 +176,31 @@ the API reject a confirmation that differs from the password with **422**.
 
 - [ ] Step 5 complete: I followed the instructions and verified the results before continuing.
 
+### Step 5a: Manage accounts as an administrator
+
+Keep the API running and use the `adminToken` captured in Step 5. In VS Code,
+open [admin-users.http](../requests/http/admin-users.http) and send these
+requests in order. Each request uses the ID captured by creation.
+
+| Step | Done | Request | Expected result |
+| --- | --- | --- | --- |
+| 1 | ☐ | `admin_users_list` | **200** lists accounts; passwords are absent |
+| 2 | ☐ | `admin_users_create` | **201** creates a driver and returns `Location` |
+| 3 | ☐ | `admin_users_get` | **200** includes name, username and CNH number |
+| 4 | ☐ | `admin_users_update` | **200** shows the edited name and new role; the account ID stays the same |
+| 5 | ☐ | `admin_users_delete` | **204** removes the account without rental history |
+
+The **Users** navigation in React is visible only to administrators. Open it to
+repeat the same journey through the browser. Creation and editing can assign `USER` or
+`ADMIN`; editing also changes contact and driver details, while password changes use
+the recovery flow. The API denies access to drivers and guests, blocks deletion
+of your own account, blocks self-demotion, and returns **409** when rental history
+must be retained. Changing a role ends that user's refresh sessions; they must
+sign in again to obtain the new role. An old administrator token immediately
+loses access to administrator routes after demotion.
+
+- [ ] Step 5a complete: I managed a test account and verified its removal.
+
 ## Step 6: Read catalogs and create equipment
 
 | Step | Done | Request | Expected result |

@@ -56,4 +56,15 @@ class DriverProfile {
   String userName() {
     return userName;
   }
+
+  String driveLicense() {
+    return driveLicense;
+  }
+
+  void manage(String firstName, String lastName, String userName, String driveLicense) {
+    this.firstName = firstName;
+    this.lastName = lastName;
+    this.userName = userName;
+    this.driveLicense = driveLicense;
+  }
 }

@@ -1,6 +1,7 @@
 package com.github.theguuholi.rentcars.auth;
 
 import jakarta.servlet.DispatcherType;
+import java.util.UUID;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -9,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -16,9 +19,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
@@ -45,7 +50,7 @@ class SecurityConfiguration {
   }
 
   @Bean
-  SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
+  SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, AccountRepository accounts) {
     var roles = new JwtGrantedAuthoritiesConverter();
     roles.setAuthoritiesClaimName("roles");
     roles.setAuthorityPrefix("ROLE_");
@@ -67,6 +72,21 @@ class SecurityConfiguration {
         new org.springframework.security.oauth2.server.resource.web.authentication
             .BearerTokenAuthenticationConverter();
     var forbidden = new BearerTokenAccessDeniedHandler();
+    AuthorizationManager<RequestAuthorizationContext> currentAdmin =
+        (authenticationSupplier, request) -> {
+          var principal = authenticationSupplier.get();
+          if (!(principal instanceof JwtAuthenticationToken jwt)
+              || principal.getAuthorities().stream()
+                  .noneMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()))) {
+            return new AuthorizationDecision(false);
+          }
+          boolean allowed =
+              accounts
+                  .findById(UUID.fromString(jwt.getToken().getSubject()))
+                  .map(account -> "ADMIN".equals(account.role()))
+                  .orElse(false);
+          return new AuthorizationDecision(allowed);
+        };
     return http.csrf(CsrfConfigurer::spa)
         .exceptionHandling(
             errors ->
@@ -112,10 +132,12 @@ class SecurityConfiguration {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/sessions/me")
                     .authenticated()
+                    .requestMatchers("/admin/users/**")
+                    .access(currentAdmin)
                     .requestMatchers(rentalEndpoints)
                     .authenticated()
                     .requestMatchers(catalog)
-                    .hasRole("ADMIN")
+                    .access(currentAdmin)
                     .anyRequest()
                     .denyAll())
         .oauth2ResourceServer(
