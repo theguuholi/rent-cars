@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test as scenario, vi } from 'vitest'
 import { captureException } from '@sentry/react'
 import { AppErrorBoundary } from './AppErrorBoundary'
+import { createRef } from 'react'
 
 vi.mock('@sentry/react', () => ({ captureException: vi.fn() }))
 
@@ -16,13 +17,15 @@ describe('Application error boundary', () => {
   })
 
   scenario('Given a healthy page, when it renders, then the content stays visible', () => {
-    render(<AppErrorBoundary>Catalog</AppErrorBoundary>)
+    const boundary = createRef<AppErrorBoundary>()
+    render(<AppErrorBoundary ref={boundary}>Catalog</AppErrorBoundary>)
     expect(screen.getByText('Catalog')).toBeVisible()
+    expect(boundary.current?.state).toEqual({ failed: false })
   })
 
   scenario(
     'Given no Sentry DSN, when rendering fails, then the visitor sees a recovery message',
-    () => {
+    async () => {
       const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
       try {
         render(
@@ -31,6 +34,7 @@ describe('Application error boundary', () => {
           </AppErrorBoundary>,
         )
         expect(screen.getByRole('alert')).toHaveTextContent('Reload the page')
+        await new Promise((resolve) => setTimeout(resolve, 0))
         expect(captureException).not.toHaveBeenCalled()
       } finally {
         errorLog.mockRestore()
