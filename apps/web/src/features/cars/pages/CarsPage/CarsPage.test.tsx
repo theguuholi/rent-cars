@@ -33,6 +33,15 @@ describe('CarsPage', () => {
   )
 
   scenario(
+    'Given the catalog URL without filters, when opening it, then the URL stays clean',
+    async () => {
+      const history = openCatalogRoute('/cars')
+      await screen.findByText('No matching cars.')
+      expect(history.location.search).toBe('')
+    },
+  )
+
+  scenario(
     'Given a pending fleet request, when it fails and the visitor retries, then an empty fleet offers registration',
     async () => {
       let reject!: (error: Error) => void

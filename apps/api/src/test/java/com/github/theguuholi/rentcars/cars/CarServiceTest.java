@@ -83,8 +83,9 @@ class CarServiceTest {
     @Test
     @DisplayName("Given an excessive page size, when listing, then the request is rejected")
     void invalidSize() {
+      Pageable tooLarge = PageRequest.of(0, 101);
       assertThatExceptionOfType(ResponseStatusException.class)
-          .isThrownBy(() -> service.list(true, null, null, null, PageRequest.of(0, 101)))
+          .isThrownBy(() -> service.list(true, null, null, null, tooLarge))
           .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
       Pageable invalid = mock(Pageable.class);
       when(invalid.getPageSize()).thenReturn(0);
@@ -96,11 +97,9 @@ class CarServiceTest {
     @Test
     @DisplayName("Given an unsupported sort, when listing, then the request is rejected")
     void invalidSort() {
+      Pageable unsupportedSort = PageRequest.of(0, 12, Sort.by("licensePlate"));
       assertThatExceptionOfType(ResponseStatusException.class)
-          .isThrownBy(
-              () ->
-                  service.list(
-                      true, null, null, null, PageRequest.of(0, 12, Sort.by("licensePlate"))))
+          .isThrownBy(() -> service.list(true, null, null, null, unsupportedSort))
           .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
