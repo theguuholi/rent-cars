@@ -1,5 +1,5 @@
 apiVersion: v2
 name: rent-cars
-description: Local Rent Cars stack with React, Spring, PostgreSQL, SeaweedFS and Mailpit
+description: Local Rent Cars stack with React, Spring, PostgreSQL, SeaweedFS, Mailpit and Grafana LGTM
 type: application
 version: 0.1.0

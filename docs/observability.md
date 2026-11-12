@@ -66,9 +66,12 @@ variables and enable API export. The single-container LGTM image is intended
 for local development and testing. A production web deployment needs a
 same-origin `/otel` collector route or an allowed CORS endpoint before enabling
 browser export. Do not expose the collector directly to untrusted clients
-without access controls and rate limits. The Kubernetes chart keeps telemetry
-export disabled by default; inject the collector URLs and enable it when the
-cluster has a collector.
+without access controls and rate limits. The local Kubernetes chart installs
+the same LGTM image and points the API to its in-cluster collector. See the
+[Kubernetes observability walkthrough](../helm/README.md#verify-observability)
+for the port-forward and Grafana queries. Browser traces remain disabled in the
+published web image. For a production cluster, use a managed collector and
+configure its endpoints and access controls instead of exposing local LGTM.
 
 To stop local services, run `make infra-stop`. To remove only telemetry data,
 stop the stack and remove the `rent-cars_observability_data` Docker volume.

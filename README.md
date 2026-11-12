@@ -33,7 +33,7 @@ the SMTP server configured in `application-prod.yaml` and the
 `MAIL_FROM`/`WEB_BASE_URL` variables. See the [recovery walkthrough](docs/getting-started.md#step-9a-recover-a-drivers-password)
 for the full flow.
 
-For container images and a local Kubernetes deployment, follow the [Docker and Helm guide](helm/README.md).
+For container images and a local Kubernetes deployment, follow the [Docker and Helm guide](helm/README.md). The Kubernetes chart also runs the local Grafana LGTM simulator; use the [observability walkthrough](helm/README.md#verify-observability) to inspect API traces, metrics and logs.
 
 ### Publish the latest application images
 

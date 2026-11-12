@@ -532,10 +532,16 @@ kubectl --context docker-desktop -n rent-cars get pods,svc,pvc
 helm test fleet --kube-context docker-desktop -n rent-cars --logs
 ```
 
-Expect the API, web, PostgreSQL, SeaweedFS and Mailpit pods to become ready and their
+Expect the API, web, PostgreSQL, SeaweedFS, Mailpit and Grafana LGTM pods to become ready and their
 persistent claims to be bound. Open React at **http://localhost:8082** and choose
 **k8s** in HTTP Yac. Its API base URL is **http://localhost:8082/api**. Repeat the
 same numbered HTTP Yac walkthrough with fresh logins and IDs.
+
+To inspect Kubernetes metrics, traces and logs in Grafana, follow
+[Verify observability](../helm/README.md#verify-observability). Forward
+`svc/fleet-observability` to local port 3001, then check the API in Tempo,
+Prometheus and Loki. Browser traces are available in the `make dev` workflow;
+the published React image does not export them.
 
 For the password-recovery inbox examples, keep this command running in a second
 terminal while sending `password-recovery.http`:
