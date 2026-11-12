@@ -10,9 +10,9 @@ through Vite's `/otel` proxy. No external account is needed.
    rental. Failed API calls are useful too; their HTTP status appears on the
    request span. Use the [HTTP Yac walkthrough](getting-started.md#step-4-open-the-requests-in-vs-code)
    to exercise the same API paths without the browser.
-3. Open <http://localhost:3000> and sign in with `admin` / `admin`.
-   The image includes **RED Metrics** and **JVM Metrics** dashboards for request
-   rate, errors, latency and JVM health.
+3. Open <http://localhost:3000>. The current local LGTM image allows anonymous
+   access, so no sign-in is needed. It includes **RED Metrics** and **JVM Metrics**
+   dashboards for request rate, errors, latency and JVM health.
 4. In **Explore**, select **Tempo** and search for service `rent-cars-api` or
    `rent-cars-web`. Open a request trace to follow the browser `/api` call into
    Spring. The browser traces only fetch requests, so static page navigation

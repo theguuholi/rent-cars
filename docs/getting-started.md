@@ -79,7 +79,7 @@ and the development administrator automatically.
 | Spring API | http://localhost:8080 |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | Local email inbox | http://localhost:8025 |
-| Grafana (local telemetry) | http://localhost:3000 (admin / admin) |
+| Grafana (local telemetry) | http://localhost:3000 (opens directly with the current local LGTM image) |
 | HTTP Yac environment | No environment needed (local default) |
 
 From a second terminal in the repository root:
@@ -119,6 +119,34 @@ ports. PostgreSQL uses 5432, the local S3 endpoint uses 8333, Mailpit uses
 [Observe the application](observability.md) for the three signals and a short verification flow.
 
 - [ ] Step 3 complete: I followed the instructions and verified the results before continuing.
+
+### Step 3a: Verify observability
+
+The local stack sends API metrics, traces and logs to Grafana LGTM. To make a
+specific browser journey easy to find, start the stack with full trace sampling:
+
+```sh
+# Stop an existing make dev process with Ctrl+C before running this command.
+RENT_TRACING_SAMPLE_RATE=1 make dev
+```
+
+From a second terminal, check the API health endpoint, then open the catalog at
+<http://localhost:5173>. Open a car detail page and return to the catalog. Open
+Grafana at <http://localhost:3000>; the current local image opens directly.
+
+| Step | Done | Where to look | Expected result |
+| --- | --- | --- | --- |
+| 1 | ☐ | `curl -fsS http://localhost:8080/actuator/health` | JSON reports `"status":"UP"` |
+| 2 | ☐ | Grafana **Explore → Tempo**, search service `rent-cars-web` | A catalog request trace includes spans from both `rent-cars-web` and `rent-cars-api` |
+| 3 | ☐ | Grafana **Explore → Prometheus**, query `http_server_requests_milliseconds_count` | API request counts appear after the first export, which can take about one minute |
+| 4 | ☐ | Grafana **Explore → Loki**, query `{service_name="rent-cars-api"}` | API logs appear; a request log has a `trace_id` that can be found in Tempo |
+
+After Step 8, you can also rent and return a car, then look for `rental.start`
+and `rental.return` in Tempo and their corresponding counters in Prometheus.
+For the exact queries, browser tracing test and production configuration, see
+[Observe the application](observability.md).
+
+- [ ] Step 3a complete: I found the health response, a connected browser/API trace, metrics and logs in Grafana.
 
 ## Step 4: Open the requests in VS Code
 
