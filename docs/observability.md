@@ -3,7 +3,8 @@
 `make dev` starts Grafana LGTM alongside PostgreSQL, SeaweedFS and Mailpit. LGTM
 contains a local OpenTelemetry Collector, Prometheus, Tempo and Loki. The API
 exports metrics, traces and logs over OTLP HTTP; the browser exports fetch spans
-through Vite's `/otel` proxy. No external account is needed.
+through Vite's `/otel` proxy. No external account is needed. Grafana's anonymous
+Admin access is explicitly enabled for this localhost-only development service.
 
 1. Run `make setup` once, then `make dev` from the repository root.
 2. Open <http://localhost:5173>, browse the catalog, sign in and open/return a
@@ -56,7 +57,7 @@ or account IDs.
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | `http://localhost:4318/v1/traces` | API traces collector URL. |
 | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | `http://localhost:4318/v1/metrics` | API metrics collector URL. |
 | `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | `http://localhost:4318/v1/logs` | API logs collector URL. |
-| `RENT_TRACING_SAMPLE_RATE` | `0.1` | Fraction of server traces sampled; set `1` while verifying a specific flow. |
+| `RENT_TRACING_SAMPLE_RATE` | `1.0` (`dev`); `0.1` otherwise | Fraction of server traces sampled; lower it for busier environments. |
 | `VITE_OTEL_TRACES_URL` | `/otel/v1/traces` in Vite development | Browser trace endpoint. Unset in production builds, so browser export is off. |
 | `VITE_SENTRY_DSN` | unset | Optional frontend runtime error reporting. Build with a DSN to enable it. |
 

@@ -23,6 +23,8 @@ rent:
 
 management:
   tracing:
+    sampling:
+      probability: ${RENT_TRACING_SAMPLE_RATE:1.0}
     export:
       otlp:
         enabled: ${RENT_OBSERVABILITY_ENABLED:true}

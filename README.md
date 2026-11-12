@@ -8,7 +8,7 @@ The local stack also includes [Grafana observability](docs/observability.md) for
 
 ## Run the full stack locally
 
-Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), 5432 (PostgreSQL), 8333 (development S3), 8025 (email inbox) and 1025 (development SMTP) are available.
+Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), 5432 (PostgreSQL), 8333 (development S3), 8025 (email inbox), 1025 (development SMTP) and 3000 (Grafana) are available.
 
 ```sh
 git clone https://github.com/theguuholi/rent-cars.git

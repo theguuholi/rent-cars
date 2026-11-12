@@ -122,13 +122,9 @@ ports. PostgreSQL uses 5432, the local S3 endpoint uses 8333, Mailpit uses
 
 ### Step 3a: Verify observability
 
-The local stack sends API metrics, traces and logs to Grafana LGTM. To make a
-specific browser journey easy to find, start the stack with full trace sampling:
-
-```sh
-# Stop an existing make dev process with Ctrl+C before running this command.
-RENT_TRACING_SAMPLE_RATE=1 make dev
-```
+The local stack sends API metrics, traces and logs to Grafana LGTM. The `dev`
+profile samples all traces, so the browser journey below is easy to find. You
+can override this with `RENT_TRACING_SAMPLE_RATE` when needed.
 
 From a second terminal, check the API health endpoint, then open the catalog at
 <http://localhost:5173>. Open a car detail page and return to the catalog. Open
