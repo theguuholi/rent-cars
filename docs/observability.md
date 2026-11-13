@@ -26,10 +26,17 @@ Admin access is explicitly enabled for this localhost-only development service.
 
 Spring Boot applies Micrometer `@Observed` to the rental service's create and
 return operations, producing `rental.start` and `rental.return` observations.
-Search these names in Tempo to inspect the operation, or query
-`rental_start_milliseconds_count` and `rental_return_milliseconds_count` in
-Prometheus. Failed attempts are recorded by the observation
-and the enclosing HTTP request; no account, car or rental ID is used as a
+In **Explore → Tempo → TraceQL**, run these queries after renting and returning a car:
+
+```traceql
+{ resource.service.name = "rent-cars-api" && span:name = "rental.start" }
+{ resource.service.name = "rent-cars-api" && span:name = "rental.return" }
+```
+
+Set the time range to include the actions. Each query returns traces for one
+operation. In **Prometheus**, query `rental_start_milliseconds_count` and
+`rental_return_milliseconds_count` to inspect the corresponding counters. Failed
+attempts are recorded by the observation and the enclosing HTTP request; no account, car or rental ID is used as a
 metric label.
 
 With `make dev` still running, verify browser propagation from another terminal:
