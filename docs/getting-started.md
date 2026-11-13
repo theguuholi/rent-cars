@@ -287,14 +287,19 @@ process does not populate this editor's request state.
 | 28 | ☐ | `scenarios-rentals.http → scenarios_rentals_unavailable_car` | **409**; administrator cannot rent the same occupied car |
 | 29 | ☐ | `scenarios-rentals.http → scenarios_rentals_foreign_return` | **404**; administrator cannot return the driver's rental |
 | 30 | ☐ | `rentals.http → rentals_return` | **200**; fills return time/total and releases the car |
-| 31 | ☐ | `cars.http → cars_get` | **200**, `available=true` |
-| 32 | ☐ | `scenarios-rentals.http → scenarios_rentals_return_twice` | **409**; duplicate return is rejected |
-| 33 | ☐ | `scenarios-rentals.http → scenarios_rentals_invalid_period` | **422**; expected return less than 24 hours ahead is rejected |
-| 34 | ☐ | `scenarios-rentals.http → scenarios_rentals_delete_history` | **409**; rental history prevents deleting the car |
+| 31 | ☐ | `rentals.http → rentals_receipt` | **200**; saved daily rate, charged days, late fee and total match |
+| 32 | ☐ | `cars.http → cars_get` | **200**, `available=true` |
+| 33 | ☐ | `scenarios-rentals.http → scenarios_rentals_return_twice` | **409**; duplicate return is rejected |
+| 34 | ☐ | `scenarios-rentals.http → scenarios_rentals_invalid_period` | **422**; expected return less than 24 hours ahead is rejected |
+| 35 | ☐ | `scenarios-rentals.http → scenarios_rentals_delete_history` | **409**; rental history prevents deleting the car |
 
 An immediate return costs **15000 centavos (R$150)** for this example. Billing
 uses completed 24-hour periods, at least one daily charge, and completed days
-late for the fine. The server uses the current car prices at return time.
+late for the fine. The server records the daily rate and fine when the rental starts.
+After returning, sign in as the driver in React, open **My rentals** in the top
+navigation, and check the returned car, charged days, late days and final total.
+Refresh the page to confirm the receipt remains available. Older rentals may
+show only the final total.
 User identity, start time, actual return time and total are assigned by the server.
 
 An account can have only one open rental. If an earlier run stopped after
@@ -406,7 +411,7 @@ complete `make setup` from Step 2 once before running the test.
    restore and sign out, redirect after admin login, and denial for a driver
    opening an admin page. The rental journey registers a new driver, rents one
    available car, confirms that it becomes unavailable, returns it and confirms
-   that it becomes available again.
+   that it becomes available again, then opens My rentals to check the receipt after a reload.
 
    Playwright discovers all `*.pw.ts` files under `apps/web/e2e/`, so a new
    journey needs no package script or CI change. To run one file, pass its path:

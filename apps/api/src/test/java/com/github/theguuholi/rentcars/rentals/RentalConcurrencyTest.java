@@ -69,7 +69,7 @@ class RentalConcurrencyTest extends RentalIntegrationSupport {
   class ReturnCar {
     @Test
     @DisplayName(
-        "Given a pending price edit, when returning the car, then return waits and uses the committed price")
+        "Given a pending price edit, when returning the car, then return waits but keeps the agreed price")
     void returnWaitsForCarPriceEdit() throws Exception {
       // Given: a rental is open and a transaction changes its car's daily rate.
       var rental = service.create(owner, carId, NOW.plusSeconds(86400));
@@ -88,10 +88,10 @@ class RentalConcurrencyTest extends RentalIntegrationSupport {
                   return returning; // The price transaction commits before the future is read.
                 });
 
-        // Then: return uses the committed price rather than the previous rate.
+        // Then: return keeps the rate agreed before the edit.
         assertThat(pendingReturn.get(15, TimeUnit.SECONDS))
             .extracting("totalCents")
-            .isEqualTo(20000L);
+            .isEqualTo(10000L);
       }
     }
 

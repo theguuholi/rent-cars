@@ -104,6 +104,42 @@ public class Rental {
       example = "30000")
   private Long totalCents;
 
+  @Column(name = "daily_rate_cents")
+  @JsonProperty
+  @Schema(
+      description =
+          "Daily rate agreed when the rental started, in Brazilian centavos; null for legacy receipts.",
+      nullable = true,
+      accessMode = Schema.AccessMode.READ_ONLY)
+  private Integer dailyRateCents;
+
+  @Column(name = "fine_amount_cents")
+  @JsonProperty
+  @Schema(
+      description =
+          "Fine per completed late day agreed when the rental started, in Brazilian centavos; null for legacy receipts.",
+      nullable = true,
+      accessMode = Schema.AccessMode.READ_ONLY)
+  private Integer fineAmountCents;
+
+  @Column(name = "billed_days")
+  @JsonProperty
+  @Schema(
+      description =
+          "Completed 24-hour periods charged, with a minimum of one; null while open or for legacy receipts.",
+      nullable = true,
+      accessMode = Schema.AccessMode.READ_ONLY)
+  private Long billedDays;
+
+  @Column(name = "late_days")
+  @JsonProperty
+  @Schema(
+      description =
+          "Completed 24-hour periods after the expected return; null while open or for legacy receipts.",
+      nullable = true,
+      accessMode = Schema.AccessMode.READ_ONLY)
+  private Long lateDays;
+
   @CreationTimestamp
   @Column(nullable = false, updatable = false)
   private Instant insertedAt;
@@ -124,6 +160,8 @@ public class Rental {
     rental.accountId = accountId;
     rental.car = car;
     rental.carId = car.id();
+    rental.dailyRateCents = car.rentalDailyRateCents();
+    rental.fineAmountCents = car.rentalFineAmountCents();
     rental.startDate = now;
     rental.expectedReturnDate = expectedReturnDate;
     return rental;
@@ -136,14 +174,27 @@ public class Rental {
     }
   }
 
-  void finish(Instant now, long totalCents) {
+  void finish(Instant now, RentalPricing.Charge charge) {
     requireOpen();
-    if (now.isBefore(startDate) || totalCents < 0) {
+    if (now.isBefore(startDate)
+        || charge.totalCents() < 0
+        || charge.billedDays() < 1
+        || charge.lateDays() < 0) {
       throw new RentalException(
           RentalException.Reason.INVALID_RETURN, "Invalid return time or charge");
     }
     this.endDate = now;
-    this.totalCents = totalCents;
+    this.totalCents = charge.totalCents();
+    this.billedDays = charge.billedDays();
+    this.lateDays = charge.lateDays();
+  }
+
+  int dailyRateCents() {
+    return dailyRateCents;
+  }
+
+  int fineAmountCents() {
+    return fineAmountCents;
   }
 
   UUID id() {
