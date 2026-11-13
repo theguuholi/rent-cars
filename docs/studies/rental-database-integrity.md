@@ -91,28 +91,51 @@ Testcontainers; run no `DROP INDEX` or migration edits on the development DB.
 
 ## Step 3: Trace a race condition
 
-Read [`RentalService.java`](../../apps/api/src/main/java/com/github/theguuholi/rentcars/rentals/RentalService.java),
+Start with [`RentalConcurrencyTest.java`](../../apps/api/src/test/java/com/github/theguuholi/rentcars/rentals/RentalConcurrencyTest.java).
+Read each test from its **Given** setup to the **When** operation and **Then**
+database assertions. `assertOneCommitAndOneConflict` starts two transactions at
+one barrier; either request may win. The test checks the outcome and persisted
+state, not a predetermined winner.
+
+### Two drivers, one car
+
+Read `Create.twoDriversCompeteForOneCar`, then follow its calls through
+[`RentalService.java`](../../apps/api/src/main/java/com/github/theguuholi/rentcars/rentals/RentalService.java),
 [`CarRentalAccess.java`](../../apps/api/src/main/java/com/github/theguuholi/rentcars/cars/CarRentalAccess.java),
-[`CarRepository.java`](../../apps/api/src/main/java/com/github/theguuholi/rentcars/cars/CarRepository.java),
-and [`RentalRepository.java`](../../apps/api/src/main/java/com/github/theguuholi/rentcars/rentals/RentalRepository.java).
-Then read `ConcurrentWrites` in `RentalRepositoryTest.java`.
+and [`CarRepository.java`](../../apps/api/src/main/java/com/github/theguuholi/rentcars/cars/CarRepository.java).
 
-1. Two drivers request the same car. `findForUpdate` takes a pessimistic write
-   lock on the car, so one transaction waits while the other rents it. The
-   waiting transaction sees the new availability after the first commits.
-   `rentals_open_car` remains the database guarantee for any competing write,
-   including one that bypasses the service.
-2. One driver requests two *different* cars. Locking each car does not serialize
-   those requests by account. Both could pass the application's preliminary
-   `existsByAccountIdAndEndDateIsNull` check. `rentals_open_account` guarantees
-   that only one open rental commits.
-3. Two requests return the same rental. `findForReturn` locks its rental row;
-   the first return completes and the second cannot finish it again.
+| Moment | First transaction | Second transaction |
+| --- | --- | --- |
+| Start | Tries to rent the car | Tries to rent the same car |
+| Car lookup | One transaction gets the car row's `PESSIMISTIC_WRITE` lock | The other waits for that lock |
+| After the first commit | Its rental is open; the car is unavailable | It sees the unavailable car and is rejected |
 
-These scenarios are already tested with competing PostgreSQL transactions.
-They assert one committed operation and one conflict, then inspect persisted
-state. A direct SQL violation is different from an HTTP response: the API's
-exception mapping is what turns a relevant conflict into HTTP 409.
+The `rentals_open_car` partial unique index is the final database guarantee,
+including for a writer that bypasses `RentalService`. The test verifies one
+open rental and an unavailable car.
+
+### One driver, two different cars
+
+Read `Create.oneDriverCompetesForTwoCars`. Each transaction locks a different
+car, so those car locks do not serialize the two requests. Both may initially
+see no open rental for the account. The `rentals_open_account` partial unique
+index allows only one transaction to commit. The test verifies one open rental
+for the account and exactly one unavailable car.
+
+### Two returns, one rental
+
+Read `ReturnCar.twoReturnsCompeteForOneRental` and
+[`RentalRepository.findForReturn`](../../apps/api/src/main/java/com/github/theguuholi/rentcars/rentals/RentalRepository.java).
+Both requests try to lock the *same rental row*. One completes the return; the
+other finds a completed rental and is rejected. The test verifies one recorded
+total and one car release. `ReturnCar.returnWaitsForCarPriceEdit` is a separate,
+deterministic lock example: it uses PostgreSQL's `pg_blocking_pids` to observe
+the return waiting for a car price edit before that edit commits.
+
+The first three tests prove the final invariant under simultaneous starts; they
+do not assert which request obtains a lock first. A direct SQL constraint error
+is also different from an HTTP response: the API's exception mapping turns a
+relevant conflict into HTTP 409.
 
 For comparison, car catalog edits use the `@Version` field in
 [`VersionedEntity.java`](../../apps/api/src/main/java/com/github/theguuholi/rentcars/shared/persistence/VersionedEntity.java)
@@ -120,7 +143,7 @@ and the editor's `expectedVersion`. That optimistic version protects edits
 against stale data. It does not replace the rental-specific locks or partial
 unique indexes. Do not remove a lock or index as part of this lab.
 
-- [ ] I can explain which two requests contend for the same row, which do not,
+- [ ] I can explain which requests contend for the same row, which do not,
   and why both partial indexes are still needed.
 
 ## Step 4: Explain the design
