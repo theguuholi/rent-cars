@@ -45,6 +45,7 @@ describe('Application layout', () => {
       await screen.findByText('No vehicle categories available.')
       const nav = screen.getByRole('navigation', { name: 'Vehicle catalogs' })
       expect(screen.getByRole('link', { name: 'Rent Cars home' })).toHaveAttribute('href', '/')
+      expect(within(nav).queryByRole('link', { name: 'My rentals' })).not.toBeInTheDocument()
       expect(within(nav).getByRole('link', { name: 'Categories' })).toHaveAttribute(
         'aria-current',
         'page',

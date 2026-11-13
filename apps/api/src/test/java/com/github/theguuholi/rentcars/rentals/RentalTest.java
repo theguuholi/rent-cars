@@ -33,6 +33,16 @@ class RentalTest {
     }
 
     @Test
+    void givenCarPricesWhenStartingThenSnapshotsPrices() {
+      org.mockito.Mockito.when(car.rentalDailyRateCents()).thenReturn(15000);
+      org.mockito.Mockito.when(car.rentalFineAmountCents()).thenReturn(3000);
+      var rental = open();
+      assertThat(rental)
+          .extracting("dailyRateCents", "fineAmountCents")
+          .containsExactly(15000, 3000);
+    }
+
+    @Test
     void givenLessThan24HoursWhenStartingThenRejectsPeriod() {
       assertThatThrownBy(() -> Rental.start(owner, car, now, now.plusSeconds(86399)))
           .isInstanceOfSatisfying(
@@ -46,18 +56,30 @@ class RentalTest {
     @Test
     void givenOpenRentalWhenFinishingThenSetsChargeAndDateTogether() {
       var rental = open();
-      rental.finish(now, 0);
-      assertThat(rental).extracting("endDate", "totalCents").containsExactly(now, 0L);
+      rental.finish(now, new RentalPricing.Charge(1, 0, 0));
+      assertThat(rental)
+          .extracting("endDate", "totalCents", "billedDays", "lateDays")
+          .containsExactly(now, 0L, 1L, 0L);
     }
 
     @Test
     void givenReturnedRentalWhenFinishingAgainThenPreservesOriginalReturn() {
       var rental = open();
-      rental.finish(now, 100);
+      rental.finish(now, new RentalPricing.Charge(1, 0, 100));
       var secondReturn = now.plusSeconds(1);
-      assertThatThrownBy(() -> rental.finish(secondReturn, 200))
+      assertThatThrownBy(() -> rental.finish(secondReturn, new RentalPricing.Charge(1, 0, 200)))
           .isInstanceOf(RentalException.class);
       assertThat(rental).extracting("endDate", "totalCents").containsExactly(now, 100L);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"0,0,100", "1,-1,100"})
+    void givenInvalidDayCountsWhenFinishingThenKeepsRentalOpen(
+        long days, long lateDays, long amount) {
+      var rental = open();
+      assertThatThrownBy(() -> rental.finish(now, new RentalPricing.Charge(days, lateDays, amount)))
+          .isInstanceOf(RentalException.class);
+      assertThat(rental).extracting("endDate", "totalCents").containsExactly(null, null);
     }
 
     @ParameterizedTest
@@ -65,7 +87,7 @@ class RentalTest {
     void givenInvalidTimeOrChargeWhenFinishingThenKeepsRentalOpen(long amount) {
       var rental = open();
       var returnedAt = amount == 0 ? now.minusSeconds(1) : now;
-      assertThatThrownBy(() -> rental.finish(returnedAt, amount))
+      assertThatThrownBy(() -> rental.finish(returnedAt, new RentalPricing.Charge(1, 0, amount)))
           .isInstanceOf(RentalException.class);
       assertThat(rental).extracting("endDate", "totalCents").containsExactly(null, null);
     }
@@ -81,7 +103,7 @@ class RentalTest {
     @Test
     void givenReturnedRentalWhenCheckingThenRejectsReturn() {
       var rental = open();
-      rental.finish(now, 100);
+      rental.finish(now, new RentalPricing.Charge(1, 0, 100));
       assertThatThrownBy(rental::requireOpen)
           .isInstanceOfSatisfying(
               RentalException.class,

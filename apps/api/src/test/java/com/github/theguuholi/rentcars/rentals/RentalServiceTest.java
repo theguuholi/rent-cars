@@ -62,18 +62,20 @@ class RentalServiceTest {
   @Nested
   class ReturnCar {
     @Test
-    void givenOpenRentalWhenReturningThenUsesCurrentCarPricesAndReleasesIt() {
+    void givenOpenRentalWhenReturningThenUsesAgreedCarPricesAndReleasesIt() {
       when(car.id()).thenReturn(carId);
       var exactNow = now.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+      when(car.rentalDailyRateCents()).thenReturn(100);
+      when(car.rentalFineAmountCents()).thenReturn(30);
       var rental =
           Rental.start(accountId, car, exactNow.minusSeconds(259200), exactNow.minusSeconds(86400));
       when(repository.findForReturn(rentalId, accountId)).thenReturn(Optional.of(rental));
       when(cars.getForRental(carId)).thenReturn(car);
-      when(car.rentalDailyRateCents()).thenReturn(100);
-      when(car.rentalFineAmountCents()).thenReturn(30);
       when(repository.saveAndFlush(rental)).thenReturn(rental);
       assertThat(service.returnCar(rentalId, accountId)).isSameAs(rental);
-      assertThat(rental).extracting("totalCents").isEqualTo(330L);
+      assertThat(rental)
+          .extracting("totalCents", "billedDays", "lateDays")
+          .containsExactly(330L, 3L, 1L);
       verify(car).releaseAfterReturn();
     }
 
@@ -89,7 +91,7 @@ class RentalServiceTest {
     @Test
     void givenAlreadyReturnedRentalWhenReturningThenDoesNotReleaseVehicle() {
       var rental = Rental.start(accountId, car, now, now.plusSeconds(86400));
-      rental.finish(now, 100);
+      rental.finish(now, new RentalPricing.Charge(1, 0, 100));
       when(repository.findForReturn(rentalId, accountId)).thenReturn(Optional.of(rental));
       assertThatThrownBy(() -> service.returnCar(rentalId, accountId))
           .isInstanceOf(RentalException.class);

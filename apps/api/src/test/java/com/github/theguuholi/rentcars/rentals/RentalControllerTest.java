@@ -107,7 +107,11 @@ class RentalControllerTest extends RentalIntegrationSupport {
               "startDate",
               "expectedReturnDate",
               "endDate",
-              "totalCents")) {
+              "totalCents",
+              "dailyRateCents",
+              "fineAmountCents",
+              "billedDays",
+              "lateDays")) {
         assertThat(props.has(field)).as(field).isTrue();
         assertThat(rental.has(field)).as(field).isTrue();
       }
@@ -240,10 +244,47 @@ class RentalControllerTest extends RentalIntegrationSupport {
       giveBack(id, owner)
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.totalCents").value(36000))
+          .andExpect(jsonPath("$.dailyRateCents").value(10000))
+          .andExpect(jsonPath("$.fineAmountCents").value(3000))
+          .andExpect(jsonPath("$.billedDays").value(3))
+          .andExpect(jsonPath("$.lateDays").value(2))
           .andExpect(jsonPath("$.endDate").value(NOW.plusSeconds(259200).toString()))
           .andExpect(jsonPath("$.car.available").value(true))
           .andExpect(jsonPath("$.car.version").value(2));
       assertThat(available(carId)).isTrue();
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+      "0,10000,1,0",
+      "86399,10000,1,0",
+      "86400,10000,1,0",
+      "172800,23000,2,1"
+    })
+    void givenElapsedDaysWhenReturningThenChargesCompletedDaysAndLateFine(
+        long seconds, long total, long days, long lateDays) throws Exception {
+      UUID id = rent();
+      when(clock.instant()).thenReturn(NOW.plusSeconds(seconds));
+      giveBack(id, owner)
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.totalCents").value(total))
+          .andExpect(jsonPath("$.billedDays").value(days))
+          .andExpect(jsonPath("$.lateDays").value(lateDays));
+    }
+
+    @Test
+    void givenReturnedCarWhenRentingAgainThenTheSameDriverCanOpenAnotherRental() throws Exception {
+      UUID first = rent();
+      giveBack(first, owner).andExpect(status().isOk());
+      UUID second = rent();
+      assertThat(second).isNotEqualTo(first);
+      assertThat(available(carId)).isFalse();
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from rentals where car_id=? and end_date is null",
+                  Integer.class,
+                  carId))
+          .isEqualTo(1);
     }
 
     @Test
@@ -310,7 +351,8 @@ class RentalControllerTest extends RentalIntegrationSupport {
       UUID id = jdbc.queryForObject("select id from rentals where car_id=?", UUID.class, carId);
       giveBack(id, owner)
           .andExpect(status().isOk())
-          .andExpect(jsonPath("$.totalCents").value(12000));
+          .andExpect(jsonPath("$.totalCents").value(10000))
+          .andExpect(jsonPath("$.dailyRateCents").value(10000));
     }
 
     @Test

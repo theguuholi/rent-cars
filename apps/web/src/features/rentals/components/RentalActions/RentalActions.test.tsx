@@ -18,6 +18,11 @@ const driver = {
 }
 const openRental: Rental = {
   id: 'rental',
+  car: { name: 'Corolla' },
+  dailyRateCents: 10000,
+  fineAmountCents: 3000,
+  billedDays: null,
+  lateDays: null,
   carId: car.id,
   startDate: '2026-11-09T12:00:00Z',
   expectedReturnDate: '2026-11-12T12:00:00Z',
