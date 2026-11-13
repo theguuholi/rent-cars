@@ -66,6 +66,18 @@ mailpit:
     limits:
       memory: 128Mi
 
+# Local-only Grafana LGTM (Prometheus, Tempo, Loki and OTLP collector).
+observability:
+  enabled: true
+  image: grafana/otel-lgtm:0.37.0
+  storage: 2Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+
 mail:
   from: no-reply@rent-cars.local
   webBaseUrl: http://localhost:8082

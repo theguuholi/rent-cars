@@ -67,7 +67,8 @@ root; the frontend package lives in `apps/web`.
 make dev
 ```
 
-Leave this terminal running. This starts PostgreSQL, SeaweedFS and Mailpit in Docker,
+Leave this terminal running. This starts PostgreSQL, SeaweedFS, Mailpit and the local
+Grafana observability stack in Docker,
 then starts the Spring API and Vite/React on your machine. It supplies the local
 S3 credentials. Flyway creates/updates the schema and loads development catalogs
 and the development administrator automatically.
@@ -78,6 +79,7 @@ and the development administrator automatically.
 | Spring API | http://localhost:8080 |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | Local email inbox | http://localhost:8025 |
+| Grafana (local telemetry) | http://localhost:3000 (opens directly with the current local LGTM image) |
 | HTTP Yac environment | No environment needed (local default) |
 
 From a second terminal in the repository root:
@@ -87,7 +89,7 @@ docker compose ps
 curl -i http://localhost:8080/cars
 ```
 
-All three data services should be healthy. The API should return **200** and a JSON
+All four infrastructure services should be healthy. The API should return **200** and a JSON
 array. If it is still compiling or starting, wait for the API startup message.
 
 Open React and sign in with the development administrator:
@@ -112,10 +114,35 @@ make web-dev
 ```
 
 Do not run these alongside another instance of `make dev`: they use the same
-ports. PostgreSQL uses 5432, the local S3 endpoint uses 8333, and Mailpit uses
-8025 for its inbox and 1025 for SMTP.
+ports. PostgreSQL uses 5432, the local S3 endpoint uses 8333, Mailpit uses
+8025 for its inbox and 1025 for SMTP, and Grafana uses 3000. See
+[Observe the application](observability.md) for the three signals and a short verification flow.
 
 - [ ] Step 3 complete: I followed the instructions and verified the results before continuing.
+
+### Step 3a: Verify observability
+
+The local stack sends API metrics, traces and logs to Grafana LGTM. The `dev`
+profile samples all traces, so the browser journey below is easy to find. You
+can override this with `RENT_TRACING_SAMPLE_RATE` when needed.
+
+From a second terminal, check the API health endpoint, then open the catalog at
+<http://localhost:5173>. Open a car detail page and return to the catalog. Open
+Grafana at <http://localhost:3000>; the current local image opens directly.
+
+| Step | Done | Where to look | Expected result |
+| --- | --- | --- | --- |
+| 1 | ☐ | `curl -fsS http://localhost:8080/actuator/health` | JSON reports `"status":"UP"` |
+| 2 | ☐ | Grafana **Explore → Tempo**, search service `rent-cars-web` | A catalog request trace includes spans from both `rent-cars-web` and `rent-cars-api` |
+| 3 | ☐ | Grafana **Explore → Prometheus**, query `http_server_requests_milliseconds_count` | API request counts appear after the first export, which can take about one minute |
+| 4 | ☐ | Grafana **Explore → Loki**, query `{service_name="rent-cars-api"}` | API logs appear; a request log has a `trace_id` that can be found in Tempo |
+
+After Step 8, you can also rent and return a car, then look for `rental.start`
+and `rental.return` in Tempo and their corresponding counters in Prometheus.
+For the exact queries, browser tracing test and production configuration, see
+[Observe the application](observability.md).
+
+- [ ] Step 3a complete: I found the health response, a connected browser/API trace, metrics and logs in Grafana.
 
 ## Step 4: Open the requests in VS Code
 
@@ -505,10 +532,16 @@ kubectl --context docker-desktop -n rent-cars get pods,svc,pvc
 helm test fleet --kube-context docker-desktop -n rent-cars --logs
 ```
 
-Expect the API, web, PostgreSQL, SeaweedFS and Mailpit pods to become ready and their
+Expect the API, web, PostgreSQL, SeaweedFS, Mailpit and Grafana LGTM pods to become ready and their
 persistent claims to be bound. Open React at **http://localhost:8082** and choose
 **k8s** in HTTP Yac. Its API base URL is **http://localhost:8082/api**. Repeat the
 same numbered HTTP Yac walkthrough with fresh logins and IDs.
+
+To inspect Kubernetes metrics, traces and logs in Grafana, follow
+[Verify observability](../helm/README.md#verify-observability). Forward
+`svc/fleet-observability` to local port 3001, then check the API in Tempo,
+Prometheus and Loki. Browser traces are available in the `make dev` workflow;
+the published React image does not export them.
 
 For the password-recovery inbox examples, keep this command running in a second
 terminal while sending `password-recovery.http`:

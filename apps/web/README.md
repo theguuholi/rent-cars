@@ -28,8 +28,8 @@ Group scenarios by the component, route or API client using `describe`. For larg
 
 ### Mutation testing
 
-From `apps/web/`, run `npm ci` and `npm run mutation`. StrykerJS mutates the application TS/TSX under `src/` and uses the existing Vitest suite to detect behavioral changes. Open `reports/mutation/mutation.html` to inspect each surviving change; the same directory includes a machine-readable JSON report. A mutation score below 100% fails the command locally and in CI. The ordinary web coverage gate remains separate.
+From `apps/web/`, run `npm ci` and `npm run mutation` for the full application. StrykerJS mutates the application TS/TSX under `src/` and uses the existing Vitest suite to detect behavioral changes. Open `reports/mutation/mutation.html` to inspect each surviving change; the same directory includes a machine-readable JSON report. A mutation score below 100% fails the command. The ordinary web coverage gate remains separate.
 
-GitHub runs **Web mutation tests** on Mondays at 06:37 UTC, on manual dispatch, and on every pull request changing files under `apps/web/` or the workflow itself. Download the **web-mutation** artifact from the workflow run.
+GitHub runs **Web mutation tests** on Mondays at 06:37 UTC, on manual dispatch, and on every pull request changing files under `apps/web/` or the workflow itself. Pull requests mutate only changed production TS/TSX files and require 100% of their mutations to be detected. Scheduled and manual runs mutate the full application. Download the **web-mutation** artifact from the workflow run. See [the mutation gate decision](../../docs/decisions/003-web-mutation-pr-scope.md) before changing this scope.
 
 The sandbox excludes the root `tsconfig.json` project-reference aggregator because Stryker 10 uses a compiler API removed in TypeScript 7 to rewrite references. Its two referenced projects live within `apps/web/`. Vitest runs through Vite; the normal web build still type-checks both projects with the original configuration.

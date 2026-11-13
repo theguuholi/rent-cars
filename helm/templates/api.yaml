@@ -40,6 +40,18 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: local
+            {{- if .Values.observability.enabled }}
+            - name: RENT_OBSERVABILITY_ENABLED
+              value: 'true'
+            - name: RENT_TRACING_SAMPLE_RATE
+              value: '1.0'
+            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+              value: http://{{ .Release.Name }}-observability:4318/v1/traces
+            - name: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+              value: http://{{ .Release.Name }}-observability:4318/v1/metrics
+            - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+              value: http://{{ .Release.Name }}-observability:4318/v1/logs
+            {{- end }}
             - name: SPRING_MAIL_HOST
               value: {{ .Release.Name }}-mailpit
             - name: SPRING_MAIL_PORT

@@ -23,7 +23,13 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./src/test/setup.ts'],
     },
     server: {
-      proxy: createApiProxy(API_TARGET),
+      proxy: {
+        ...createApiProxy(API_TARGET),
+        '/otel': {
+          target: 'http://127.0.0.1:4318',
+          rewrite: (path) => path.replace(/^\/otel\b/, ''),
+        },
+      },
     },
   }
 })

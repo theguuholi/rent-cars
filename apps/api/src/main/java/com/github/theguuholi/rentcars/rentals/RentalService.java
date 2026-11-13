@@ -2,6 +2,7 @@ package com.github.theguuholi.rentcars.rentals;
 
 import com.github.theguuholi.rentcars.cars.Car;
 import com.github.theguuholi.rentcars.cars.CarRentalAccess;
+import io.micrometer.observation.annotation.Observed;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,6 +27,7 @@ class RentalService {
   }
 
   @Transactional
+  @Observed(name = "rental.start", contextualName = "rental.start")
   Rental create(UUID accountId, UUID carId, Instant expectedReturnDate) {
     // PostgreSQL stores microseconds. Use that same precision at the business boundary.
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
@@ -45,6 +47,7 @@ class RentalService {
   }
 
   @Transactional
+  @Observed(name = "rental.return", contextualName = "rental.return")
   Rental returnCar(UUID id, UUID accountId) {
     Rental rental =
         rentals
