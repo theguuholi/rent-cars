@@ -4,6 +4,9 @@ Rent Cars is a fleet management application. Register vehicles, assign their cat
 
 New to the project? Follow the [step-by-step onboarding tutorial](docs/getting-started.md): tools, React/Java startup, HTTP Yac requests, containers and Kubernetes.
 
+To study the PostgreSQL schema, constraints, race conditions and locks behind
+rentals, follow the [rental database integrity lab](docs/studies/rental-database-integrity.md).
+
 The local stack also includes [Grafana observability](docs/observability.md) for API logs, metrics and traces and browser request traces. After starting `make dev`, follow [Step 3a of the onboarding tutorial](docs/getting-started.md#step-3a-verify-observability) to confirm that all three signals reach Grafana.
 
 ## Run the full stack locally

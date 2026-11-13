@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.postgresql.util.PSQLException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -64,6 +65,20 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
   @Nested
   class DatabaseGuarantees {
     @Test
+    void givenUnknownCarWhenInsertingRentalThenForeignKeyRejectsIt() {
+      assertDatabaseViolation(
+          "23503", "rentals_car_id_fkey", () -> insert(owner, UUID.randomUUID()));
+      assertThat(jdbc.queryForObject("select count(*) from rentals", Integer.class)).isZero();
+    }
+
+    @Test
+    void givenReturnBeforeOneDayWhenInsertingRentalThenPeriodCheckRejectsIt() {
+      assertDatabaseViolation(
+          "23514", "rentals_period", () -> insert(owner, carId, NOW.plusSeconds(86399)));
+      assertThat(jdbc.queryForObject("select count(*) from rentals", Integer.class)).isZero();
+    }
+
+    @Test
     void givenMissingAccountWhenPersistingThenRollsBackCarAvailability() {
       var missingAccount = UUID.randomUUID();
       var expectedReturn = NOW.plusSeconds(86400);
@@ -87,10 +102,8 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
     void givenOpenRentalWhenInsertingDuplicatesDirectlyThenBothUniqueIndexesProtectIt() {
       service.create(owner, carId, NOW.plusSeconds(86400));
       UUID second = car();
-      assertThatThrownBy(() -> insert(other, carId))
-          .isInstanceOf(DataIntegrityViolationException.class);
-      assertThatThrownBy(() -> insert(owner, second))
-          .isInstanceOf(DataIntegrityViolationException.class);
+      assertDatabaseViolation("23505", "rentals_open_car", () -> insert(other, carId));
+      assertDatabaseViolation("23505", "rentals_open_account", () -> insert(owner, second));
     }
 
     @Test
@@ -111,12 +124,32 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
     }
 
     void insert(UUID account, UUID car) {
+      insert(account, car, NOW.plusSeconds(86400));
+    }
+
+    void insert(UUID account, UUID car, java.time.Instant expectedReturn) {
       jdbc.update(
           "insert into rentals(car_id,account_id,start_date,expected_return_date) values(?,?,?::timestamptz,?::timestamptz)",
           car,
           account,
           NOW.toString(),
-          NOW.plusSeconds(86400).toString());
+          expectedReturn.toString());
+    }
+
+    void assertDatabaseViolation(
+        String state,
+        String constraint,
+        org.assertj.core.api.ThrowableAssert.ThrowingCallable write) {
+      assertThatThrownBy(write)
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .hasRootCauseInstanceOf(PSQLException.class)
+          .satisfies(
+              error -> {
+                var postgresError = (PSQLException) error.getCause();
+                assertThat(postgresError.getSQLState()).isEqualTo(state);
+                assertThat(postgresError.getServerErrorMessage().getConstraint())
+                    .isEqualTo(constraint);
+              });
     }
   }
 
