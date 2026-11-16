@@ -19,11 +19,14 @@ class RentalService {
   private final RentalRepository rentals;
   private final CarRentalAccess cars;
   private final Clock clock;
+  private final RentalEventRecorder events;
 
-  RentalService(RentalRepository rentals, CarRentalAccess cars, Clock clock) {
+  RentalService(
+      RentalRepository rentals, CarRentalAccess cars, Clock clock, RentalEventRecorder events) {
     this.rentals = rentals;
     this.cars = cars;
     this.clock = clock;
+    this.events = events;
   }
 
   /** Opens the rental and reserves the car in one transaction; flush does not commit it. */
@@ -40,7 +43,9 @@ class RentalService {
           RentalException.Reason.ALREADY_RENTING, "Account already has an open rental");
     }
     car.rent();
-    return rentals.saveAndFlush(rental);
+    rentals.saveAndFlush(rental);
+    events.opened(rental, accountId);
+    return rental;
   }
 
   List<Rental> list(UUID accountId) {
@@ -67,6 +72,8 @@ class RentalService {
             rental.fineAmountCents());
     rental.finish(now, charge);
     car.releaseAfterReturn();
-    return rentals.saveAndFlush(rental);
+    rentals.saveAndFlush(rental);
+    events.returned(rental, accountId, now, charge.totalCents());
+    return rental;
   }
 }

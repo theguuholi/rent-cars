@@ -17,13 +17,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 class RentalServiceTest {
+  final RentalEventRecorder events = mock();
   final RentalRepository repository = mock();
   final CarRentalAccess cars = mock();
   final Car car = mock();
   final UUID carId = UUID.randomUUID(), accountId = UUID.randomUUID(), rentalId = UUID.randomUUID();
   final Instant now = Instant.parse("2026-11-06T15:00:00.123456789Z");
   final RentalService service =
-      new RentalService(repository, cars, Clock.fixed(now, ZoneOffset.UTC));
+      new RentalService(repository, cars, Clock.fixed(now, ZoneOffset.UTC), events);
 
   @Nested
   class Create {

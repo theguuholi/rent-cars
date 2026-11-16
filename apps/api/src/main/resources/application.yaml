@@ -1,4 +1,16 @@
 spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.block.ms: 1000
+        delivery.timeout.ms: 4000
+        request.timeout.ms: 2000
+        linger.ms: 0
   application:
     name: rent-cars-api
 
@@ -26,6 +38,10 @@ spring:
         logServerErrorDetail: false
 
 rent:
+  messaging:
+    enabled: ${RENT_MESSAGING_ENABLED:false}
+    topic: ${RENT_MESSAGING_TOPIC:rentals.events}
+    poll-interval: ${RENT_MESSAGING_POLL_INTERVAL:1s}
   mail:
     from: ${RENT_MAIL_FROM:no-reply@rent-cars.local}
     web-base-url: ${RENT_MAIL_WEB_BASE_URL:http://localhost:5173}
