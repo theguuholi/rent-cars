@@ -24,6 +24,7 @@ export function Layout() {
             aria-label="Vehicle catalogs"
           >
             <Link to="/cars">Cars</Link>
+            {identity?.user.role === 'USER' && <Link to="/rentals">My rentals</Link>}
             {identity?.user.role === 'ADMIN' && (
               <>
                 <Link to="/categories">Categories</Link>

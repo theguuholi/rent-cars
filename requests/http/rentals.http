@@ -31,6 +31,9 @@ Content-Type: application/json
   test("Rental open and car unavailable", () => {
     assert.equal(response.parsedBody.endDate, null);
     assert.equal(response.parsedBody.totalCents, null);
+    assert.equal(typeof response.parsedBody.dailyRateCents, "number");
+    assert.equal(typeof response.parsedBody.fineAmountCents, "number");
+    assert.equal(response.parsedBody.billedDays, null);
     assert.equal(response.parsedBody.car.available, false);
   });
 }}
@@ -62,7 +65,31 @@ Authorization: Bearer {{state.driverToken}}
   }
   test("Rental closed and car released", () => {
     assert.equal(typeof response.parsedBody.endDate, "string");
-    assert.ok(response.parsedBody.totalCents >= 15000);
+    assert.ok(response.parsedBody.totalCents >= response.parsedBody.dailyRateCents);
+    assert.ok(response.parsedBody.billedDays >= 1);
+    assert.ok(response.parsedBody.lateDays >= 0);
+    assert.equal(response.parsedBody.totalCents,
+      response.parsedBody.billedDays * response.parsedBody.dailyRateCents +
+      response.parsedBody.lateDays * response.parsedBody.fineAmountCents);
     assert.equal(response.parsedBody.car.available, true);
+  });
+}}
+
+### Read the saved rental receipt
+# @name rentals_receipt
+# @tag smoke
+GET {{baseUrl}}/rentals
+Authorization: Bearer {{state.driverToken}}
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  test("Returned rental keeps its agreed prices and final charge", () => {
+    const receipt = response.parsedBody.find(rental => rental.id === state.rentalId);
+    assert.ok(receipt);
+    assert.equal(typeof receipt.endDate, "string");
+    assert.equal(receipt.totalCents,
+      receipt.billedDays * receipt.dailyRateCents +
+      receipt.lateDays * receipt.fineAmountCents);
   });
 }}

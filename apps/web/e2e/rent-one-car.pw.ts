@@ -78,4 +78,17 @@ test('Given a new driver and an available car, when the car is rented and return
       .filter({ has: page.getByRole('link', { name: carName }) })
     await expect(car.getByText('Available', { exact: true })).toBeVisible()
   })
+  await test.step('Then the returned rental appears in My rentals with a final receipt', async () => {
+    await page.getByRole('link', { name: 'My rentals' }).click()
+    await expect(page.getByRole('heading', { name: 'My rentals' })).toBeVisible()
+    const receipt = page.getByRole('article', { name: new RegExp(carName) })
+    await expect(receipt.getByText('Returned', { exact: true })).toBeVisible()
+    await expect(receipt.getByText(/Total charge: R\$\s*\d/)).toBeVisible()
+  })
+
+  await test.step('And revisiting My rentals keeps the receipt', async () => {
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'My rentals' })).toBeVisible()
+    await expect(page.getByRole('article', { name: new RegExp(carName) })).toBeVisible()
+  })
 })
