@@ -130,3 +130,7 @@ For Kubernetes use the rollout commands in the Helm guide and run
 These checks validate the S3-compatible development setup; repeat the image
 lifecycle against the real AWS bucket before deploying there to validate IAM
 permissions and AWS-specific behavior.
+
+## Study: rental transactions and recovery
+
+Follow the [ACID and rollback lab](docs/studies/rental-acid-rollback.md) to trace the Spring transaction, force a failure after both database writes, and test recovery from a failed or lost rental response without automatically repeating the request.

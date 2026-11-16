@@ -40,6 +40,115 @@ function chooseReturn(value: string) {
 }
 
 describe('RentalActions', () => {
+  describe('Recovering a failed rental', () => {
+    scenario(
+      'Given a successful status check followed by another failed submission, when retrying, then do not reuse the previous confirmation',
+      async () => {
+        await openCar()
+        await screen.findByRole('button', { name: 'Rent car' })
+        vi.mocked(rentCar).mockRejectedValue(new Error('Write failed'))
+        chooseReturn('2099-11-12T12:00')
+        fireEvent.click(screen.getByRole('button', { name: 'Rent car' }))
+        await screen.findByText('Write failed')
+        fireEvent.click(screen.getByRole('button', { name: 'Check rental status' }))
+        expect(await screen.findByText('Rental status updated.')).toBeVisible()
+        fireEvent.click(screen.getByRole('button', { name: 'Rent car' }))
+        await screen.findByText('Write failed')
+        await waitFor(() => expect(rentCar).toHaveBeenCalledTimes(2))
+        expect(screen.queryByText('Rental status updated.')).not.toBeInTheDocument()
+      },
+    )
+
+    scenario(
+      'Given a failed rental, when checking status and retrying, then keep the date and never automatically repeat the write',
+      async () => {
+        const query = await openCar()
+        await screen.findByRole('button', { name: 'Rent car' })
+        vi.mocked(rentCar)
+          .mockRejectedValueOnce(new Error('Server unavailable'))
+          .mockResolvedValueOnce(openRental)
+        chooseReturn('2099-11-12T12:00')
+        fireEvent.click(screen.getByRole('button', { name: 'Rent car' }))
+        expect(
+          await screen.findByText(
+            'Your return date is kept. Check rental status before trying again.',
+          ),
+        ).toBeVisible()
+        expect(screen.getByLabelText('Expected return')).toHaveValue('2099-11-12T12:00')
+        expect(screen.queryByText('Car rented.')).not.toBeInTheDocument()
+        expect(query.getQueryData(['rentals'])).toEqual([])
+        let finish!: (rentals: Rental[]) => void
+        vi.mocked(listRentals).mockReturnValueOnce(
+          new Promise((resolve) => {
+            finish = resolve
+          }),
+        )
+        fireEvent.click(screen.getByRole('button', { name: 'Check rental status' }))
+        expect(await screen.findByRole('button', { name: 'Checking…' })).toBeDisabled()
+        expect(screen.getByRole('button', { name: 'Rent car' })).toBeDisabled()
+        expect(screen.getByLabelText('Expected return')).toBeDisabled()
+        await act(async () => finish([]))
+        expect(await screen.findByText('Rental status updated.')).toBeVisible()
+        expect(screen.getByLabelText('Expected return')).toHaveValue('2099-11-12T12:00')
+        expect(rentCar).toHaveBeenCalledTimes(1)
+        vi.mocked(listRentals).mockResolvedValue([openRental])
+        fireEvent.click(screen.getByRole('button', { name: 'Rent car' }))
+        expect(await screen.findByText('Car rented.')).toBeVisible()
+        expect(rentCar).toHaveBeenCalledTimes(2)
+      },
+    )
+
+    scenario(
+      'Given a lost response after commit, when checking status, then reveal the existing rental without a second write',
+      async () => {
+        await openCar()
+        await screen.findByRole('button', { name: 'Rent car' })
+        vi.mocked(rentCar).mockRejectedValueOnce(new Error('Connection lost'))
+        chooseReturn('2099-11-12T12:00')
+        fireEvent.click(screen.getByRole('button', { name: 'Rent car' }))
+        await screen.findByText('Connection lost')
+        vi.mocked(listRentals).mockResolvedValueOnce([openRental])
+        fireEvent.click(screen.getByRole('button', { name: 'Check rental status' }))
+        expect(await screen.findByRole('button', { name: 'Return car' })).toBeVisible()
+        expect(await screen.findByText('Rental status updated.')).toBeVisible()
+        expect(screen.queryByRole('button', { name: 'Rent car' })).not.toBeInTheDocument()
+        expect(rentCar).toHaveBeenCalledTimes(1)
+      },
+    )
+
+    scenario(
+      'Given an unavailable status lookup, when checking and then retrying the lookup, then show its error and preserve the draft',
+      async () => {
+        await openCar()
+        await screen.findByRole('button', { name: 'Rent car' })
+        vi.mocked(rentCar).mockRejectedValueOnce(new Error('Write failed'))
+        chooseReturn('2099-11-12T12:00')
+        fireEvent.click(screen.getByRole('button', { name: 'Rent car' }))
+        await screen.findByText('Write failed')
+        vi.mocked(listRentals)
+          .mockRejectedValueOnce(new Error('Status unavailable'))
+          .mockResolvedValue([])
+        fireEvent.click(screen.getByRole('button', { name: 'Check rental status' }))
+        expect(
+          await screen.findByText('Could not check rental status. Try checking again.'),
+        ).toBeVisible()
+        expect(screen.queryByText('Rental status updated.')).not.toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: 'Check rental status' }))
+        expect(await screen.findByText('Rental status updated.')).toBeVisible()
+        expect(
+          screen.queryByText('Could not check rental status. Try checking again.'),
+        ).not.toBeInTheDocument()
+        expect(screen.getByLabelText('Expected return')).toHaveValue('2099-11-12T12:00')
+        chooseReturn('2099-11-13T12:00')
+        await waitFor(() => expect(screen.queryByText('Write failed')).not.toBeInTheDocument())
+        expect(
+          screen.queryByRole('button', { name: 'Check rental status' }),
+        ).not.toBeInTheDocument()
+        expect(rentCar).toHaveBeenCalledTimes(1)
+      },
+    )
+  })
+
   beforeEach(() => vi.resetAllMocks())
   afterEach(() => vi.unstubAllGlobals())
 

@@ -11,6 +11,9 @@ export function RentalActions({ carId, available }: { carId: string; available: 
     queryFn: ({ signal }) => listRentals(signal),
     enabled: identity?.user.role === 'USER',
   })
+  const checkStatus = useMutation({
+    mutationFn: () => rentals.refetch({ throwOnError: true }),
+  })
   const refresh = async () => {
     await Promise.all([
       client.invalidateQueries({ queryKey: ['rentals'] }),
@@ -32,7 +35,10 @@ export function RentalActions({ carId, available }: { carId: string; available: 
   const form = useForm({
     // Stryker disable next-line StringLiteral: datetime-local sanitizes a non-date default to empty.
     defaultValues: { expectedReturnDate: '' },
-    onSubmit: ({ value }) => rent.mutate(new Date(value.expectedReturnDate).toISOString()),
+    onSubmit: ({ value }) => {
+      checkStatus.reset()
+      rent.mutate(new Date(value.expectedReturnDate).toISOString())
+    },
   })
 
   if (identity?.user.role !== 'USER') return null
@@ -79,7 +85,7 @@ export function RentalActions({ carId, available }: { carId: string; available: 
             void form.handleSubmit()
           }}
         >
-          <fieldset disabled={rent.isPending} className="space-y-3">
+          <fieldset disabled={rent.isPending || checkStatus.isPending} className="space-y-3">
             <form.Field
               name="expectedReturnDate"
               validators={{
@@ -124,7 +130,23 @@ export function RentalActions({ carId, available }: { carId: string; available: 
           </fieldset>
         </form>
       )}
-      {rent.isError && <p role="alert">{rent.error.message}</p>}
+      {rent.isError && (
+        <div className="space-y-3">
+          <p role="alert">{rent.error.message}</p>
+          <p>Your return date is kept. Check rental status before trying again.</p>
+          <button
+            className="btn-secondary"
+            disabled={checkStatus.isPending}
+            onClick={() => checkStatus.mutate()}
+          >
+            {checkStatus.isPending ? 'Checking…' : 'Check rental status'}
+          </button>
+          {checkStatus.isError && (
+            <p role="alert">Could not check rental status. Try checking again.</p>
+          )}
+          {checkStatus.isSuccess && <p role="status">Rental status updated.</p>}
+        </div>
+      )}
       {giveBack.isError && <p role="alert">{giveBack.error.message}</p>}
       {giveBack.isSuccess && <p role="status">Car returned.</p>}
       {rent.isSuccess && <p role="status">Car rented.</p>}

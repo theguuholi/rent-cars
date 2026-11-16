@@ -185,3 +185,5 @@ make check-api
 
 Read replicas and sharding are outside this lab: the integrity and concurrent
 write guarantees here are local to the primary PostgreSQL database.
+
+Next: [ACID and rollback](rental-acid-rollback.md) exercises failures after both writes and connects database guarantees to frontend recovery.
