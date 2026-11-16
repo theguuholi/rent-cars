@@ -69,6 +69,61 @@ class RentalControllerTest extends RentalIntegrationSupport {
 
   @Nested
   class Create {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void givenCompetingDriversOrCarsWhenPostingTogetherThenOneCreatedOneConflictAndOneOpenRental(
+        boolean sameCar) throws Exception {
+      var secondCar = sameCar ? carId : car();
+      var secondOwner = sameCar ? other : owner;
+      var start = new java.util.concurrent.CyclicBarrier(2);
+      try (var workers = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        var first =
+            workers.submit(
+                () -> {
+                  start.await(10, java.util.concurrent.TimeUnit.SECONDS);
+                  return create(owner, carId).andReturn().getResponse();
+                });
+        var second =
+            workers.submit(
+                () -> {
+                  start.await(10, java.util.concurrent.TimeUnit.SECONDS);
+                  return create(secondOwner, secondCar).andReturn().getResponse();
+                });
+        var responses =
+            List.of(
+                first.get(20, java.util.concurrent.TimeUnit.SECONDS),
+                second.get(20, java.util.concurrent.TimeUnit.SECONDS));
+        assertThat(responses)
+            .extracting(org.springframework.mock.web.MockHttpServletResponse::getStatus)
+            .containsExactlyInAnyOrder(201, 409);
+        var success =
+            responses.stream()
+                .filter(response -> response.getStatus() == 201)
+                .findFirst()
+                .orElseThrow();
+        var conflict =
+            responses.stream()
+                .filter(response -> response.getStatus() == 409)
+                .findFirst()
+                .orElseThrow();
+        var committed = json.readTree(success.getContentAsString());
+        var winner = UUID.fromString(committed.get("carId").asString());
+        assertThat(conflict.getContentAsString())
+            .containsAnyOf(
+                "Car is unavailable",
+                "Account already has an open rental",
+                "A record with the same unique value already exists");
+        assertThat(
+                jdbc.queryForObject(
+                    "select count(*) from rentals where end_date is null", Integer.class))
+            .isEqualTo(1);
+        assertThat(jdbc.queryForObject("select id from rentals where end_date is null", UUID.class))
+            .isEqualTo(UUID.fromString(committed.get("id").asString()));
+        assertThat(available(winner)).isFalse();
+        if (!sameCar) assertThat(available(winner.equals(carId) ? secondCar : carId)).isTrue();
+      }
+    }
+
     @Test
     void givenDriverAndAvailableCarWhenCreatingThenReturnsDocumentedRentalAndLocation()
         throws Exception {
