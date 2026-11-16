@@ -1,0 +1,46 @@
+stage,scenario,repeat,execution_ms,planning_ms,result_rows,car_rows_visited_approx,shared_hit,shared_read,car_scan
+baseline,rare-page,1,8.144,0.306,20,99999,3303,0,Seq Scan
+baseline,rare-page,2,8.545,0.336,20,99999,3303,0,Seq Scan
+baseline,rare-page,3,9.217,0.341,20,99999,3303,0,Seq Scan
+baseline,rare-count,1,8.343,0.337,1,99999,3243,0,Seq Scan
+baseline,rare-count,2,8.802,0.376,1,99999,3243,0,Seq Scan
+baseline,rare-count,3,8.088,0.312,1,99999,3243,0,Seq Scan
+baseline,broad-page,1,18.086,0.259,20,99999,3303,0,Seq Scan
+baseline,broad-page,2,18.778,0.362,20,99999,3303,0,Seq Scan
+baseline,broad-page,3,18.206,0.237,20,99999,3303,0,Seq Scan
+baseline,short-page,1,18.672,0.267,20,99999,3303,0,Seq Scan
+baseline,short-page,2,17.928,0.257,20,99999,3303,0,Seq Scan
+baseline,short-page,3,20.497,0.296,20,99999,3303,0,Seq Scan
+baseline,deep-page,1,25.364,0.254,20,99999,3303,0,Seq Scan
+baseline,deep-page,2,25.625,0.298,20,99999,3303,0,Seq Scan
+baseline,deep-page,3,24.968,0.293,20,99999,3303,0,Seq Scan
+btree,rare-page,1,7.798,0.352,20,99999,3303,0,Seq Scan
+btree,rare-page,2,8.714,0.279,20,99999,3303,0,Seq Scan
+btree,rare-page,3,8.378,0.325,20,99999,3303,0,Seq Scan
+btree,rare-count,1,9.47,0.368,1,99999,3243,0,Seq Scan
+btree,rare-count,2,7.8,0.333,1,99999,3243,0,Seq Scan
+btree,rare-count,3,7.466,0.349,1,99999,3243,0,Seq Scan
+btree,broad-page,1,17.806,0.312,20,99999,3303,0,Seq Scan
+btree,broad-page,2,19.27,0.322,20,99999,3303,0,Seq Scan
+btree,broad-page,3,20.655,0.388,20,99999,3303,0,Seq Scan
+btree,short-page,1,18.68,0.318,20,99999,3303,0,Seq Scan
+btree,short-page,2,18.583,0.337,20,99999,3303,0,Seq Scan
+btree,short-page,3,18.487,0.266,20,99999,3303,0,Seq Scan
+btree,deep-page,1,24.696,0.275,20,99999,3303,0,Seq Scan
+btree,deep-page,2,25.499,0.278,20,99999,3303,0,Seq Scan
+btree,deep-page,3,24.7,0.29,20,99999,3303,0,Seq Scan
+trigram,rare-page,1,0.476,0.553,20,100,116,0,Bitmap Heap Scan
+trigram,rare-page,2,0.575,0.554,20,100,116,0,Bitmap Heap Scan
+trigram,rare-page,3,0.601,0.596,20,100,116,0,Bitmap Heap Scan
+trigram,rare-count,1,0.576,0.65,1,100,110,0,Bitmap Heap Scan
+trigram,rare-count,2,0.424,0.505,1,100,110,0,Bitmap Heap Scan
+trigram,rare-count,3,0.503,0.606,1,100,110,0,Bitmap Heap Scan
+trigram,broad-page,1,18.639,0.564,20,99999,3303,0,Seq Scan
+trigram,broad-page,2,17.985,0.47,20,99999,3303,0,Seq Scan
+trigram,broad-page,3,18.431,0.455,20,99999,3303,0,Seq Scan
+trigram,short-page,1,18.058,0.475,20,99999,3303,0,Seq Scan
+trigram,short-page,2,18.116,0.517,20,99999,3303,0,Seq Scan
+trigram,short-page,3,19.266,0.56,20,99999,3303,0,Seq Scan
+trigram,deep-page,1,25.529,0.49,20,99999,3303,0,Seq Scan
+trigram,deep-page,2,25.23,0.52,20,99999,3303,0,Seq Scan
+trigram,deep-page,3,26.406,0.567,20,99999,3303,0,Seq Scan

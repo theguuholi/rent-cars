@@ -1,0 +1,25 @@
+{
+  "postgres": "PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+  "cars": 100000,
+  "migrations": [
+    "V1__create_categories.sql",
+    "V2__seed_categories.sql",
+    "V3__create_specifications.sql",
+    "V4__create_cars.sql",
+    "V5__create_accounts.sql",
+    "V6__version_cars_and_specifications.sql",
+    "V7__refresh_sessions.sql",
+    "V8__create_car_images.sql",
+    "V9__remove_image_cleanup_queue.sql",
+    "V10__create_rentals.sql",
+    "V11__create_driver_profiles.sql",
+    "V12__create_password_reset_tokens.sql",
+    "V13__snapshot_rental_prices.sql"
+  ],
+  "settings": {
+    "shared_buffers": "128MB",
+    "work_mem": "4MB",
+    "random_page_cost": "4",
+    "max_parallel_workers_per_gather": "2"
+  }
+}
