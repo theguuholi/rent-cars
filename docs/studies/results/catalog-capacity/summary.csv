@@ -1,0 +1,4 @@
+concurrency,requests,p50_ms,p95_ms,max_ms,requests_per_second,peak_active,peak_waiting,peak_total
+1,120,58.19,66.20,70.10,16.99,1,0,10
+4,120,83.18,93.15,97.44,48.67,4,0,10
+12,120,193.07,267.62,282.32,64.51,10,2,10

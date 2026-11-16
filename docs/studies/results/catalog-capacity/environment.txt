@@ -1,0 +1,12 @@
+java=25
+postgres=17.11 (Debian 17.11-1.pgdg13+2)
+max_connections=100
+superuser_reserved_connections=3
+reserved_connections=0
+backend_connections_before=10
+maximumPoolSize=10
+minimumIdle=10
+connectionTimeoutMs=30000
+fixtureCars=20000
+requestsPerStage=120
+sampleIntervalMs=10
