@@ -1,3 +1,7 @@
+# Kafka study: ../../docs/kafka.md
+# With the relay enabled, rentals_create emits RentalOpened and rentals_return emits RentalReturned.
+# HTTP success commits the Outbox; delivery is asynchronous. Match response.id to the Kafka key.
+# Stop/start the broker and repeat with a valid available car to observe pending/recovered events.
 # @import ./common.http
 
 ### Rent the example car
