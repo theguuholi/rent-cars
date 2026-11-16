@@ -134,3 +134,5 @@ permissions and AWS-specific behavior.
 ## Study: rental transactions and recovery
 
 Follow the [ACID and rollback lab](docs/studies/rental-acid-rollback.md) to trace the Spring transaction, force a failure after both database writes, and test recovery from a failed or lost rental response without automatically repeating the request.
+
+Study PostgreSQL through the running application with the [full-stack database labs](docs/studies/README.md): concurrency, query plans and ORM pagination.
