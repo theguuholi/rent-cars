@@ -33,3 +33,7 @@ From `apps/web/`, run `npm ci` and `npm run mutation` for the full application. 
 GitHub runs **Web mutation tests** on Mondays at 06:37 UTC, on manual dispatch, and on every pull request changing files under `apps/web/` or the workflow itself. Pull requests mutate only changed production TS/TSX files and require 100% of their mutations to be detected. Scheduled and manual runs mutate the full application. Download the **web-mutation** artifact from the workflow run. See [the mutation gate decision](../../docs/decisions/003-web-mutation-pr-scope.md) before changing this scope.
 
 The sandbox excludes the root `tsconfig.json` project-reference aggregator because Stryker 10 uses a compiler API removed in TypeScript 7 to rewrite references. Its two referenced projects live within `apps/web/`. Vitest runs through Vite; the normal web build still type-checks both projects with the original configuration.
+
+## Study: rental transactions and recovery
+
+Follow the [ACID and rollback lab](../../docs/studies/rental-acid-rollback.md) to trace the Spring transaction, force a failure after both database writes, and test recovery from a failed or lost rental response without automatically repeating the request.

@@ -4,10 +4,14 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.postgresql.util.PSQLException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -56,6 +60,92 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
             assertThat(repository.findForReturn(rental.id(), other)).isEmpty();
             assertThat(repository.findForReturn(UUID.randomUUID(), owner)).isEmpty();
           });
+    }
+  }
+
+  @Nested
+  class Atomicity {
+    @Test
+    void givenBothWritesFlushedWhenCommitFailsThenRentalAvailabilityAndVersionRollBack() {
+      var expectedReturn = NOW.plusSeconds(86400);
+      var version = jdbc.queryForObject("select version from cars where id=?", Long.class, carId);
+      // This trigger exists only in the disposable Testcontainers database.
+      jdbc.execute(
+          """
+          CREATE FUNCTION fail_rental_commit() RETURNS trigger LANGUAGE plpgsql AS $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM rentals WHERE id = NEW.id)
+               OR NOT EXISTS (SELECT 1 FROM cars WHERE id = NEW.car_id AND available = false) THEN
+              RAISE EXCEPTION 'Expected both writes before the simulated failure' USING ERRCODE = 'P0002';
+            END IF;
+            RAISE EXCEPTION 'Simulated failure after both writes' USING ERRCODE = 'P0001';
+          END;
+          $$
+          """);
+      try {
+        jdbc.execute(
+            """
+            CREATE CONSTRAINT TRIGGER fail_rental_commit
+            AFTER INSERT ON rentals DEFERRABLE INITIALLY DEFERRED
+            FOR EACH ROW EXECUTE FUNCTION fail_rental_commit()
+            """);
+        assertThatThrownBy(() -> service.create(owner, carId, expectedReturn))
+            .hasRootCauseInstanceOf(PSQLException.class)
+            .satisfies(
+                error -> {
+                  var postgres = (PSQLException) NestedExceptionUtils.getMostSpecificCause(error);
+                  assertThat(postgres.getSQLState()).isEqualTo("P0001");
+                  assertThat(postgres.getMessage()).contains("Simulated failure after both writes");
+                });
+      } finally {
+        jdbc.execute("DROP TRIGGER IF EXISTS fail_rental_commit ON rentals");
+        jdbc.execute("DROP FUNCTION fail_rental_commit()");
+      }
+      // Outside the service transaction: these reads observe committed database state.
+      assertThat(repository.findByAccountIdOrderByStartDateDescIdDesc(owner)).isEmpty();
+      assertThat(available(carId)).isTrue();
+      assertThat(jdbc.queryForObject("select version from cars where id=?", Long.class, carId))
+          .isEqualTo(version);
+
+      var saved = service.create(owner, carId, expectedReturn);
+      assertThat(repository.findByAccountIdOrderByStartDateDescIdDesc(owner))
+          .extracting(Rental::id)
+          .containsExactly(saved.id());
+      assertThat(available(carId)).isFalse();
+    }
+
+    @Test
+    void givenFlushedWritesWhenRuntimeFailureEscapesThenOtherConnectionsNeverSeePartialState() {
+      var expectedReturn = NOW.plusSeconds(86400);
+      assertThatThrownBy(
+              () ->
+                  tx.executeWithoutResult(
+                      status -> {
+                        var saved = service.create(owner, carId, expectedReturn);
+                        assertThat(available(carId)).isFalse();
+                        assertThat(repository.existsById(saved.id())).isTrue();
+                        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+                          var observed =
+                              CompletableFuture.runAsync(
+                                  () -> {
+                                    assertThat(available(carId)).isTrue();
+                                    assertThat(
+                                            jdbc.queryForObject(
+                                                "select count(*) from rentals where id=?",
+                                                Integer.class,
+                                                saved.id()))
+                                        .isZero();
+                                  },
+                                  executor);
+                          observed.orTimeout(5, TimeUnit.SECONDS).join();
+                        }
+                        throw new IllegalStateException(
+                            "Simulated application failure after flush");
+                      }))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessage("Simulated application failure after flush");
+      assertThat(available(carId)).isTrue();
+      assertThat(repository.findByAccountIdOrderByStartDateDescIdDesc(owner)).isEmpty();
     }
   }
 

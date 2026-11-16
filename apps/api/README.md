@@ -210,5 +210,11 @@ rentals and receipts.
 
 Run `make check-api` for domain, HTTP/OpenAPI and PostgreSQL tests. Rental tests
 cover concurrent booking/return, rollback, access isolation, persisted history
+and billing boundaries. Flyway applies V10 on startup; existing local or Kubernetes
+databases do not need to be deleted to enable this feature.
+
+## Study: rental transactions and recovery
+
+Follow the [ACID and rollback lab](../../docs/studies/rental-acid-rollback.md) to trace the Spring transaction, force a failure after both database writes, and test recovery from a failed or lost rental response without automatically repeating the request.
 and billing boundaries. Flyway applies V10 and V13 on startup; existing local
 or Kubernetes databases do not need to be deleted to enable this feature.

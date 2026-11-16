@@ -26,6 +26,7 @@ class RentalService {
     this.clock = clock;
   }
 
+  /** Opens the rental and reserves the car in one transaction; flush does not commit it. */
   @Transactional
   @Observed(name = "rental.start", contextualName = "rental.start")
   Rental create(UUID accountId, UUID carId, Instant expectedReturnDate) {
