@@ -67,7 +67,7 @@ public class RentalController {
   @Operation(
       summary = "Return your rented car",
       description =
-          "Charges completed 24-hour periods, with at least one daily charge, plus the fine for each completed day late. Uses current vehicle prices. Server assigns the return time and total; no body is required.")
+          "Charges completed 24-hour periods, with at least one daily charge, plus the fine for each completed day late. Uses the daily rate and late fine recorded when the rental started. Server assigns the return time and total; no body is required.")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
   @ApiResponse(responseCode = "400", description = "Malformed rental UUID")
   @ApiResponse(responseCode = "404", description = "Rental not found or owned by another account")

@@ -28,15 +28,33 @@ class RentalPricingTest {
     void givenElapsedTimeWhenCalculatingThenChargesCompletedDays(long seconds, long expected) {
       assertThat(
               RentalPricing.calculate(
-                  start, start.plusSeconds(172800), start.plusSeconds(seconds), 100, 30))
+                      start, start.plusSeconds(172800), start.plusSeconds(seconds), 100, 30)
+                  .totalCents())
           .isEqualTo(expected);
+    }
+
+    @Test
+    void givenPartialLateDayWhenCalculatingThenOnlyCompletedLateDaysCount() {
+      var charge =
+          RentalPricing.calculate(
+              start, start.plusSeconds(86400), start.plusSeconds(172799), 100, 30);
+      assertThat(charge).isEqualTo(new RentalPricing.Charge(1, 0, 100));
+    }
+
+    @Test
+    void givenCompletedLateDayWhenCalculatingThenFineIsAddedToDailyCost() {
+      var charge =
+          RentalPricing.calculate(
+              start, start.plusSeconds(86400), start.plusSeconds(172800), 100, 30);
+      assertThat(charge).isEqualTo(new RentalPricing.Charge(2, 1, 230));
     }
 
     @Test
     void givenFreeVehicleWhenReturningThenChargesZero() {
       assertThat(
               RentalPricing.calculate(
-                  start, start.plusSeconds(86400), start.plusSeconds(259200), 0, 0))
+                      start, start.plusSeconds(86400), start.plusSeconds(259200), 0, 0)
+                  .totalCents())
           .isZero();
     }
 
@@ -44,11 +62,12 @@ class RentalPricingTest {
     void givenLargeValidRatesWhenCalculatingThenUsesLongCentavos() {
       assertThat(
               RentalPricing.calculate(
-                  start,
-                  start.plusSeconds(86400),
-                  start.plusSeconds(172800),
-                  Integer.MAX_VALUE,
-                  Integer.MAX_VALUE))
+                      start,
+                      start.plusSeconds(86400),
+                      start.plusSeconds(172800),
+                      Integer.MAX_VALUE,
+                      Integer.MAX_VALUE)
+                  .totalCents())
           .isEqualTo(3L * Integer.MAX_VALUE);
     }
 

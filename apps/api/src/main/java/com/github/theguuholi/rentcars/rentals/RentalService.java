@@ -57,14 +57,14 @@ class RentalService {
     rental.requireOpen();
     Car car = cars.getForRental(rental.carId());
     Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
-    long total =
+    var charge =
         RentalPricing.calculate(
             rental.startDate(),
             rental.expectedReturnDate(),
             now,
-            car.rentalDailyRateCents(),
-            car.rentalFineAmountCents());
-    rental.finish(now, total);
+            rental.dailyRateCents(),
+            rental.fineAmountCents());
+    rental.finish(now, charge);
     car.releaseAfterReturn();
     return rentals.saveAndFlush(rental);
   }

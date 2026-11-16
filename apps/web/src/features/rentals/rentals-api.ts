@@ -2,11 +2,16 @@ import { protectedFetch } from '../auth/protected-fetch'
 
 export interface Rental {
   id: string
+  car: { name: string }
   carId: string
   startDate: string
   expectedReturnDate: string
   endDate: string | null
   totalCents: number | null
+  dailyRateCents: number | null
+  fineAmountCents: number | null
+  billedDays: number | null
+  lateDays: number | null
 }
 
 async function request(path: string, options: RequestInit): Promise<Response> {

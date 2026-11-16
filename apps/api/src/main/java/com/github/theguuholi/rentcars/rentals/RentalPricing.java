@@ -7,7 +7,9 @@ import java.time.Instant;
 final class RentalPricing {
   private RentalPricing() {}
 
-  static long calculate(
+  record Charge(long billedDays, long lateDays, long totalCents) {}
+
+  static Charge calculate(
       Instant start,
       Instant expectedReturn,
       Instant returnedAt,
@@ -20,8 +22,12 @@ final class RentalPricing {
     long days = Math.max(1, Duration.between(start, returnedAt).toDays());
     long lateDays = Math.max(0, Duration.between(expectedReturn, returnedAt).toDays());
     try {
-      return Math.addExact(
-          Math.multiplyExact(days, dailyRateCents), Math.multiplyExact(lateDays, fineAmountCents));
+      return new Charge(
+          days,
+          lateDays,
+          Math.addExact(
+              Math.multiplyExact(days, dailyRateCents),
+              Math.multiplyExact(lateDays, fineAmountCents)));
     } catch (ArithmeticException _) {
       throw new RentalException(
           RentalException.Reason.INVALID_RETURN, "Rental charge exceeds the supported amount");

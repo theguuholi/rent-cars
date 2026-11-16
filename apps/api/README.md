@@ -189,7 +189,10 @@ PostgreSQL's microsecond precision.
 Billing matches the Elixir implementation: completed 24-hour periods with a
 minimum of one daily charge, plus the fine for each completed day late. A
 25-hour rental costs one daily rate; an overdue period shorter than 24 hours
-adds no fine. Current car prices are used at return time, not a frozen quotation.
+adds no fine. V13 stores the daily rate and late fine at rental creation;
+later catalog edits do not change the charge. Returned rentals also store
+billed and late day counts for receipts. Older completed rentals retain their
+recorded total, but their original price breakdown is unavailable.
 Totals are signed 64-bit integer centavos; negative or overflowing charges are rejected.
 
 V10 adds `rentals`, return-state checks, restrictive foreign keys and unique
@@ -202,9 +205,10 @@ rented car, and cars/accounts with rental history cannot be deleted.
 Business conflicts return 409, invalid periods/charges 422, and missing or
 foreign-owned rentals 404. The controller requires a bearer token; ordinary
 USER accounts can rent without catalog administrator permissions. No payment,
-future booking, cancellation, frontend or infrastructure changes are included.
+future booking or cancellation is included. The React My rentals page shows open
+rentals and receipts.
 
 Run `make check-api` for domain, HTTP/OpenAPI and PostgreSQL tests. Rental tests
 cover concurrent booking/return, rollback, access isolation, persisted history
-and billing boundaries. Flyway applies V10 on startup; existing local or Kubernetes
-databases do not need to be deleted to enable this feature.
+and billing boundaries. Flyway applies V10 and V13 on startup; existing local
+or Kubernetes databases do not need to be deleted to enable this feature.

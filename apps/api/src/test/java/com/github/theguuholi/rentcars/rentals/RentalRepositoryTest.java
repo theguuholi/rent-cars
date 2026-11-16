@@ -104,6 +104,37 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
     }
 
     @Test
+    void givenOpenRentalWhenReadingAfterCommitThenItsAgreedPricesAreStored() {
+      var rental = service.create(owner, carId, NOW.plusSeconds(86400));
+      assertThat(
+              jdbc.queryForObject(
+                  "select daily_rate_cents from rentals where id=?", Integer.class, rental.id()))
+          .isEqualTo(10000);
+      assertThat(
+              jdbc.queryForObject(
+                  "select fine_amount_cents from rentals where id=?", Integer.class, rental.id()))
+          .isEqualTo(3000);
+    }
+
+    @Test
+    void givenLegacyReceiptWithoutPriceDetailsWhenReadingThenItsRecordedTotalRemains() {
+      var id = UUID.randomUUID();
+      jdbc.update(
+          "insert into rentals(id,car_id,account_id,start_date,expected_return_date,end_date,total_cents) values(?,?,?,?::timestamptz,?::timestamptz,?::timestamptz,?)",
+          id,
+          carId,
+          owner,
+          NOW.toString(),
+          NOW.plusSeconds(86400).toString(),
+          NOW.plusSeconds(86400).toString(),
+          10000);
+      assertThat(repository.findByAccountIdOrderByStartDateDescIdDesc(owner))
+          .singleElement()
+          .extracting("totalCents", "dailyRateCents", "fineAmountCents")
+          .containsExactly(10000L, null, null);
+    }
+
+    @Test
     void givenInconsistentReturnWhenWritingDirectlyThenCheckConstraintRejectsIt() {
       var rental = service.create(owner, carId, NOW.plusSeconds(86400));
       var rentalId = rental.id();
