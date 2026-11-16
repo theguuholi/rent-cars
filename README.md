@@ -136,3 +136,7 @@ permissions and AWS-specific behavior.
 Follow the [ACID and rollback lab](docs/studies/rental-acid-rollback.md) to trace the Spring transaction, force a failure after both database writes, and test recovery from a failed or lost rental response without automatically repeating the request.
 
 Study PostgreSQL through the running application with the [full-stack database labs](docs/studies/README.md): concurrency, query plans and ORM pagination.
+
+## Rental events and Kafka
+
+Follow the [Kafka producer walkthrough](docs/kafka.md) for Compose, the read-only browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.
