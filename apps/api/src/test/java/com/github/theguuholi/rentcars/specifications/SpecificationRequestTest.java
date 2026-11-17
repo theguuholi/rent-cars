@@ -13,8 +13,8 @@ class SpecificationRequestTest {
     var request =
         mapper.readValue(
             """
-        {"name":"gps","description":"Navigation"}
-        """,
+            {"name":"gps","description":"Navigation"}
+            """,
             SpecificationRequest.class);
     assertThat(request.name).isEqualTo("gps");
     assertThat(request.description).isEqualTo("Navigation");

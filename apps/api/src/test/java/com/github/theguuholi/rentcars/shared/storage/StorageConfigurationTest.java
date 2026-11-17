@@ -21,19 +21,18 @@ class StorageConfigurationTest {
     void s3() {
       context
           .withPropertyValues("rent.storage.s3.bucket=bucket", "rent.storage.s3.region=sa-east-1")
-          .run(
-              c -> {
-                assertThat(c)
-                    .hasSingleBean(ImageStorage.class)
-                    .hasSingleBean(S3Client.class)
-                    .hasSingleBean(DefaultCredentialsProvider.class);
-                assertThat(c.getBean(ImageStorage.class)).isInstanceOf(S3ImageStorage.class);
-                var configuration = c.getBean(S3Client.class).serviceClientConfiguration();
-                assertThat(configuration.region().id()).isEqualTo("sa-east-1");
-                assertThat(configuration.endpointOverride()).isEmpty();
-                assertThat(configuration.credentialsProvider())
-                    .isSameAs(c.getBean(DefaultCredentialsProvider.class));
-              });
+          .run(c -> {
+            assertThat(c)
+                .hasSingleBean(ImageStorage.class)
+                .hasSingleBean(S3Client.class)
+                .hasSingleBean(DefaultCredentialsProvider.class);
+            assertThat(c.getBean(ImageStorage.class)).isInstanceOf(S3ImageStorage.class);
+            var configuration = c.getBean(S3Client.class).serviceClientConfiguration();
+            assertThat(configuration.region().id()).isEqualTo("sa-east-1");
+            assertThat(configuration.endpointOverride()).isEmpty();
+            assertThat(configuration.credentialsProvider())
+                .isSameAs(c.getBean(DefaultCredentialsProvider.class));
+          });
     }
   }
 
@@ -45,16 +44,14 @@ class StorageConfigurationTest {
     void invalid() {
       context
           .withPropertyValues("rent.storage.s3.region=us-east-1")
-          .run(
-              c ->
-                  assertThat(c.getStartupFailure())
-                      .hasRootCauseMessage("S3 bucket and region must be configured"));
+          .run(c ->
+              assertThat(c.getStartupFailure())
+                  .hasRootCauseMessage("S3 bucket and region must be configured"));
       context
           .withPropertyValues("rent.storage.s3.bucket=bucket")
-          .run(
-              c ->
-                  assertThat(c.getStartupFailure())
-                      .hasRootCauseMessage("S3 bucket and region must be configured"));
+          .run(c ->
+              assertThat(c.getStartupFailure())
+                  .hasRootCauseMessage("S3 bucket and region must be configured"));
     }
   }
 }

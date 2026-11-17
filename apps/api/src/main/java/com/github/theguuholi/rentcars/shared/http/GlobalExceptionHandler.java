@@ -51,11 +51,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     Map<String, List<String>> errors = new TreeMap<>();
     exception
         .getConstraintViolations()
-        .forEach(
-            v ->
-                errors
-                    .computeIfAbsent(v.getPropertyPath().toString(), key -> new ArrayList<>())
-                    .add(v.getMessage()));
+        .forEach(v ->
+            errors
+                .computeIfAbsent(v.getPropertyPath().toString(), key -> new ArrayList<>())
+                .add(v.getMessage()));
     return new Errors(errors);
   }
 
@@ -68,11 +67,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     Map<String, List<String>> errors = new TreeMap<>();
     exception
         .getFieldErrors()
-        .forEach(
-            e ->
-                errors
-                    .computeIfAbsent(e.getField(), key -> new ArrayList<>())
-                    .add(e.getDefaultMessage()));
+        .forEach(e ->
+            errors
+                .computeIfAbsent(e.getField(), key -> new ArrayList<>())
+                .add(e.getDefaultMessage()));
     return ResponseEntity.unprocessableContent().headers(headers).body(new Errors(errors));
   }
 

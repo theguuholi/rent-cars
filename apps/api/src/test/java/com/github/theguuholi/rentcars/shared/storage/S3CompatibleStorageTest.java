@@ -49,25 +49,24 @@ class S3CompatibleStorageTest {
               "rent.storage.s3.region=us-east-1",
               "rent.storage.s3.endpoint=http://" + s3.getHost() + ":" + s3.getMappedPort(8333),
               "rent.storage.s3.path-style=true")
-          .run(
-              c -> {
-                assertThat(c).hasNotFailed();
-                var storage = c.getBean(ImageStorage.class);
-                byte[] bytes = "image-content".getBytes(StandardCharsets.UTF_8);
-                String key = "cars/car-id/image-id.png";
-                storage.store(key, bytes, "image/png");
-                assertThat(storage.load(key)).isEqualTo(bytes);
-                assertThatThrownBy(() -> storage.store(key, new byte[] {1}, "image/png"))
-                    .isInstanceOfSatisfying(
-                        S3Exception.class, e -> assertThat(e.statusCode()).isEqualTo(412));
-                assertThat(storage.load(key)).isEqualTo(bytes);
-                storage.delete(key);
-                assertThatThrownBy(() -> storage.load(key))
-                    .isInstanceOfSatisfying(
-                        ResponseStatusException.class,
-                        e -> assertThat(e.getStatusCode().value()).isEqualTo(404));
-                storage.delete(key);
-              });
+          .run(c -> {
+            assertThat(c).hasNotFailed();
+            var storage = c.getBean(ImageStorage.class);
+            byte[] bytes = "image-content".getBytes(StandardCharsets.UTF_8);
+            String key = "cars/car-id/image-id.png";
+            storage.store(key, bytes, "image/png");
+            assertThat(storage.load(key)).isEqualTo(bytes);
+            assertThatThrownBy(() -> storage.store(key, new byte[] {1}, "image/png"))
+                .isInstanceOfSatisfying(
+                    S3Exception.class, e -> assertThat(e.statusCode()).isEqualTo(412));
+            assertThat(storage.load(key)).isEqualTo(bytes);
+            storage.delete(key);
+            assertThatThrownBy(() -> storage.load(key))
+                .isInstanceOfSatisfying(
+                    ResponseStatusException.class,
+                    e -> assertThat(e.getStatusCode().value()).isEqualTo(404));
+            storage.delete(key);
+          });
     }
   }
 }

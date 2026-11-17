@@ -75,18 +75,16 @@ class RentalConcurrencyTest extends RentalIntegrationSupport {
       var rental = service.create(owner, carId, NOW.plusSeconds(86400));
       try (var workers = Executors.newVirtualThreadPerTaskExecutor()) {
         var pendingReturn =
-            transactions.execute(
-                status -> {
-                  jdbc.update(
-                      "update cars set daily_rate_cents=20000,version=version+1 where id=?", carId);
-                  int priceEditorPid =
-                      jdbc.queryForObject("select pg_backend_pid()", Integer.class);
+            transactions.execute(status -> {
+              jdbc.update(
+                  "update cars set daily_rate_cents=20000,version=version+1 where id=?", carId);
+              int priceEditorPid = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
 
-                  // When: return tries to lock the car before the price edit commits.
-                  var returning = workers.submit(() -> service.returnCar(rental.id(), owner));
-                  awaitTransactionBlockedBy(priceEditorPid);
-                  return returning; // The price transaction commits before the future is read.
-                });
+              // When: return tries to lock the car before the price edit commits.
+              var returning = workers.submit(() -> service.returnCar(rental.id(), owner));
+              awaitTransactionBlockedBy(priceEditorPid);
+              return returning; // The price transaction commits before the future is read.
+            });
 
         // Then: return keeps the rate agreed before the edit.
         assertThat(pendingReturn.get(15, TimeUnit.SECONDS))
@@ -120,12 +118,11 @@ class RentalConcurrencyTest extends RentalIntegrationSupport {
   private void awaitTransactionBlockedBy(int blockingPid) {
     Awaitility.await()
         .atMost(Duration.ofSeconds(10))
-        .until(
-            () ->
-                jdbc.queryForObject(
-                    "select exists(select 1 from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
-                    Boolean.class,
-                    blockingPid));
+        .until(() ->
+            jdbc.queryForObject(
+                "select exists(select 1 from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
+                Boolean.class,
+                blockingPid));
   }
 
   private void assertOneCommitAndOneConflict(Runnable first, Runnable second) throws Exception {
@@ -143,15 +140,14 @@ class RentalConcurrencyTest extends RentalIntegrationSupport {
 
   private Outcome runTransaction(Runnable operation, CyclicBarrier startingLine) {
     try {
-      transactions.executeWithoutResult(
-          status -> {
-            try {
-              startingLine.await(10, TimeUnit.SECONDS);
-            } catch (Exception e) {
-              throw new IllegalStateException("Competing transaction did not start", e);
-            }
-            operation.run();
-          });
+      transactions.executeWithoutResult(status -> {
+        try {
+          startingLine.await(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+          throw new IllegalStateException("Competing transaction did not start", e);
+        }
+        operation.run();
+      });
       return Outcome.COMMITTED;
     } catch (RentalException | DataIntegrityViolationException | CarUnavailableException e) {
       return Outcome.CONFLICT;

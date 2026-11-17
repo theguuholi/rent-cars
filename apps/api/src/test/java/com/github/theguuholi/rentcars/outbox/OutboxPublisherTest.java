@@ -63,13 +63,12 @@ class OutboxPublisherTest {
       CompletableFuture<SendResult<String, String>> confirmation = mock();
       when(kafka.send(anyString(), anyString(), anyString())).thenReturn(confirmation);
       when(confirmation.get(5, TimeUnit.SECONDS))
-          .thenAnswer(
-              _ -> {
-                assertThat(message.publishedAt()).isNull();
-                assertThat(metrics.find("outbox.send").tag("result", "acknowledged").counter())
-                    .isNull();
-                return null;
-              });
+          .thenAnswer(_ -> {
+            assertThat(message.publishedAt()).isNull();
+            assertThat(metrics.find("outbox.send").tag("result", "acknowledged").counter())
+                .isNull();
+            return null;
+          });
       assertThat(publisher.publishNext()).isTrue();
       var order = inOrder(repository, kafka, confirmation);
       order.verify(repository).tryPublisherLock();

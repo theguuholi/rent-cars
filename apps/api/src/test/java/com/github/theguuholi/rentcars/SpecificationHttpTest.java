@@ -31,8 +31,8 @@ class SpecificationHttpTest {
   private static final String PATH = "/specifications";
   private static final String GPS =
       """
-        {"name":"gps","description":"Navigation"}
-        """;
+      {"name":"gps","description":"Navigation"}
+      """;
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
 
@@ -142,8 +142,8 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"expectedVersion":0,"name":"navigation","description":"Satellite navigation"}
-            """))
+                    {"expectedVersion":0,"name":"navigation","description":"Satellite navigation"}
+                    """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("NAVIGATION"));
     String longDescription = "x".repeat(512);
@@ -152,8 +152,8 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"expectedVersion":1,"description":"%s"}
-            """
+                    {"expectedVersion":1,"description":"%s"}
+                    """
                         .formatted(longDescription)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("NAVIGATION"))
@@ -178,8 +178,8 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"expectedVersion":0,"name":"abs"}
-            """))
+                    {"expectedVersion":0,"name":"abs"}
+                    """))
         .andExpect(status().isConflict());
     mvc.perform(get(location)).andExpect(jsonPath("$.name").value("GPS"));
   }
@@ -200,8 +200,8 @@ class SpecificationHttpTest {
                 .contentType("application/json")
                 .content(
                     """
-            {"expectedVersion":0,"description":null}
-            """))
+                    {"expectedVersion":0,"description":null}
+                    """))
         .andExpect(status().is(422))
         .andExpect(jsonPath("$.errors.description").isArray());
     mvc.perform(
@@ -256,39 +256,36 @@ class SpecificationHttpTest {
       // Hold the first HTTP update open until PostgreSQL confirms that the second request is
       // blocked.
       var waiting =
-          transactions.execute(
-              status -> {
-                try {
-                  mvc.perform(
-                          patch(location)
-                              .contentType("application/json")
-                              .content("{\"expectedVersion\":0,\"name\":\"sat nav\"}"))
-                      .andExpect(status().isOk());
-                  int owner = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
-                  var next =
-                      workers.submit(
-                          () ->
-                              mvc.perform(
-                                      patch(location)
-                                          .contentType("application/json")
-                                          .content(
-                                              "{\"expectedVersion\":0,\"description\":\"Updated maps\"}"))
-                                  .andReturn()
-                                  .getResponse()
-                                  .getStatus());
-                  await()
-                      .atMost(Duration.ofSeconds(10))
-                      .until(
-                          () ->
-                              jdbc.queryForObject(
-                                  "select exists (select 1 from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
-                                  Boolean.class,
-                                  owner));
-                  return next;
-                } catch (Exception ex) {
-                  throw new AssertionError(ex);
-                }
-              });
+          transactions.execute(status -> {
+            try {
+              mvc.perform(
+                      patch(location)
+                          .contentType("application/json")
+                          .content("{\"expectedVersion\":0,\"name\":\"sat nav\"}"))
+                  .andExpect(status().isOk());
+              int owner = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
+              var next =
+                  workers.submit(() ->
+                      mvc.perform(
+                              patch(location)
+                                  .contentType("application/json")
+                                  .content(
+                                      "{\"expectedVersion\":0,\"description\":\"Updated maps\"}"))
+                          .andReturn()
+                          .getResponse()
+                          .getStatus());
+              await()
+                  .atMost(Duration.ofSeconds(10))
+                  .until(() ->
+                      jdbc.queryForObject(
+                          "select exists (select 1 from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
+                          Boolean.class,
+                          owner));
+              return next;
+            } catch (Exception ex) {
+              throw new AssertionError(ex);
+            }
+          });
       assertThat(waiting.get(15, TimeUnit.SECONDS)).isEqualTo(409);
     }
     mvc.perform(get(location))

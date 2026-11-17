@@ -187,11 +187,10 @@ class CarServiceTest {
       request.licensePlate = "a".repeat(19) + "ß";
       assertThatExceptionOfType(ConstraintViolationException.class)
           .isThrownBy(() -> service.create(request))
-          .satisfies(
-              ex ->
-                  assertThat(ex.getConstraintViolations())
-                      .extracting(v -> v.getPropertyPath().toString())
-                      .containsExactly("licensePlate"));
+          .satisfies(ex ->
+              assertThat(ex.getConstraintViolations())
+                  .extracting(v -> v.getPropertyPath().toString())
+                  .containsExactly("licensePlate"));
       verifyNoInteractions(repository);
     }
 
@@ -203,11 +202,10 @@ class CarServiceTest {
       negative.dailyRateCents = -1;
       assertThatExceptionOfType(ConstraintViolationException.class)
           .isThrownBy(() -> service.create(negative))
-          .satisfies(
-              ex ->
-                  assertThat(ex.getConstraintViolations())
-                      .extracting(v -> v.getPropertyPath().toString())
-                      .containsExactly("dailyRateCents"));
+          .satisfies(ex ->
+              assertThat(ex.getConstraintViolations())
+                  .extracting(v -> v.getPropertyPath().toString())
+                  .containsExactly("dailyRateCents"));
       verifyNoInteractions(repository);
     }
   }
@@ -237,11 +235,10 @@ class CarServiceTest {
       var blankName = patchName(" ");
       assertThatExceptionOfType(ConstraintViolationException.class)
           .isThrownBy(() -> service.update(id, blankName))
-          .satisfies(
-              ex ->
-                  assertThat(ex.getConstraintViolations())
-                      .extracting(v -> v.getPropertyPath().toString())
-                      .containsExactly("name"));
+          .satisfies(ex ->
+              assertThat(ex.getConstraintViolations())
+                  .extracting(v -> v.getPropertyPath().toString())
+                  .containsExactly("name"));
       verify(repository, never()).saveAndFlush(any());
     }
 

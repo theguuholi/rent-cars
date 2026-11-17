@@ -43,11 +43,10 @@ class RentalEventRecorderIntegrationTest extends RentalIntegrationSupport {
 
     @Test
     void givenOuterRollbackWhenOpeningThenNeitherRentalReservationNorEventSurvives() {
-      tx.executeWithoutResult(
-          status -> {
-            service.create(owner, carId, NOW.plusSeconds(86400));
-            status.setRollbackOnly();
-          });
+      tx.executeWithoutResult(status -> {
+        service.create(owner, carId, NOW.plusSeconds(86400));
+        status.setRollbackOnly();
+      });
       assertThat(jdbc.queryForObject("select count(*) from outbox_messages", Integer.class))
           .isZero();
       assertThat(repository.findByAccountIdOrderByStartDateDescIdDesc(owner)).isEmpty();
@@ -57,11 +56,10 @@ class RentalEventRecorderIntegrationTest extends RentalIntegrationSupport {
     @Test
     void givenOuterRollbackWhenReturningThenOnlyOpenedEventAndOpenRentalSurvive() {
       var rental = service.create(owner, carId, NOW.plusSeconds(86400));
-      tx.executeWithoutResult(
-          status -> {
-            service.returnCar(rental.id(), owner);
-            status.setRollbackOnly();
-          });
+      tx.executeWithoutResult(status -> {
+        service.returnCar(rental.id(), owner);
+        status.setRollbackOnly();
+      });
       assertThat(jdbc.queryForObject("select count(*) from outbox_messages", Integer.class))
           .isEqualTo(1);
       assertThat(repository.existsByAccountIdAndEndDateIsNull(owner)).isTrue();

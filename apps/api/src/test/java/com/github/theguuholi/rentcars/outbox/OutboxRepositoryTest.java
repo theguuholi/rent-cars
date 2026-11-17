@@ -121,11 +121,10 @@ class OutboxRepositoryTest {
     void givenAcknowledgedSendAndDatabaseRollbackWhenRetryingThenSameEventCanArriveTwice() {
       var rentalId = UUID.randomUUID();
       var event = pending(rentalId);
-      tx.executeWithoutResult(
-          status -> {
-            assertThat(publisher.publishNext()).isTrue();
-            status.setRollbackOnly();
-          });
+      tx.executeWithoutResult(status -> {
+        assertThat(publisher.publishNext()).isTrue();
+        status.setRollbackOnly();
+      });
       assertThat(repository.countByPublishedAtIsNull()).isEqualTo(1);
       assertThat(publisher.publishNext()).isTrue();
       assertThat(read(rentalId, 2))
@@ -150,12 +149,11 @@ class OutboxRepositoryTest {
       jdbc.update("update outbox_messages set next_attempt_at=current_timestamp");
       org.awaitility.Awaitility.await()
           .atMost(Duration.ofSeconds(30))
-          .until(
-              () -> {
-                jdbc.update(
-                    "update outbox_messages set next_attempt_at=current_timestamp where published_at is null");
-                return publisher.publishNext();
-              });
+          .until(() -> {
+            jdbc.update(
+                "update outbox_messages set next_attempt_at=current_timestamp where published_at is null");
+            return publisher.publishNext();
+          });
       assertThat(repository.countByPublishedAtIsNull()).isZero();
       assertThat(read(rentalId, 1)).extracting(ConsumerRecord::value).containsOnly(event.payload());
     }
@@ -171,20 +169,18 @@ class OutboxRepositoryTest {
       var release = new CountDownLatch(1);
       try (var executor = Executors.newSingleThreadExecutor()) {
         var owner =
-            executor.submit(
-                () ->
-                    tx.executeWithoutResult(
-                        status -> {
-                          assertThat(repository.tryPublisherLock()).isTrue();
-                          acquired.countDown();
-                          try {
-                            assertThat(release.await(10, TimeUnit.SECONDS)).isTrue();
-                          } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            throw new IllegalStateException(e);
-                          }
-                          status.setRollbackOnly();
-                        }));
+            executor.submit(() ->
+                tx.executeWithoutResult(status -> {
+                  assertThat(repository.tryPublisherLock()).isTrue();
+                  acquired.countDown();
+                  try {
+                    assertThat(release.await(10, TimeUnit.SECONDS)).isTrue();
+                  } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(e);
+                  }
+                  status.setRollbackOnly();
+                }));
         try {
           assertThat(acquired.await(10, TimeUnit.SECONDS)).isTrue();
           assertThat(publisher.publishNext()).isFalse();
