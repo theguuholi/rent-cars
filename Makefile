@@ -4,7 +4,7 @@ KAFKA_ENABLED ?= false
 .PHONY: help k8s-up k8s-down
 help:
 	@printf '%s\n' \
-	  'make dev       Start local development' \
+	  'make dev       Start API, React, infrastructure and Kafka UI' \
 	  'make check     Run backend and frontend checks' \
 	  'make kafka-up  Start Kafka and create the rental events topic' \
 	  'make kafka-ui  Open local Kafka UI on localhost:8084' \
@@ -45,6 +45,8 @@ setup:
 	npm --prefix apps/web ci
 
 dev: infra-up
+	docker compose --profile kafka-ui up -d kafka-ui
+	@printf '%s\n' 'Web: http://localhost:5173' "Swagger: http://localhost:$${SERVER_PORT:-8080}/swagger-ui.html" 'Grafana: http://localhost:3000' 'Mailpit: http://localhost:8025' "Kafka UI: http://localhost:$${KAFKA_UI_PORT:-8084}"
 	RENT_MESSAGING_ENABLED=true AWS_ACCESS_KEY_ID=rent-cars-dev AWS_SECRET_ACCESS_KEY=rent-cars-dev-secret API_TARGET="$${API_TARGET:-http://127.0.0.1:$${SERVER_PORT:-8080}}" npm --prefix apps/web run dev:stack
 
 api-dev: infra-up

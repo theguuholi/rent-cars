@@ -20,7 +20,7 @@ make setup
 make dev
 ```
 
-Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. `make dev` and `make api-dev` also start SeaweedFS, an S3-compatible object store with a persistent Docker volume and an automatically created `rent-cars-images` bucket. No cloud account or activation token is required. Press Ctrl+C to stop the applications and run `make infra-stop` to stop PostgreSQL, SeaweedFS, Mailpit and Grafana LGTM.
+Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. `make dev` and `make api-dev` also start SeaweedFS, an S3-compatible object store with a persistent Docker volume and an automatically created `rent-cars-images` bucket. No cloud account or activation token is required. Press Ctrl+C to stop the applications and run `make infra-stop` to stop PostgreSQL, SeaweedFS, Mailpit, Grafana LGTM, Kafka and Kafka UI.
 
 Password recovery emails are captured in Mailpit. Open the inbox that matches
 how you started the application:
@@ -136,6 +136,20 @@ permissions and AWS-specific behavior.
 Follow the [ACID and rollback lab](docs/studies/rental-acid-rollback.md) to trace the Spring transaction, force a failure after both database writes, and test recovery from a failed or lost rental response without automatically repeating the request.
 
 Study PostgreSQL through the running application with the [full-stack database labs](docs/studies/README.md): concurrency, query plans and ORM pagination.
+
+## Interfaces started by `make dev`
+
+`make dev` also starts the read-only Kafka UI automatically. No second Make command is needed.
+
+| Interface | Default URL |
+| --- | --- |
+| React | http://localhost:5173 |
+| Swagger | http://localhost:8080/swagger-ui.html |
+| Grafana | http://localhost:3000 |
+| Mailpit | http://localhost:8025 |
+| Kafka UI | http://localhost:8084 |
+
+`SERVER_PORT` and `KAFKA_UI_PORT` override the corresponding ports printed at startup. Stop the Kubernetes Kafka UI before using the same local port, or choose another `KAFKA_UI_PORT`. `make api-dev` keeps the Kafka UI optional: run `make kafka-ui` when needed. `make kafka-events` is an optional terminal consumer, not an application dependency.
 
 ## Rental events and Kafka
 
