@@ -39,15 +39,14 @@ class OpenTelemetryAppenderTest {
           logger.error("Storage unavailable", new IllegalStateException("offline"));
           assertThat(exporter.getFinishedLogRecordItems())
               .singleElement()
-              .satisfies(
-                  log -> {
-                    assertThat(log.getBodyValue()).isEqualTo(Value.of("Storage unavailable"));
-                    assertThat(log.getSeverityText()).isEqualTo("ERROR");
-                    assertThat(log.getAttributes().get(AttributeKey.stringKey("exception.type")))
-                        .isEqualTo("java.lang.IllegalStateException");
-                    assertThat(log.getAttributes().get(AttributeKey.stringKey("exception.message")))
-                        .isEqualTo("offline");
-                  });
+              .satisfies(log -> {
+                assertThat(log.getBodyValue()).isEqualTo(Value.of("Storage unavailable"));
+                assertThat(log.getSeverityText()).isEqualTo("ERROR");
+                assertThat(log.getAttributes().get(AttributeKey.stringKey("exception.type")))
+                    .isEqualTo("java.lang.IllegalStateException");
+                assertThat(log.getAttributes().get(AttributeKey.stringKey("exception.message")))
+                    .isEqualTo("offline");
+              });
         } finally {
           appender.stop();
           context.stop();
