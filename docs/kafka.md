@@ -8,7 +8,7 @@ Prerequisites: Java 25, repository Node version, Docker running. Run commands fr
 
 ```sh
 make api-dev
-# Or make dev for API + React.
+# Or make dev for API + React + Kafka UI.
 ```
 
 These targets start Kafka and explicitly create `rentals.events`, then enable the application relay. To start only Kafka:
@@ -32,7 +32,7 @@ make kafka-events
 
 The last command keeps consuming until Ctrl+C. It displays keys and JSON values from the retained history.
 
-For a browser interface:
+`make dev` starts the browser interface automatically. With `make api-dev` or Kafka alone, start it explicitly:
 
 ```sh
 make kafka-ui
