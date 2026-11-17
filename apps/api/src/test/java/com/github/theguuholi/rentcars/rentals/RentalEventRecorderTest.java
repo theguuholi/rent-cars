@@ -1,90 +1,75 @@
 package com.github.theguuholi.rentcars.rentals;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
+import com.github.theguuholi.rentcars.outbox.OutboxMessage;
+import com.github.theguuholi.rentcars.outbox.OutboxRepository;
 import java.time.Instant;
 import java.util.UUID;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.support.TransactionTemplate;
-import tools.jackson.databind.ObjectMapper;
+import org.mockito.ArgumentCaptor;
+import tools.jackson.databind.json.JsonMapper;
 
-class RentalEventRecorderTest extends RentalIntegrationSupport {
-  @Autowired TransactionTemplate tx;
-  @Autowired ObjectMapper json;
-  @Autowired RentalEventRecorder recorder;
+class RentalEventRecorderTest {
+  final OutboxRepository messages = mock();
+  final JsonMapper json = spy(JsonMapper.builder().build());
+  final RentalEventRecorder recorder = new RentalEventRecorder(messages, json);
+  final Rental rental = mock();
+  final UUID accountId = UUID.randomUUID();
+  final UUID rentalId = UUID.randomUUID();
+  final Instant now = Instant.parse("2026-11-17T12:00:00Z");
 
-  @BeforeEach
-  void clearOutbox() {
-    jdbc.update("delete from outbox_messages");
+  @Nested
+  class Opened {
+    @Test
+    void givenRentalWhenRecordingOpeningThenSavesMatchingEnvelopeAndOutboxMetadata() {
+      when(rental.id()).thenReturn(rentalId);
+      when(rental.startDate()).thenReturn(now);
+      recorder.opened(rental, accountId);
+      assertSaved("RentalOpened", now);
+    }
+
+    @Test
+    void givenSerializationFailureWhenRecordingThenDoesNotSaveAnIncompleteMessage() {
+      doThrow(new IllegalStateException("Cannot serialize")).when(json).writeValueAsString(any());
+      assertThatThrownBy(() -> recorder.opened(rental, accountId))
+          .isInstanceOf(IllegalStateException.class);
+      verifyNoInteractions(messages);
+    }
   }
 
   @Nested
-  class Record {
+  class Returned {
     @Test
-    void givenRentalLifecycleWhenCommittingThenStoresVersionedSnapshotsInOrder() {
-      var rental = service.create(owner, carId, NOW.plusSeconds(86400));
-      service.returnCar(rental.id(), owner);
-      var rows =
-          jdbc.queryForList("select payload from outbox_messages order by sequence", String.class);
-      assertThat(rows).hasSize(2);
-      var opened = json.readTree(rows.get(0));
-      var returned = json.readTree(rows.get(1));
-      assertThat(opened.get("eventType").asText()).isEqualTo("RentalOpened");
-      assertThat(returned.get("eventType").asText()).isEqualTo("RentalReturned");
-      assertThat(opened.get("eventId").asText()).isNotEqualTo(returned.get("eventId").asText());
-      assertThat(UUID.fromString(opened.get("eventId").asText())).isNotNull();
-      assertThat(opened.get("schemaVersion").asInt()).isEqualTo(1);
-      assertThat(opened.get("rentalId").asText()).isEqualTo(rental.id().toString());
-      assertThat(Instant.parse(opened.get("occurredAt").asText())).isEqualTo(NOW);
-      var data = opened.get("payload");
-      assertThat(data.get("accountId").asText()).isEqualTo(owner.toString());
-      assertThat(data.get("carId").asText()).isEqualTo(carId.toString());
-      assertThat(data.get("dailyRateCents").asInt()).isEqualTo(10000);
-      assertThat(data.get("fineAmountCents").asInt()).isEqualTo(3000);
-      assertThat(data.get("currency").asText()).isEqualTo("BRL");
-      assertThat(data.get("totalCents").isNull()).isTrue();
-      assertThat(data.get("endDate").isNull()).isTrue();
-      assertThat(Instant.parse(data.get("startDate").asText())).isEqualTo(NOW);
-      assertThat(Instant.parse(data.get("expectedReturnDate").asText()))
-          .isEqualTo(NOW.plusSeconds(86400));
-      assertThat(returned.get("payload").get("totalCents").asLong()).isEqualTo(10000);
-      assertThat(Instant.parse(returned.get("payload").get("endDate").asText())).isEqualTo(NOW);
+    void givenReturnWhenRecordingThenSavesMatchingEnvelopeAndOutboxMetadata() {
+      when(rental.id()).thenReturn(rentalId);
+      recorder.returned(rental, accountId, now, 25000);
+      assertSaved("RentalReturned", now);
     }
+  }
 
-    @Test
-    void givenOuterRollbackWhenOpeningThenNeitherRentalReservationNorEventSurvives() {
-      tx.executeWithoutResult(
-          status -> {
-            service.create(owner, carId, NOW.plusSeconds(86400));
-            status.setRollbackOnly();
-          });
-      assertThat(jdbc.queryForObject("select count(*) from outbox_messages", Integer.class))
-          .isZero();
-      assertThat(repository.findByAccountIdOrderByStartDateDescIdDesc(owner)).isEmpty();
-      assertThat(available(carId)).isTrue();
-    }
-
-    @Test
-    void givenOuterRollbackWhenReturningThenOnlyOpenedEventAndOpenRentalSurvive() {
-      var rental = service.create(owner, carId, NOW.plusSeconds(86400));
-      tx.executeWithoutResult(
-          status -> {
-            service.returnCar(rental.id(), owner);
-            status.setRollbackOnly();
-          });
-      assertThat(jdbc.queryForObject("select count(*) from outbox_messages", Integer.class))
-          .isEqualTo(1);
-      assertThat(repository.existsByAccountIdAndEndDateIsNull(owner)).isTrue();
-      assertThat(available(carId)).isFalse();
-    }
-
-    @Test
-    void givenNoTransactionWhenRecordingThenRejectsIndependentOutboxWrite() {
-      assertThatThrownBy(() -> recorder.opened(null, owner))
-          .isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
-    }
+  private void assertSaved(String type, Instant occurredAt) {
+    var captor = ArgumentCaptor.forClass(OutboxMessage.class);
+    verify(messages).save(captor.capture());
+    var message = captor.getValue();
+    var payload =
+        json.readTree(
+            (String)
+                org.springframework.test.util.ReflectionTestUtils.getField(message, "payload"));
+    assertThat(payload.get("eventType").asText()).isEqualTo(type);
+    assertThat(message)
+        .extracting("eventId", "rentalId", "occurredAt", "nextAttemptAt", "publishedAt")
+        .containsExactly(
+            UUID.fromString(payload.get("eventId").asText()),
+            rentalId,
+            occurredAt,
+            occurredAt,
+            null);
+    assertThat(payload.get("rentalId").asText()).isEqualTo(rentalId.toString());
+    assertThat(Instant.parse(payload.get("occurredAt").asText())).isEqualTo(occurredAt);
   }
 }

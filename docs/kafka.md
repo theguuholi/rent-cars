@@ -156,7 +156,7 @@ Actuator/Micrometer records `outbox.pending`, `outbox.oldest.pending.seconds`, `
 ```sh
 make check-api
 cd apps/api
-./mvnw -B -Dtest=RentalEventRecorderTest,OutboxRepositoryTest,OutboxPublisherTest,OutboxScheduleTest,OutboxMessageTest test
+./mvnw -B -Dtest=RentalEventTest,RentalEventRecorderTest,RentalEventRecorderIntegrationTest,OutboxRepositoryTest,OutboxPublisherTest,OutboxScheduleTest,OutboxMessageTest test
 ```
 
 The integration tests use disposable PostgreSQL/Kafka containers, including a paused broker, real records, retry, duplicate publication and competing database transactions. No notification or analytics service is needed to validate the producer.
