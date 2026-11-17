@@ -45,21 +45,40 @@ public class OutboxPublisher {
   @Transactional
   @Observed(name = "outbox.publish")
   public boolean publishNext() {
-    if (!messages.tryPublisherLock()) return false;
+    // 1. Only one publisher may process the Outbox during this transaction.
+    if (!messages.tryPublisherLock()) {
+      return false;
+    }
+
+    // 2. Keep publication order: do not skip the oldest message during its retry delay.
     var pending = messages.findFirstByPublishedAtIsNullOrderBySequenceAsc();
-    if (pending.isEmpty()) return false;
-    var message = pending.orElseThrow();
-    if (!message.ready(clock.instant())) return false;
+    if (pending.isEmpty()) {
+      return false;
+    }
+
+    OutboxMessage message = pending.orElseThrow();
+    if (!message.ready(clock.instant())) {
+      return false;
+    }
+
+    // 3. Wait for Kafka confirmation before recording a successful publication.
+    return publishAndRecordResult(message);
+  }
+
+  private boolean publishAndRecordResult(OutboxMessage message) {
     try {
-      kafka.send(topic, message.rentalId().toString(), message.payload()).get(5, TimeUnit.SECONDS);
+      String rentalKey = message.rentalId().toString();
+      var confirmation = kafka.send(topic, rentalKey, message.payload());
+      confirmation.get(5, TimeUnit.SECONDS);
+
       message.published(clock.instant());
       metrics.counter("outbox.send", "result", "acknowledged").increment();
       return true;
-    } catch (InterruptedException exception) {
+    } catch (InterruptedException _) {
       Thread.currentThread().interrupt();
       recordFailure(message);
       return false;
-    } catch (ExecutionException | TimeoutException | RuntimeException exception) {
+    } catch (ExecutionException | TimeoutException | RuntimeException _) {
       recordFailure(message);
       return false;
     }

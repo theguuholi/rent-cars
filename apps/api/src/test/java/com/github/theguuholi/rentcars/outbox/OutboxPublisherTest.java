@@ -58,12 +58,24 @@ class OutboxPublisherTest {
     }
 
     @Test
-    void givenAcknowledgmentWhenSendingThenMarksPublishedAndRecordsMetrics() {
+    void givenAcknowledgmentWhenSendingThenMarksPublishedAndRecordsMetrics() throws Exception {
       pending();
-      when(kafka.send(anyString(), anyString(), anyString()))
-          .thenReturn(CompletableFuture.completedFuture(null));
+      CompletableFuture<SendResult<String, String>> confirmation = mock();
+      when(kafka.send(anyString(), anyString(), anyString())).thenReturn(confirmation);
+      when(confirmation.get(5, TimeUnit.SECONDS))
+          .thenAnswer(
+              _ -> {
+                assertThat(message).extracting("publishedAt").isNull();
+                assertThat(metrics.find("outbox.send").tag("result", "acknowledged").counter())
+                    .isNull();
+                return null;
+              });
       assertThat(publisher.publishNext()).isTrue();
-      verify(kafka).send("rentals.events", message.rentalId().toString(), "{}");
+      var order = inOrder(repository, kafka, confirmation);
+      order.verify(repository).tryPublisherLock();
+      order.verify(repository).findFirstByPublishedAtIsNullOrderBySequenceAsc();
+      order.verify(kafka).send("rentals.events", message.rentalId().toString(), "{}");
+      order.verify(confirmation).get(5, TimeUnit.SECONDS);
       assertThat(message).extracting("publishedAt").isEqualTo(now);
       assertThat(metrics.get("outbox.send").tag("result", "acknowledged").counter().count())
           .isEqualTo(1);
