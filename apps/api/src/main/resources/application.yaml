@@ -6,6 +6,8 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
       properties:
+        # Deduplicates producer-internal retries, not Outbox republications.
+        # OutboxPublisher implements at-least-once; consumers must deduplicate eventId.
         enable.idempotence: true
         max.block.ms: 1000
         delivery.timeout.ms: 4000

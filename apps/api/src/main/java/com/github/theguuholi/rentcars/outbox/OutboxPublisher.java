@@ -39,8 +39,15 @@ public class OutboxPublisher {
   }
 
   /**
-   * One bounded send per transaction. A failed head blocks later events to preserve publication
-   * order.
+   * Delivery guarantee: AT-LEAST-ONCE from the committed Outbox to Kafka.
+   *
+   * <p>Pending events are retried until Kafka acknowledges them. The published marker commits only
+   * after that acknowledgment. If the database transaction fails after Kafka accepts an event, the
+   * same eventId is sent again. Consumers must deduplicate eventId together with their business
+   * changes; producer idempotence does not deduplicate a new application-level send.
+   *
+   * <p>One bounded send per transaction. A failed head blocks later events to preserve publication
+   * order. This guarantee comes from the flow below, not a configurable delivery-mode flag.
    */
   @Transactional
   @Observed(name = "outbox.publish")
