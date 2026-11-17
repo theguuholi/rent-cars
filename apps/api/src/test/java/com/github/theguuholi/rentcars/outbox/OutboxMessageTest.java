@@ -22,7 +22,7 @@ class OutboxMessageTest {
       assertThat(message.ready(now)).isTrue();
       assertThat(message.ready(now.minusNanos(1))).isFalse();
       message.published(now);
-      assertThat(message).extracting("publishedAt").isEqualTo(now);
+      assertThat(message.publishedAt()).isEqualTo(now);
     }
 
     @Test

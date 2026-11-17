@@ -21,14 +21,14 @@ class RentalEventRecorder {
   }
 
   void opened(Rental rental, UUID accountId) {
-    record(new RentalEvent(rental, accountId));
+    saveEvent(new RentalEvent(rental, accountId));
   }
 
   void returned(Rental rental, UUID accountId, Instant returnedAt, long totalCents) {
-    record(new RentalEvent(rental, accountId, returnedAt, totalCents));
+    saveEvent(new RentalEvent(rental, accountId, returnedAt, totalCents));
   }
 
-  private void record(RentalEvent event) {
+  private void saveEvent(RentalEvent event) {
     messages.save(
         new OutboxMessage(
             event.eventId(), event.rentalId(), json.writeValueAsString(event), event.occurredAt()));

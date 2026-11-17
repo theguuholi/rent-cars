@@ -51,6 +51,10 @@ public class OutboxMessage {
     return !nextAttemptAt.isAfter(now);
   }
 
+  Instant publishedAt() {
+    return publishedAt;
+  }
+
   void published(Instant now) {
     publishedAt = now;
   }

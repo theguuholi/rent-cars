@@ -124,4 +124,4 @@ between stores automatically.
 
 ## Rental events and Kafka
 
-Follow the [Kafka producer walkthrough](../docs/kafka.md) for Compose, the read-only browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.
+Follow the [Kafka producer walkthrough](../docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.
