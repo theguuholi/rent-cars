@@ -38,7 +38,18 @@ The last command keeps consuming until Ctrl+C. It displays keys and JSON values 
 make kafka-ui
 ```
 
-Open **http://localhost:8084** → `rent-cars-local` → Topics → `rentals.events` → Messages. The optional Kafbat UI is read-only and bound to localhost, without authentication. This is a development tool, not a production admin console.
+Open **http://localhost:8084** → `rent-cars-local` → Topics → `rentals.events` → Messages. The optional Kafbat UI allows reading and writing messages and is bound to localhost in Compose, without authentication. This is a development tool, not a production admin console.
+
+### Read, publish and resend messages
+
+After updating the configuration, recreate the UI with `make kafka-ui`. For Kubernetes, apply `kubectl --context docker-desktop -n rent-kafka apply -f deploy/kafka/ui-local.yaml` and wait for `kubectl --context docker-desktop -n rent-kafka rollout status deployment/kafka-ui`.
+
+1. Open `rentals.events` → **Messages**, select the earliest offset to inspect retained messages, and start browsing. Expand a row to inspect its key and JSON value.
+2. To publish, use **Produce Message**, set the key to the rental UUID and paste a valid rental-event JSON value. Keep the key and `rentalId` consistent.
+3. To replay an event, copy its key and full JSON value and publish them again through **Produce Message**. Preserve `eventId` when testing consumer deduplication. The replay creates a new Kafka record; it does not modify the original one.
+4. Refresh the message browser and check that the new record has a new offset in its partition.
+
+Manual Kafka publishing bypasses the rental API and Outbox: it does not create or update a rental in PostgreSQL. Prefer a separate topic such as `rentals.events.sandbox` for free-form experiments. These unauthenticated write permissions are intended only for the local development cluster.
 
 | Location | Bootstrap address |
 | --- | --- |

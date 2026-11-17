@@ -139,7 +139,7 @@ Study PostgreSQL through the running application with the [full-stack database l
 
 ## Interfaces started by `make dev`
 
-`make dev` also starts the read-only Kafka UI automatically. No second Make command is needed.
+`make dev` also starts the Kafka UI automatically. No second Make command is needed.
 
 | Interface | Default URL |
 | --- | --- |
@@ -153,4 +153,4 @@ Study PostgreSQL through the running application with the [full-stack database l
 
 ## Rental events and Kafka
 
-Follow the [Kafka producer walkthrough](docs/kafka.md) for Compose, the read-only browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.
+Follow the [Kafka producer walkthrough](docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.

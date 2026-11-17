@@ -45,7 +45,7 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: rent-cars-local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
-      KAFKA_CLUSTERS_0_READONLY: 'true'
+      KAFKA_CLUSTERS_0_READONLY: 'false'
     ports:
       - '127.0.0.1:${KAFKA_UI_PORT:-8084}:8080'
 volumes:

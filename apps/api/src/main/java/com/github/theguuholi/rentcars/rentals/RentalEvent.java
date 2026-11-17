@@ -1,15 +1,14 @@
 package com.github.theguuholi.rentcars.rentals;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.UUID;
 
 /** Immutable integration snapshot; constructing it does not publish or persist anything. */
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 final class RentalEvent {
   private final UUID eventId = UUID.randomUUID();
   private final String eventType;
-  private final int schemaVersion = 1;
+  private static final int SCHEMA_VERSION = 1;
   private final Instant occurredAt;
   private final UUID rentalId;
   private final RentalData payload;
@@ -45,16 +44,34 @@ final class RentalEvent {
             "BRL");
   }
 
+  @JsonProperty("eventId")
   UUID eventId() {
     return eventId;
   }
 
+  @JsonProperty("rentalId")
   UUID rentalId() {
     return rentalId;
   }
 
+  @JsonProperty("occurredAt")
   Instant occurredAt() {
     return occurredAt;
+  }
+
+  @JsonProperty("eventType")
+  String eventType() {
+    return eventType;
+  }
+
+  @JsonProperty("schemaVersion")
+  int schemaVersion() {
+    return SCHEMA_VERSION;
+  }
+
+  @JsonProperty("payload")
+  RentalData payload() {
+    return payload;
   }
 
   private record RentalData(

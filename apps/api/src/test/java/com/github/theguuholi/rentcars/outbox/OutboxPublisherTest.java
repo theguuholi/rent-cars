@@ -65,7 +65,7 @@ class OutboxPublisherTest {
       when(confirmation.get(5, TimeUnit.SECONDS))
           .thenAnswer(
               _ -> {
-                assertThat(message).extracting("publishedAt").isNull();
+                assertThat(message.publishedAt()).isNull();
                 assertThat(metrics.find("outbox.send").tag("result", "acknowledged").counter())
                     .isNull();
                 return null;
@@ -76,7 +76,7 @@ class OutboxPublisherTest {
       order.verify(repository).findFirstByPublishedAtIsNullOrderBySequenceAsc();
       order.verify(kafka).send("rentals.events", message.rentalId().toString(), "{}");
       order.verify(confirmation).get(5, TimeUnit.SECONDS);
-      assertThat(message).extracting("publishedAt").isEqualTo(now);
+      assertThat(message.publishedAt()).isEqualTo(now);
       assertThat(metrics.get("outbox.send").tag("result", "acknowledged").counter().count())
           .isEqualTo(1);
       when(repository.countByPublishedAtIsNull()).thenReturn(3L);
@@ -126,7 +126,7 @@ class OutboxPublisherTest {
 
     private void assertFailure() {
       assertThat(publisher.publishNext()).isFalse();
-      assertThat(message).extracting("publishedAt").isNull();
+      assertThat(message.publishedAt()).isNull();
       assertThat(message.ready(now)).isFalse();
       assertThat(metrics.get("outbox.send").tag("result", "failed").counter().count()).isEqualTo(1);
     }

@@ -88,8 +88,8 @@ class OutboxRepositoryTest {
       var rows = new ArrayList<ConsumerRecord<String, String>>();
       long deadline = System.nanoTime() + Duration.ofSeconds(20).toNanos();
       while (rows.size() < count && System.nanoTime() < deadline) {
-        for (var record : consumer.poll(Duration.ofMillis(200))) {
-          if (rentalId.toString().equals(record.key())) rows.add(record);
+        for (var event : consumer.poll(Duration.ofMillis(200))) {
+          if (rentalId.toString().equals(event.key())) rows.add(event);
         }
       }
       assertThat(rows).hasSizeGreaterThanOrEqualTo(count);
