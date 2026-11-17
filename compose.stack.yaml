@@ -1,5 +1,17 @@
 name: rent-cars-stack
 services:
+  kafka:
+    extends:
+      file: compose.kafka.yaml
+      service: kafka
+  kafka-init:
+    extends:
+      file: compose.kafka.yaml
+      service: kafka-init
+  kafka-ui:
+    extends:
+      file: compose.kafka.yaml
+      service: kafka-ui
   mailpit:
     image: axllent/mailpit:v1.32.0
     ports:
@@ -49,6 +61,8 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      RENT_MESSAGING_ENABLED: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
       SPRING_PROFILES_ACTIVE: dev
       SPRING_MAIL_HOST: mailpit
       RENT_MAIL_WEB_BASE_URL: http://localhost:8081
@@ -78,5 +92,6 @@ services:
       retries: 12
 
 volumes:
+  kafka_data:
   postgres_data:
   s3_data:

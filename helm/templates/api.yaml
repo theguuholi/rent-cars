@@ -38,6 +38,12 @@ spec:
             - name: http
               containerPort: 8080
           env:
+            - name: RENT_MESSAGING_ENABLED
+              value: {{ .Values.messaging.enabled | quote }}
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.messaging.bootstrapServers | quote }}
+            - name: RENT_MESSAGING_TOPIC
+              value: {{ .Values.messaging.topic | quote }}
             - name: SPRING_PROFILES_ACTIVE
               value: local
             {{- if .Values.observability.enabled }}

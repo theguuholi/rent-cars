@@ -121,3 +121,7 @@ The existing Secret must contain `AWS_ACCESS_KEY_ID` and
 `AWS_SECRET_ACCESS_KEY`. The bucket must already exist.
 Do not put AWS credentials in `values.yaml`. Existing photos are not copied
 between stores automatically.
+
+## Rental events and Kafka
+
+Follow the [Kafka producer walkthrough](../docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.

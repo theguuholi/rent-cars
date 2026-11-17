@@ -1,4 +1,16 @@
 services:
+  kafka:
+    extends:
+      file: compose.kafka.yaml
+      service: kafka
+  kafka-init:
+    extends:
+      file: compose.kafka.yaml
+      service: kafka-init
+  kafka-ui:
+    extends:
+      file: compose.kafka.yaml
+      service: kafka-ui
   observability:
     image: grafana/otel-lgtm:0.37.0
     environment:
@@ -58,6 +70,7 @@ services:
       retries: 30
 
 volumes:
+  kafka_data:
   observability_data:
   postgres_data:
   s3_data:

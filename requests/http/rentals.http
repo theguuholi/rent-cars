@@ -1,11 +1,17 @@
+# Kafka study: ../../docs/kafka.md
+# With the relay enabled, rentals_create emits RentalOpened and rentals_return emits RentalReturned.
+# HTTP success commits the Outbox; delivery is asynchronous. Match response.id to the Kafka key.
+# Stop/start the broker and repeat with a valid available car to observe pending/recovered events.
 # @import ./common.http
+# @import ./cars.http
 
-### Rent the example car
+### Rent the first available car
 # @name rentals_create
 # @tag smoke
+# @forceRef cars_list
 {{
-  if (!state.carId) {
-    throw new Error("No car selected. Send cars_create in cars.http and confirm 201 in this VS Code window and environment before renting. Listing cars does not select one.");
+  if (!state.availableCarId) {
+    throw new Error("No available cars found in cars_list. Add or return a car, then retry renting.");
   }
   if (!state.driverToken) {
     throw new Error("Sign in as driver with auth_login_driver in auth.http before renting.");
@@ -17,7 +23,7 @@ Authorization: Bearer {{state.driverToken}}
 Content-Type: application/json
 
 {
-  "carId": "{{state.carId}}",
+  "carId": "{{state.availableCarId}}",
   "expectedReturnDate": "{{state.expectedReturnDate}}"
 }
 
@@ -26,7 +32,7 @@ Content-Type: application/json
   assert.equal(response.statusCode, 201);
   if (response.statusCode === 201) {
     state.rentalId = response.parsedBody.id;
-    state.carVersion = response.parsedBody.car.version;
+    state.rentalCarId = response.parsedBody.carId;
   }
   test("Rental open and car unavailable", () => {
     assert.equal(response.parsedBody.endDate, null);
@@ -60,9 +66,6 @@ Authorization: Bearer {{state.driverToken}}
 {{
   const assert = require("node:assert/strict");
   assert.equal(response.statusCode, 200);
-  if (response.statusCode === 200) {
-    state.carVersion = response.parsedBody.car.version;
-  }
   test("Rental closed and car released", () => {
     assert.equal(typeof response.parsedBody.endDate, "string");
     assert.ok(response.parsedBody.totalCents >= response.parsedBody.dailyRateCents);

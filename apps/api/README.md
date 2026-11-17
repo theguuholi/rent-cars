@@ -222,3 +222,7 @@ or Kubernetes databases do not need to be deleted to enable this feature.
 ## Study: capacity and consistency
 
 Work through the [pool and capacity experiment](../../docs/studies/pool-capacity.md), then the [replication, partitioning and cache design exercise](../../docs/studies/replication-cache-partitioning.md). Measure a disposable PostgreSQL catalog before tuning Hikari, and classify freshness requirements before adding infrastructure. Each guide has ordered checkpoints and expected evidence for PR review.
+
+## Rental events and Kafka
+
+Follow the [Kafka producer walkthrough](../../docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.

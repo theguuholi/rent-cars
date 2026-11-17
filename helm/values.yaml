@@ -90,3 +90,9 @@ storage:
   endpoint: http://fleet-s3:8333
   pathStyle: true
   credentialsSecret: fleet-s3
+
+# Kafka lifecycle is separate: make k8s-kafka-up, then enable publication.
+messaging:
+  enabled: false
+  bootstrapServers: rent-kafka-bootstrap.rent-kafka.svc.cluster.local:9092
+  topic: rentals.events

@@ -11,7 +11,7 @@ Authorization: Bearer {{state.adminToken}}
 Content-Type: application/json
 
 {
-  "carId": "{{state.carId}}",
+  "carId": "{{state.rentalCarId}}",
   "expectedReturnDate": "{{state.expectedReturnDate}}"
 }
 
@@ -53,7 +53,7 @@ Authorization: Bearer {{state.driverToken}}
 Content-Type: application/json
 
 {
-  "carId": "{{state.carId}}",
+  "carId": "{{state.rentalCarId}}",
   "expectedReturnDate": "{{state.invalidReturnDate}}"
 }
 
@@ -65,7 +65,7 @@ Content-Type: application/json
 ### Preserve car rental history
 # @name scenarios_rentals_delete_history
 # @tag negative
-DELETE {{baseUrl}}/cars/{{state.carId}}
+DELETE {{baseUrl}}/cars/{{state.rentalCarId}}
 Authorization: Bearer {{state.adminToken}}
 
 {{
