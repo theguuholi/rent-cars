@@ -21,58 +21,16 @@ class RentalEventRecorder {
   }
 
   void opened(Rental rental, UUID accountId) {
-    record("RentalOpened", rental, accountId, rental.startDate(), null, null);
+    record(new RentalEvent(rental, accountId));
   }
 
   void returned(Rental rental, UUID accountId, Instant returnedAt, long totalCents) {
-    record("RentalReturned", rental, accountId, returnedAt, returnedAt, totalCents);
+    record(new RentalEvent(rental, accountId, returnedAt, totalCents));
   }
 
-  private void record(
-      String type,
-      Rental rental,
-      UUID accountId,
-      Instant occurredAt,
-      Instant returnedAt,
-      Long totalCents) {
-    var event =
-        new RentalEvent(
-            UUID.randomUUID(),
-            type,
-            1,
-            occurredAt,
-            rental.id(),
-            new RentalData(
-                accountId,
-                rental.carId(),
-                rental.startDate(),
-                rental.expectedReturnDate(),
-                returnedAt,
-                rental.dailyRateCents(),
-                rental.fineAmountCents(),
-                totalCents,
-                "BRL"));
+  private void record(RentalEvent event) {
     messages.save(
         new OutboxMessage(
-            event.eventId(), rental.id(), json.writeValueAsString(event), occurredAt));
+            event.eventId(), event.rentalId(), json.writeValueAsString(event), event.occurredAt()));
   }
-
-  record RentalEvent(
-      UUID eventId,
-      String eventType,
-      int schemaVersion,
-      Instant occurredAt,
-      UUID rentalId,
-      RentalData payload) {}
-
-  record RentalData(
-      UUID accountId,
-      UUID carId,
-      Instant startDate,
-      Instant expectedReturnDate,
-      Instant endDate,
-      int dailyRateCents,
-      int fineAmountCents,
-      Long totalCents,
-      String currency) {}
 }
