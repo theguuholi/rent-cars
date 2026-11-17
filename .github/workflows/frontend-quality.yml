@@ -1,4 +1,4 @@
-name: Web quality
+name: Frontend / Quality
 on:
   pull_request:
   push:
