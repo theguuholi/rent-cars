@@ -134,6 +134,14 @@ make check                  # All checks above
 
 Docker must be running for Java integration tests. Install frontend dependencies with `make setup`; install Python 3 and Helm for infrastructure checks. JaCoCo reports live under each Java application's `target/site/jacoco/`; web coverage lives in `apps/web/coverage/`. See [AGENTS.md](AGENTS.md) for testing conventions and the application READMEs for PIT/Stryker commands.
 
+### CI by application
+
+- `api.yml`: API verification and Sonar, plus PIT jobs partitioned by package with every production class included.
+- `web.yml`: frontend verification, Stryker and Playwright journeys.
+- `recommendations.yml`: consumer verification, its own Sonar project, PIT and infrastructure checks for Helm/Compose/publication.
+
+Each Java application owns its POM and Maven Wrapper. There is no root POM; `make check-java` simply invokes the two independent builds. Sonar projects share the API's quality policy without overwriting each other's analysis.
+
 ### Merge a reviewed PR after CI
 
 Use GitHub's **Enable auto-merge → Squash and merge**, or `gh pr merge <number> --auto --squash`. This is opt-in per PR. The required `Merge readiness` check waits for every triggered PR workflow on the current commit, including mutation tests; Java's workflow also waits for the Sonar gate. Failed, cancelled or timed-out workflows block the merge. If you rerun a failed workflow without a new commit, rerun `PR merge readiness` as well. New commits trigger fresh checks.

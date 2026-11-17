@@ -3,7 +3,7 @@ name: rent-cars-java-feature
 description: Implement or change a Rent Cars Java API resource, domain rule, persistence operation or HTTP contract. Use for Spring Boot feature work in apps/api/ and apps/recommendations/.
 ---
 
-For `apps/recommendations`, read its [consumer conventions](../../../apps/recommendations/AGENTS.md). Trace the rental event contract through Jackson validation and the Kafka listener; test successful receipt, invalid input, duplicates and offset behavior with Given/When/Then and Kafka Testcontainers. Run `make check-recommendations` and PIT as documented in its README. Use the same Java quality tools as the API, without adding JPA, HTTP or browser layers to a consumer-only change. Root `make check-java` and Sonar cover both applications.
+For `apps/recommendations`, read its [consumer conventions](../../../apps/recommendations/AGENTS.md). Trace the rental event contract through Jackson validation and the Kafka listener; test successful receipt, invalid input, duplicates and offset behavior with Given/When/Then and Kafka Testcontainers. Run `make check-recommendations` and PIT as documented in its README. Use the same Java quality tools as the API, without adding JPA, HTTP or browser layers to a consumer-only change. Root `make check-java` invokes both independent builds; each application has its own CI workflow and Sonar project.
 
 For `apps/api`, follow the HTTP/persistence steps below.
 

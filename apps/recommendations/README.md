@@ -76,7 +76,7 @@ The existing Java harness applies here, including Given/When/Then tests, Spotles
 
 ```sh
 make check-recommendations  # Formatting, unit/integration tests, coverage and packaging
-make check-java            # API and recommendations in one Maven reactor
+make check-java            # Run the two independent Maven builds
 make check                 # Both Java applications plus the web checks
 
 ./apps/recommendations/mvnw -f apps/recommendations/pom.xml spotless:apply
@@ -85,4 +85,6 @@ make check                 # Both Java applications plus the web checks
 
 Reports: `apps/recommendations/target/site/jacoco/index.html` and `apps/recommendations/target/pit-reports/index.html`. This module enforces 100% line and branch coverage and a 100% PIT mutation score. Integration tests cover retained events, both event types, duplicate delivery, independent groups, restart from committed offsets and failure without skipping the invalid record.
 
-The root `pom.xml` aggregates builds and Sonar analysis only. Each application retains its own Spring Boot parent, wrapper and Docker build context. Keep shared quality plugin versions aligned when updating them.
+There is no root POM. API and recommendations each own their Spring Boot parent, Maven Wrapper, build and Docker context. `make check-java` is only a convenience target that invokes both builds. Keep quality plugin versions aligned.
+
+CI is separated into `api.yml`, `web.yml` and `recommendations.yml`. This application has its own verification, PIT and infrastructure jobs, and a separate Sonar project selected by `SONAR_RECOMMENDATIONS_PROJECT_KEY`. On first use the workflow provisions it in the existing organization and binds the API quality gate and profiles, using `SONAR_TOKEN`; the token needs project creation/administration rights. The API project and its policy are not changed.

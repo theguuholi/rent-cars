@@ -113,8 +113,7 @@ recommendations-dev: kafka-up
 check-recommendations:
 	cd apps/recommendations && ./mvnw -B verify
 
-check-java:
-	./apps/api/mvnw -B -f pom.xml verify
+check-java: check-api check-recommendations
 
 .PHONY: check-infra
 check-infra:

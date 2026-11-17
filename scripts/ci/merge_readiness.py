@@ -5,7 +5,7 @@ import os
 import subprocess
 import time
 
-BASELINE = {".github/workflows/quality.yml", ".github/workflows/web-quality.yml"}
+BASELINE = {".github/workflows/api.yml", ".github/workflows/web.yml", ".github/workflows/recommendations.yml"}
 
 
 def readiness(runs, own_run_id):
@@ -17,7 +17,7 @@ def readiness(runs, own_run_id):
         if path not in latest or run["id"] > latest[path]["id"]:
             latest[path] = run
     if not BASELINE.issubset(latest):
-        return "waiting", "Waiting for Java and web workflows to register"
+        return "waiting", "Waiting for API, frontend and recommendations workflows to register"
     pending = [r["name"] for r in latest.values() if r["status"] != "completed"]
     if pending:
         return "waiting", "Waiting for: " + ", ".join(sorted(pending))
