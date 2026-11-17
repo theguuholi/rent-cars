@@ -10,3 +10,9 @@ Read the [frontend conventions](../../../apps/web/AGENTS.md) and the [repository
    For a Zod-backed form, derive draft types from the schema and reuse a small labelled field component when inputs repeat. Keep creation and editing submissions readable and use the parsed result rather than parsing the same draft twice.
 3. Exercise success and failure at the user-facing boundary. For edits, verify invalid input, preserved drafts on conflict and the visible state after retry or cancel. For a client change, assert the HTTP method, path, body and error behavior.
 4. Run `make check-web` from the root and inspect coverage for changed modules. For layout or navigation work, verify the affected screen in a browser, including narrow width and keyboard access. Report which states you actually checked.
+
+## Responsibility and readability review
+
+Before implementing, identify the responsibility being changed and follow the scoped guide's responsibility boundaries. After implementing, walk through the main flow in execution order and answer the root [readability review questions](../../../AGENTS.md#single-responsibility-and-human-readable-code). Do this before the existing verification/handoff step; passing tests does not replace the review.
+
+For example, keep a car editor's draft and submission flow easy to locate, HTTP details in its API client and reusable field markup in a named component. Extract a pure transformation or hook when it clarifies a real responsibility, not merely to shorten the page. Preserve loading/error states, accessibility, cancellation and draft recovery in the existing Given/When/Then tests. Do not build a generic form framework or a hook per state variable.

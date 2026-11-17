@@ -10,6 +10,25 @@ This monorepo contains the Spring Boot API in `apps/api/`, the React application
 - For any user-visible feature, follow [feature delivery](docs/feature-workflow.md) and use the [end-to-end feature skill](.agents/skills/rent-cars-end-to-end-feature/SKILL.md). Write the Playwright acceptance journey before implementation, then verify it against the running stack before handoff. Respect a narrower user-requested scope and record any downstream work.
 - Keep code, test descriptions, API examples and repository documentation in English. See the [README](README.md) for prerequisites and local startup.
 
+## Single responsibility and human-readable code
+
+Give each class, component and function one cohesive purpose. Separate responsibilities that change for different reasons, such as HTTP transport, business policy, persistence and presentation. A business operation may still coordinate several steps; single responsibility does not mean one statement or one method per file.
+
+- Make the main flow readable in execution order. Use intention-revealing names and explicit intermediate values or guard clauses when they clarify decisions. Prefer a short sequence of steps over nested conditionals, nested ternaries or chains that hide side effects.
+- Extract a helper, component or service when it names a meaningful responsibility, isolates an external boundary, removes established duplication or makes a complex flow easier to follow. Keep related logic together when extraction would force the reader to jump across files without gaining clarity.
+- Do not add pass-through layers, generic frameworks, interfaces or configuration options for hypothetical future needs. Do not impose arbitrary line-count limits or split code only to satisfy a size metric. Preserve existing public boundaries unless the requested change requires adjusting them.
+- Comments should explain a constraint, trade-off or non-obvious reason. Improve unclear names and structure before adding comments that narrate each statement. Keep transactions, side effects, failure handling and state ownership visible during refactoring.
+- Apply these rules to the requested change; they do not authorize unrelated repository-wide refactoring. Readability remains a review responsibility even when Sonar and coverage gates pass.
+
+Before handing off Java or React changes, review these questions:
+
+1. Does the name explain the purpose without reading the implementation?
+2. Can a new contributor follow the main operation in execution order?
+3. Are responsibilities that change for different reasons separated at useful boundaries?
+4. Does each extraction reduce the effort to understand the flow rather than merely move code?
+5. Do comments explain decisions rather than compensate for unclear code?
+6. Do Given/When/Then tests describe observable behavior and preserve failure semantics?
+
 ## Testing requirements
 
 Every new or changed line of executable application code must be exercised by automated tests. Cover each outcome of new or changed conditional logic, including failure paths. Assert an observable result such as the HTTP response, persisted state, rendered UI or an interaction that forms part of the contract. Executing a line alone is insufficient.

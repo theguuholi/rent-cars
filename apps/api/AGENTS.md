@@ -12,3 +12,21 @@
 - In Given/When/Then HTTP tests, compare the response fields and types with the generated `/v3/api-docs` schema and exercise the resource's create and partial-update rules.
 - Use one JUnit Jupiter `@Nested` group per application-defined method or HTTP endpoint under test. Name each scenario with Given/When/Then and cover the relevant success, boundary and error outcomes. Exercise private helpers through their callers. Inherited CRUD, generated accessors and framework behavior do not warrant standalone groups or tests.
 - Update OpenAPI descriptions and the matching file under `requests/` when a public endpoint changes. Check the generated schema for changed payloads. Finish with the backend verification command in the root guide.
+
+## Apply responsibility boundaries without mandatory layers
+
+Follow the root [readability review](../../AGENTS.md#single-responsibility-and-human-readable-code). Use these boundaries when the operation needs them:
+
+| Responsibility | Usual owner |
+| --- | --- |
+| Bind/validate HTTP input and choose the HTTP response | Controller and input Request |
+| Coordinate a business operation and its transaction | Service |
+| Protect domain invariants and valid state transitions | Entity or focused domain value |
+| Express database queries and persistence operations | Repository, with database guarantees in migrations |
+| Handle Kafka, storage or email protocol details | Focused integration component |
+
+A simple catalog read can call its repository without a pass-through service. Do not introduce all these roles for every CRUD. Keep framework wiring separate from business decisions when both would otherwise obscure each other.
+
+For example, opening a rental should read as a coherent operation: load the required state, check eligibility, change availability, persist the rental and record its event. Name useful steps, but preserve the transaction that makes the database writes atomic. A controller should not assemble Kafka records, and an entity should not call HTTP or storage clients. Do not move a write to another bean merely to shorten a method if that changes transaction or locking behavior.
+
+Prefer explicit statements when a stream or callback chain hides writes, exception handling or operation order. Private helpers stay private and are tested through the operation they support; readability is not a reason to expose implementation details for tests.

@@ -26,6 +26,13 @@ HTTP Yac examples: <!-- file.http → request name; use “not applicable” if 
 
 For a business rule, identify the test that would fail if the rule changed. For schema changes, verify a clean install and an upgrade with existing data. For HTTP changes, check MockMvc coverage, OpenAPI, and the executable request. Identify tests for changed behavior and failure paths, then inspect changed-file line and branch coverage.
 
+## Responsibility and readability review
+
+For code changes, answer the shared readability review questions in `AGENTS.md` before marking this section complete. For documentation-only changes, explain why runtime review is not applicable.
+
+- [ ] Each changed unit has a clear purpose and the main flow is readable in execution order.
+- [ ] Extractions improve understanding without unnecessary layers or scattered state; transaction/error behavior and observable Given/When/Then scenarios are preserved.
+
 ## Exceptions to project conventions (if applicable)
 
 Name the convention, affected scope, reason, trade-off, and verification. For an untested path, include its location, the blocker, substitute evidence, and a revisit condition. Request explicit maintainer review and link a decision record if this changes the default across features. State downstream work and known limits. Remove placeholders before opening the PR.
