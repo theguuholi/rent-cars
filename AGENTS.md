@@ -1,9 +1,10 @@
 # Rent Cars
 
-This monorepo contains the Spring Boot API in `apps/api/`, the React application in `apps/web/`, and executable HTTP examples in `requests/`. The Go implementation lives in a separate repository. Work within the requested scope.
+This monorepo contains the Spring Boot API in `apps/api/`, the React application in `apps/web/`, the Kafka consumer in `apps/recommendations/`, and executable HTTP examples in `requests/`. The Go implementation lives in a separate repository. Work within the requested scope.
 
 ## Before editing
 
+- Read [the recommendations guide](apps/recommendations/AGENTS.md) for Kafka consumer work.
 - Read [the API guide](apps/api/AGENTS.md) for backend work and [the web guide](apps/web/AGENTS.md) for frontend work. For changes to an HTTP contract, inspect both sides and the corresponding HTTP Yac request. Call out downstream work if the request limits changes to one side.
 - Use the [Java feature skill](.agents/skills/rent-cars-java-feature/SKILL.md) or [React feature skill](.agents/skills/rent-cars-react-feature/SKILL.md) when its workflow fits. Follow the nearest existing feature and its tests; verify which domain rules actually apply.
 - Use the [Playwright journey skill](.agents/skills/rent-cars-playwright-journey/SKILL.md) when adding or changing browser navigation tests.
@@ -18,9 +19,11 @@ Run the relevant check from the repository root and inspect the changed files in
 
 | Scope | Command | Local report |
 | --- | --- | --- |
-| Java (Docker running) | `make check-api` | `apps/api/target/site/jacoco/index.html` |
+| API (Docker running) | `make check-api` | `apps/api/target/site/jacoco/index.html` |
 | React (run `make setup` on a fresh checkout) | `make check-web` | `apps/web/coverage/index.html` |
-| Both | `make check` | Both reports above |
+| Recommendations (Docker running) | `make check-recommendations` | `apps/recommendations/target/site/jacoco/index.html` |
+| All Java | `make check-java` | Both Java reports |
+| Full repository | `make check` | Java and web reports above |
 
 Add tests for missed executable lines and branches. Document any path that cannot be tested reliably using the exception process below. Existing aggregate CI thresholds are a separate merge safeguard. Preserve the configured checks and coverage scope.
 

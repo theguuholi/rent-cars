@@ -5,7 +5,8 @@ KAFKA_ENABLED ?= false
 help:
 	@printf '%s\n' \
 	  'make dev       Start API, React, infrastructure and Kafka UI' \
-	  'make check     Run backend and frontend checks' \
+	  'make check     Run all Java and frontend checks' \
+	  'make recommendations-dev  Consume rental events with Spring Boot' \
 	  'make kafka-up  Start Kafka and create the rental events topic' \
 	  'make kafka-ui  Open local Kafka UI on localhost:8084' \
 	  'make kafka-events  Read retained rental events' \
@@ -69,7 +70,7 @@ check-web:
 	npm --prefix apps/web run test:coverage
 	npm --prefix apps/web run build
 
-check: check-api check-web
+check: check-java check-web
 
 .PHONY: infra-up infra-stop
 infra-up:
@@ -96,3 +97,13 @@ k8s-kafka-up:
 	kubectl --context docker-desktop -n rent-kafka apply -f deploy/kafka/local.yaml
 	kubectl --context docker-desktop -n rent-kafka wait kafka/rent --for=condition=Ready --timeout=300s
 	kubectl --context docker-desktop -n rent-kafka wait kafkatopic/rentals-events --for=condition=Ready --timeout=120s
+
+.PHONY: recommendations-dev check-recommendations check-java
+recommendations-dev: kafka-up
+	cd apps/recommendations && ./mvnw spring-boot:run
+
+check-recommendations:
+	cd apps/recommendations && ./mvnw -B verify
+
+check-java:
+	./apps/api/mvnw -B -f pom.xml verify

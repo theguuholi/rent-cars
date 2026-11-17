@@ -1,9 +1,11 @@
-name: API mutation tests
+name: Java mutation tests
 on:
   pull_request:
     paths:
       - '.github/workflows/mutation.yml'
       - 'apps/api/**'
+      - 'apps/recommendations/**'
+      - 'pom.xml'
   workflow_dispatch:
   schedule:
     - cron: '17 6 * * 1'
@@ -13,6 +15,11 @@ permissions:
 
 jobs:
   mutation:
+    name: ${{ matrix.application == 'api' && 'mutation' || 'Recommendations mutation' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        application: [api, recommendations]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -22,12 +29,12 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-          cache-dependency-path: apps/api/pom.xml
-      - name: Run mutation tests across the API
-        working-directory: apps/api
+          cache-dependency-path: apps/${{ matrix.application }}/pom.xml
+      - name: Run mutation tests across the application
+        working-directory: apps/${{ matrix.application }}
         run: ./mvnw -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: pitest-api
-          path: apps/api/target/pit-reports/
+          name: pitest-${{ matrix.application }}
+          path: apps/${{ matrix.application }}/target/pit-reports/
           if-no-files-found: error

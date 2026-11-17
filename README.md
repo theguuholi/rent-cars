@@ -66,6 +66,7 @@ Follow [the developer walkthrough](docs/project-walkthrough.md) to try visitor, 
 | Directory | Contents |
 | --- | --- |
 | [apps/api/](apps/api/README.md) | Java API, Maven Wrapper, Flyway migrations and backend tests |
+| [apps/recommendations/](apps/recommendations/README.md) | Independent Spring Boot Kafka consumer and Java quality checks |
 | [apps/web/](apps/web/README.md) | React and TypeScript application, feature routes and frontend tests |
 | [requests/](requests/) | HTTP Yac files for authentication, catalogs, images and rentals |
 | [.github/workflows/](.github/workflows/) | CI workflows for verification, coverage and mutation testing |
@@ -154,3 +155,9 @@ Study PostgreSQL through the running application with the [full-stack database l
 ## Rental events and Kafka
 
 Follow the [Kafka producer walkthrough](docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.
+
+## Recommendations consumer
+
+The independent Spring Boot consumer lives in `apps/recommendations`. Start it with `make recommendations-dev` alongside `make dev`, or use `docker compose --profile recommendations up -d --build recommendations`. It consumes rental events and logs receipts; recommendation computation is a later step.
+
+Follow the [consumer guide](apps/recommendations/README.md) for Kafka UI, replay, failure recovery, configuration and Docker commands. `make check-java` verifies both Java applications; `make check` also verifies the frontend. Both Java applications use the existing Java quality workflow and Sonar gate, with separate JaCoCo and PIT reports.

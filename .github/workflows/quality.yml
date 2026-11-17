@@ -13,9 +13,6 @@ jobs:
     name: Java verification
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: apps/api
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -25,14 +22,16 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-          cache-dependency-path: apps/api/pom.xml
+          cache-dependency-path: |
+            pom.xml
+            apps/*/pom.xml
       - name: Check formatting, run tests and generate coverage
         working-directory: .
-        run: make check-api
+        run: make check-java
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jacoco-coverage
-          path: apps/api/target/site/jacoco/
+          path: apps/*/target/site/jacoco/
           if-no-files-found: error
       - name: Analyze code and wait for the Sonar quality gate
         id: sonar
@@ -46,7 +45,7 @@ jobs:
           : "${SONAR_TOKEN:?Configure the Sonar token in repository secrets}"
           : "${SONAR_PROJECT_KEY:?Configure the Sonar project key in repository variables}"
           : "${SONAR_ORGANIZATION:?Configure the Sonar organization in repository variables}"
-          ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar \
+          ./apps/api/mvnw -B -f pom.xml org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar \
             -Dsonar.projectKey="$SONAR_PROJECT_KEY" -Dsonar.organization="$SONAR_ORGANIZATION" \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
             -Dsonar.qualitygate.wait=true
