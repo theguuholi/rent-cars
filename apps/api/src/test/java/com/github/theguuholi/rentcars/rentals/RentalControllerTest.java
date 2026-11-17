@@ -78,17 +78,15 @@ class RentalControllerTest extends RentalIntegrationSupport {
       var start = new java.util.concurrent.CyclicBarrier(2);
       try (var workers = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
         var first =
-            workers.submit(
-                () -> {
-                  start.await(10, java.util.concurrent.TimeUnit.SECONDS);
-                  return create(owner, carId).andReturn().getResponse();
-                });
+            workers.submit(() -> {
+              start.await(10, java.util.concurrent.TimeUnit.SECONDS);
+              return create(owner, carId).andReturn().getResponse();
+            });
         var second =
-            workers.submit(
-                () -> {
-                  start.await(10, java.util.concurrent.TimeUnit.SECONDS);
-                  return create(secondOwner, secondCar).andReturn().getResponse();
-                });
+            workers.submit(() -> {
+              start.await(10, java.util.concurrent.TimeUnit.SECONDS);
+              return create(secondOwner, secondCar).andReturn().getResponse();
+            });
         var responses =
             List.of(
                 first.get(20, java.util.concurrent.TimeUnit.SECONDS),

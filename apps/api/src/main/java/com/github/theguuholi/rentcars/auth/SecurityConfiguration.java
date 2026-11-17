@@ -39,12 +39,11 @@ class SecurityConfiguration {
   AuthenticationManager authenticationManager(
       AccountRepository accounts, PasswordEncoder passwords) {
     var provider =
-        new DaoAuthenticationProvider(
-            email ->
-                accounts
-                    .findByEmail(email)
-                    .map(Account::principal)
-                    .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials")));
+        new DaoAuthenticationProvider(email ->
+            accounts
+                .findByEmail(email)
+                .map(Account::principal)
+                .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials")));
     provider.setPasswordEncoder(passwords);
     return new ProviderManager(provider);
   }
@@ -88,65 +87,61 @@ class SecurityConfiguration {
           return new AuthorizationDecision(allowed);
         };
     return http.csrf(CsrfConfigurer::spa)
-        .exceptionHandling(
-            errors ->
-                errors.defaultAccessDeniedHandlerFor(
-                    (request, response, denied) -> {
-                      // A protected write without a bearer token is an authentication failure for
-                      // API clients.
-                      if (denied instanceof CsrfException) {
-                        response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
-                        response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                      } else {
-                        forbidden.handle(request, response, denied);
-                      }
-                    },
-                    new OrRequestMatcher(catalog, rentalEndpoints)))
+        .exceptionHandling(errors ->
+            errors.defaultAccessDeniedHandlerFor(
+                (request, response, denied) -> {
+                  // A protected write without a bearer token is an authentication failure for
+                  // API clients.
+                  if (denied instanceof CsrfException) {
+                    response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
+                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                  } else {
+                    forbidden.handle(request, response, denied);
+                  }
+                },
+                new OrRequestMatcher(catalog, rentalEndpoints)))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(
-            a ->
-                a.dispatcherTypeMatchers(DispatcherType.ERROR)
-                    .permitAll()
-                    .requestMatchers(cookieEndpoints)
-                    .permitAll()
-                    .requestMatchers(
-                        HttpMethod.POST,
-                        "/users",
-                        "/sessions",
-                        "/password-recovery",
-                        "/password-recovery/reset")
-                    .permitAll()
-                    .requestMatchers(
-                        HttpMethod.GET,
-                        "/cars",
-                        "/cars/{id:[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}}")
-                    .permitAll()
-                    .requestMatchers(
-                        HttpMethod.GET,
-                        "/actuator/health",
-                        "/csrf",
-                        "/swagger-ui.html",
-                        "/swagger-ui/**",
-                        "/v3/api-docs",
-                        "/v3/api-docs/**",
-                        "/v3/api-docs.yaml")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/sessions/me")
-                    .authenticated()
-                    .requestMatchers("/admin/users/**")
-                    .access(currentAdmin)
-                    .requestMatchers(rentalEndpoints)
-                    .authenticated()
-                    .requestMatchers(catalog)
-                    .access(currentAdmin)
-                    .anyRequest()
-                    .denyAll())
-        .oauth2ResourceServer(
-            r ->
-                r.authenticationConverter(
-                        request ->
-                            cookieEndpoints.matches(request) ? null : bearer.convert(request))
-                    .jwt(j -> j.jwtAuthenticationConverter(authentication)))
+        .authorizeHttpRequests(a ->
+            a.dispatcherTypeMatchers(DispatcherType.ERROR)
+                .permitAll()
+                .requestMatchers(cookieEndpoints)
+                .permitAll()
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/users",
+                    "/sessions",
+                    "/password-recovery",
+                    "/password-recovery/reset")
+                .permitAll()
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/cars",
+                    "/cars/{id:[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}}")
+                .permitAll()
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/actuator/health",
+                    "/csrf",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/v3/api-docs",
+                    "/v3/api-docs/**",
+                    "/v3/api-docs.yaml")
+                .permitAll()
+                .requestMatchers(HttpMethod.GET, "/sessions/me")
+                .authenticated()
+                .requestMatchers("/admin/users/**")
+                .access(currentAdmin)
+                .requestMatchers(rentalEndpoints)
+                .authenticated()
+                .requestMatchers(catalog)
+                .access(currentAdmin)
+                .anyRequest()
+                .denyAll())
+        .oauth2ResourceServer(r ->
+            r.authenticationConverter(
+                    request -> cookieEndpoints.matches(request) ? null : bearer.convert(request))
+                .jwt(j -> j.jwtAuthenticationConverter(authentication)))
         .build();
   }
 }

@@ -63,10 +63,10 @@ class RentalEventTest {
     var expected =
         json.readTree(
             """
-        {"eventId":"%s","eventType":"%s","schemaVersion":1,"occurredAt":"%s","rentalId":"%s",
-         "payload":{"accountId":"%s","carId":"%s","startDate":"%s","expectedReturnDate":"%s",
-         "endDate":%s,"dailyRateCents":10000,"fineAmountCents":3000,"totalCents":%s,"currency":"BRL"}}
-        """
+            {"eventId":"%s","eventType":"%s","schemaVersion":1,"occurredAt":"%s","rentalId":"%s",
+             "payload":{"accountId":"%s","carId":"%s","startDate":"%s","expectedReturnDate":"%s",
+             "endDate":%s,"dailyRateCents":10000,"fineAmountCents":3000,"totalCents":%s,"currency":"BRL"}}
+            """
                 .formatted(
                     event.eventId(),
                     type,

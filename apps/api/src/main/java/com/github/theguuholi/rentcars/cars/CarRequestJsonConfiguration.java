@@ -17,15 +17,14 @@ import tools.jackson.databind.type.LogicalType;
 class CarRequestJsonConfiguration implements WebMvcConfigurer {
   @Override
   public void configureMessageConverters(HttpMessageConverters.ServerBuilder builder) {
-    builder.configureMessageConverters(
-        converter -> {
-          if (converter instanceof JacksonJsonHttpMessageConverter json) {
-            var mapper = carRequestMapper(json.getMapper());
-            json.registerMappersForType(
-                CarRequest.class,
-                types -> json.getSupportedMediaTypes().forEach(type -> types.put(type, mapper)));
-          }
-        });
+    builder.configureMessageConverters(converter -> {
+      if (converter instanceof JacksonJsonHttpMessageConverter json) {
+        var mapper = carRequestMapper(json.getMapper());
+        json.registerMappersForType(
+            CarRequest.class,
+            types -> json.getSupportedMediaTypes().forEach(type -> types.put(type, mapper)));
+      }
+    });
   }
 
   private static JsonMapper carRequestMapper(JsonMapper base) {
