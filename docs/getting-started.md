@@ -488,7 +488,7 @@ RENT_CARS_API_URL=http://localhost:18080 npm --prefix apps/web run test:e2e -- e
 If the test reports a connection error, check that terminal 1 is still running
 and that `curl` succeeds. If it reports an empty catalog, check that the API is
 using the development profile and has completed its seed migration. All Playwright
-checks run in the `Frontend CI` GitHub Actions workflow on relevant
+checks run in the `Frontend / E2E` GitHub Actions workflow on relevant
 pull requests and pushes to master.
 
 For new API cases, keep each test focused on an observable HTTP contract. Use

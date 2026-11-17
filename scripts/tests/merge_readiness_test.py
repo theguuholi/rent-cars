@@ -21,7 +21,7 @@ def workflow(identifier, path, status="completed", conclusion="success"):
 
 
 def baseline():
-    return [workflow(1, ".github/workflows/api.yml"), workflow(2, ".github/workflows/web.yml"), workflow(10, ".github/workflows/recommendations.yml")]
+    return [workflow(20 + index, path) for index, path in enumerate(sorted(module.BASELINE))]
 
 
 class ReadinessTest(unittest.TestCase):
@@ -50,7 +50,7 @@ class ReadinessTest(unittest.TestCase):
     @patch.object(module.subprocess, "run")
     def test_given_paginated_api_when_fetched_then_checks_all_runs_for_exact_pr_commit(self, run):
         run.return_value.stdout = json.dumps([{"workflow_runs": baseline()}, {"workflow_runs": [workflow(3, "mutation")]}])
-        self.assertEqual(len(module.fetch_runs("owner/repo", "abc")), 4)
+        self.assertEqual(len(module.fetch_runs("owner/repo", "abc")), len(module.BASELINE) + 1)
         args = run.call_args.args[0]
         self.assertIn("head_sha=abc", args)
         self.assertIn("event=pull_request", args)

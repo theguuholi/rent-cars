@@ -136,9 +136,11 @@ Docker must be running for Java integration tests. Install frontend dependencies
 
 ### CI by application
 
-- `api.yml`: API verification and Sonar, plus PIT jobs partitioned by package with every production class included.
-- `web.yml`: frontend verification, Stryker and Playwright journeys.
-- `recommendations.yml`: consumer verification, its own Sonar project, PIT and infrastructure checks for Helm/Compose/publication.
+- `api-quality.yml` and `api-mutation.yml`: API verification/Sonar and package-partitioned PIT with every production class included.
+- `frontend-quality.yml`, `frontend-mutation.yml` and `frontend-e2e.yml`: frontend verification, Stryker and Playwright journeys.
+- `recommendations-quality.yml` and `recommendations-mutation.yml`: consumer verification/Sonar, infrastructure checks and PIT.
+
+GitHub Actions does not discover workflows in subfolders, so filenames use application prefixes and displayed names follow `API / Quality`, `Frontend / Mutation` and `Recommendations / Quality`. Existing required check names are preserved for branch protection.
 
 Each Java application owns its POM and Maven Wrapper. There is no root POM; `make check-java` simply invokes the two independent builds. Sonar projects share the API's quality policy without overwriting each other's analysis.
 

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class SonarProvisionTest(unittest.TestCase):
-    def provision(self, existing=False, fail="", omit=None, empty_profiles=False):
+    def provision(self, existing=False, fail="", omit=None, empty_profiles=False, matching=False):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)
             curl = path / "curl"
@@ -26,9 +26,9 @@ if endpoint.endswith(os.environ.get("FAIL_ENDPOINT", "NEVER_MATCH")):
 if endpoint.endswith("projects/search"):
     print(json.dumps({"components": [{"key": "consumer"}] if os.environ["EXISTING"] == "true" else []}))
 elif endpoint.endswith("qualitygates/get_by_project"):
-    print(json.dumps({"qualityGate": {"id": "api-gate"}}))
+    print(json.dumps({"qualityGate": {"id": "api-gate" if "project=api" in args or os.environ["MATCHING"] == "true" else "other-gate"}}))
 elif endpoint.endswith("qualityprofiles/search"):
-    print(json.dumps({"profiles": [] if os.environ["EMPTY_PROFILES"] == "true" else [{"key": "java-policy"}, {"key": "yaml-policy"}]}))
+    print(json.dumps({"profiles": [] if os.environ["EMPTY_PROFILES"] == "true" or ("project=consumer" in args and os.environ["MATCHING"] != "true") else [{"key": "java-policy"}, {"key": "yaml-policy"}]}))
 else:
     print("{}")
 ''')
@@ -36,7 +36,7 @@ else:
             env = dict(os.environ, PATH=f"{path}:{os.environ['PATH']}", CALLS=str(path / "calls"),
                        SONAR_TOKEN="test-token", SONAR_ORGANIZATION="organization",
                        SONAR_API_PROJECT_KEY="api", SONAR_PROJECT_KEY="consumer",
-                       EXISTING=str(existing).lower(), EMPTY_PROFILES=str(empty_profiles).lower())
+                       EXISTING=str(existing).lower(), EMPTY_PROFILES=str(empty_profiles).lower(), MATCHING=str(matching).lower())
             env.pop("FAIL_ENDPOINT", None)
             if fail:
                 env["FAIL_ENDPOINT"] = fail
@@ -51,10 +51,10 @@ else:
         result, calls = self.provision()
         self.assertEqual(result.returncode, 0, result.stderr)
         endpoints = [next(a for a in call if a.startswith("https:")) for call in calls]
-        self.assertEqual([e.rsplit("/api/", 1)[1] for e in endpoints], ["projects/search", "projects/create", "qualitygates/get_by_project", "qualitygates/select", "qualityprofiles/search", "qualityprofiles/add_project", "qualityprofiles/add_project"])
+        self.assertEqual([e.rsplit("/api/", 1)[1] for e in endpoints], ["projects/search", "projects/create", "qualitygates/get_by_project", "qualitygates/get_by_project", "qualitygates/select", "qualityprofiles/search", "qualityprofiles/search", "qualityprofiles/add_project", "qualityprofiles/add_project"])
         self.assertIn("project=api", calls[2])
-        self.assertIn("gateId=api-gate", calls[3])
-        self.assertIn("projectKey=consumer", calls[3])
+        self.assertIn("gateId=api-gate", calls[4])
+        self.assertIn("projectKey=consumer", calls[4])
         for call in calls[-2:]:
             self.assertIn("project=consumer", call)
         self.assertIn("key=java-policy", calls[-2])
@@ -81,3 +81,9 @@ else:
     def test_given_missing_profiles_when_copying_policy_then_fails_instead_of_using_weaker_defaults(self):
         result, _ = self.provision(empty_profiles=True)
         self.assertNotEqual(result.returncode, 0)
+
+
+    def test_given_matching_policy_when_checked_then_no_admin_mutation_is_required(self):
+        result, calls = self.provision(existing=True, matching=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(any("POST" in call for call in calls))

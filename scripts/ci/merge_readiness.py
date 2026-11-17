@@ -5,7 +5,15 @@ import os
 import subprocess
 import time
 
-BASELINE = {".github/workflows/api.yml", ".github/workflows/web.yml", ".github/workflows/recommendations.yml"}
+BASELINE = {
+    ".github/workflows/api-quality.yml",
+    ".github/workflows/api-mutation.yml",
+    ".github/workflows/frontend-quality.yml",
+    ".github/workflows/frontend-mutation.yml",
+    ".github/workflows/frontend-e2e.yml",
+    ".github/workflows/recommendations-quality.yml",
+    ".github/workflows/recommendations-mutation.yml",
+}
 
 
 def readiness(runs, own_run_id):
