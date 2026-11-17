@@ -4,11 +4,17 @@
 ### Browse public fleet
 # @name cars_list
 # @tag smoke
+{{
+  delete state.availableCarId;
+}}
 GET {{baseUrl}}/cars?page=0&size=12&sort=name,asc
 
 {{
   const assert = require("node:assert/strict");
   assert.equal(response.statusCode, 200);
+
+  const availableCar = response.parsedBody.content.find(car => car.available === true);
+  state.availableCarId = availableCar?.id;
 
   test("Fleet is paged and only contains available cars", () => {
     assert.ok(Array.isArray(response.parsedBody.content));
