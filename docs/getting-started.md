@@ -6,6 +6,14 @@ Spring Boot, image storage and the basic API workflows in HTTP Yac. Start with
 Commands use a POSIX shell (macOS/Linux, or a configured WSL2 environment on Windows).
 Unless a command explicitly changes directory, run it from the repository root.
 
+## Choose your learning path
+
+1. **Use the product first:** complete steps 1–3, browse cars, then register a driver and rent/return one. React and the API are the main applications.
+2. **Understand the HTTP flow:** steps 4–9 walk through authentication, fleet and rentals with HTTP Yac. Check each response before continuing.
+3. **Explore supporting services:** observability (3a), recovery email (9a) and the optional Kafka consumer (9b) explain what happens around the main request. Recommendations currently logs events; it does not generate suggestions and is not required for renting.
+4. **Try another runtime:** steps 12–13 run the same product in containers or Kubernetes. Choose one mode at a time; do not repeat all setup modes in parallel.
+5. **Verify and troubleshoot:** use steps 15–16 whenever you change the code or get stuck.
+
 ## Step 1: Install and verify the tools
 
 | Tool | Version / installation | Why it is needed |
@@ -19,6 +27,7 @@ Unless a command explicitly changes directory, run it from the repository root.
 | kubectl | [Installation](https://kubernetes.io/docs/tasks/tools/) | Only needed for Kubernetes |
 | Helm | [Installation](https://helm.sh/docs/intro/install/) | Only needed for Kubernetes; chart checked with Helm 4.3.1 |
 | OpenSSL | Your OS package manager | Generate local Kubernetes signing keys |
+| Python 3 | Your OS package manager | Run `make check-infra` (also included in `make check`) |
 
 Open Docker Desktop and wait until its engine is running. In a new terminal:
 
@@ -68,7 +77,7 @@ make dev
 ```
 
 Leave this terminal running. This starts PostgreSQL, SeaweedFS, Mailpit and the local
-Grafana observability stack in Docker,
+Grafana observability stack, Kafka and Kafka UI in Docker,
 then starts the Spring API and Vite/React on your machine. It supplies the local
 S3 credentials. Flyway creates/updates the schema and loads development catalogs
 and the development administrator automatically.
@@ -80,6 +89,7 @@ and the development administrator automatically.
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | Local email inbox | http://localhost:8025 |
 | Grafana (local telemetry) | http://localhost:3000 (opens directly with the current local LGTM image) |
+| Kafka UI | http://localhost:8084 |
 | HTTP Yac environment | No environment needed (local default) |
 
 From a second terminal in the repository root:
@@ -89,8 +99,7 @@ docker compose ps
 curl -i http://localhost:8080/cars
 ```
 
-All four infrastructure services should be healthy. The API should return **200** and a JSON
-array. If it is still compiling or starting, wait for the API startup message.
+The long-running infrastructure services should be healthy; `kafka-init` is a one-shot topic initializer and exits successfully. The API should return **200** and a paginated JSON response containing cars. If it is still compiling or starting, wait for the API startup message.
 
 Open React and sign in with the development administrator:
 
@@ -351,6 +360,39 @@ environment. In Kubernetes, forward `svc/fleet-mailpit` as shown below.
 
 - [ ] Step 9a complete: I requested, opened and used a reset link, then verified that it cannot be reused.
 
+## Step 9b: Optional — follow rental events into a separate consumer
+
+Complete a rental from Step 8 before this exercise. Keep `make dev` running.
+Recommendations is a supporting learning application: it receives rental events
+independently, validates them and logs receipt. It does not participate in the
+HTTP response and does not calculate recommendations yet.
+
+1. In a second terminal at the repository root, run:
+
+   ```sh
+   make recommendations-dev
+   ```
+
+2. Open [Kafka UI](http://localhost:8084), choose `rentals.events`, and inspect
+   its messages. The consumer may immediately read retained rental events.
+3. Rent or return another car using React or the HTTP Yac flow. In the consumer
+   terminal, find `Rental event received`. Match its `eventId` with the Kafka
+   message and inspect group `rent-cars-recommendations-v1` in Kafka UI.
+4. Stop **only the consumer** with Ctrl+C. Complete another rental/return.
+   The API still succeeds: it does not wait for recommendations.
+5. Run `make recommendations-dev` again. Expect the new event to be received
+   from the group's saved position. Already committed events are not normally
+   replayed; crash recovery can still produce duplicates (at-least-once delivery).
+
+You have now traced: **React/HTTP → API transaction → outbox → Kafka → consumer**.
+For replay with a new group, invalid-event recovery and configuration, continue
+with the [consumer README](../apps/recommendations/README.md). No additional
+HTTP endpoint or Swagger page exists for this service. Do not inject malformed
+records into your main learning topic; use the isolated Kafka tests to study
+failures without stopping your normal consumer.
+
+- [ ] Step 9b complete: I matched a rental event to its receipt and verified that the API works while the consumer is stopped, or intentionally skipped this optional exercise.
+
 ## Step 10: Run the normal workflow automatically
 
 With the API running, in a separate terminal:
@@ -391,7 +433,7 @@ complete `make setup` from Step 2 once before running the test.
    curl -i http://localhost:8080/cars
    ```
 
-   Expect **200 OK** and a JSON array of development cars.
+   Expect **200 OK** and a paginated JSON response containing development cars.
 
 2. Install Playwright's Chromium browser once, then run every API and browser journey
    in **terminal 2**:
@@ -501,6 +543,17 @@ cd requests/http
 npx --yes httpyac@6.16.7 send auth.http categories.http specifications.http cars.http car-images.http rentals.http --tag smoke --bail --output short --env compose
 ```
 
+To include the supporting consumer in this same container environment:
+
+```sh
+docker compose -f compose.stack.yaml --profile recommendations up --build -d --wait
+docker compose -f compose.stack.yaml logs -f recommendations
+```
+
+Use the `compose` rental flow, then expect `Rental event received` in these logs.
+Do not start `make recommendations-dev` against a different environment's broker
+and expect it to see this stack's events.
+
 Compose has its **own database and photo volumes**. Records created in host
 local development will not appear here. Repeat the HTTP Yac logins/setup rather
 than reusing IDs or tokens from the other environment.
@@ -529,7 +582,7 @@ kubectl --context docker-desktop get nodes
 The node should be **Ready**. No separate kind cluster, Ingress controller or
 port-forward is required by the provided Make targets.
 
-3. From the repository root, deploy:
+3. Publish the current API, web and recommendations images with `./scripts/push-images.sh` (see the registry instructions below), then deploy from the repository root:
 
 ```sh
 make k8s-up
@@ -537,7 +590,7 @@ kubectl --context docker-desktop -n rent-cars get pods,svc,pvc
 helm test fleet --kube-context docker-desktop -n rent-cars --logs
 ```
 
-Expect the API, web, PostgreSQL, SeaweedFS, Mailpit and Grafana LGTM pods to become ready and their
+The command first prepares Strimzi, Kafka and the rental topic in `rent-kafka`. Expect the API, web, recommendations, PostgreSQL, SeaweedFS, Mailpit and Grafana LGTM pods to become ready and their
 persistent claims to be bound. Open React at **http://localhost:8082** and choose
 **k8s** in HTTP Yac. Its API base URL is **http://localhost:8082/api**. Repeat the
 same numbered HTTP Yac walkthrough with fresh logins and IDs.
@@ -562,7 +615,7 @@ npx --yes httpyac@6.16.7 send auth.http categories.http specifications.http cars
 
 **`make k8s-up` pulls the published images configured in `helm/values.yaml`. It
 does not build your working tree.** The published API must include rentals for
-that part of the tutorial to work. Re-running the command restarts API/web to
+that part of the tutorial to work. Re-running the command restarts API/web/recommendations to
 pull the current tags while preserving existing data.
 
 To test your own code through the registry, from the repository root:
@@ -573,9 +626,10 @@ docker login
 IMAGE_NAMESPACE=docker.io/YOUR_NAMESPACE ./scripts/push-images.sh
 ```
 
-Then set `api.image.repository` and `web.image.repository` in `helm/values.yaml`
-to `docker.io/YOUR_NAMESPACE/rent-cars-api` and
-`docker.io/YOUR_NAMESPACE/rent-cars-web`, and run `make k8s-up` again. The script
+Then set `api.image.repository`, `web.image.repository` and
+`recommendations.image.repository` in `helm/values.yaml` to
+`docker.io/YOUR_NAMESPACE/rent-cars-api`, `docker.io/YOUR_NAMESPACE/rent-cars-web`
+and `docker.io/YOUR_NAMESPACE/rent-cars-recommendations`, and run `make k8s-up` again. The script
 builds for your machine's platform; images must match the Kubernetes node's CPU.
 Do not publish into someone else's namespace. See the [Helm guide](../helm/README.md)
 for storage settings and external S3.
@@ -587,6 +641,21 @@ kubectl --context docker-desktop -n rent-cars get events --sort-by=.lastTimestam
 kubectl --context docker-desktop -n rent-cars logs deployment/fleet-api --tail=100
 kubectl --context docker-desktop -n rent-cars logs deployment/fleet-web --tail=100
 ```
+
+After a rental/return, confirm the consumer receipt:
+
+```sh
+kubectl --context docker-desktop -n rent-cars logs deployment/fleet-recommendations --tail=100
+```
+
+Pod readiness alone does not prove Kafka consumption; match an actual event to
+its receipt. The current stopping error handler can stop the listener while the
+JVM remains running. See the [Helm consumer checks](../helm/README.md#verify-the-supporting-consumer).
+
+To use Kubernetes without the event stack, run `make k8s-up KAFKA_ENABLED=false`.
+This disables API publication and omits recommendations; an existing Kafka
+namespace is retained. To keep publication but omit this consumer, set
+`recommendations.enabled: false` in `helm/values.yaml`.
 
 - [ ] Step 13 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
 
@@ -605,7 +674,7 @@ do **not** include it. Each environment needs its own login and record IDs.
 
 ## Step 15: Stop, reset and run checks
 
-For local development, press Ctrl+C in the application terminal, then:
+For local development, press Ctrl+C in the application and optional recommendations terminals, then:
 
 ```sh
 make infra-stop
@@ -637,15 +706,16 @@ To verify code changes, run from the repository root with Docker running and
 frontend dependencies installed:
 
 ```sh
-make check-api
+make check-java
 make check-web
-# Or both:
+make check-infra
+# Or all:
 make check
 ```
 
-Backend checks use isolated Testcontainers databases/storage; frontend checks
+Java checks use isolated Testcontainers databases/storage/Kafka; frontend checks
 run formatting, lint, coverage and build. Reports are in
-`apps/api/target/site/jacoco` and `apps/web/coverage`.
+`apps/api/target/site/jacoco`, `apps/recommendations/target/site/jacoco` and `apps/web/coverage`. Infrastructure checks require Python 3 and Helm and do not publish images or change a cluster.
 
 - [ ] Step 15 complete: I followed the instructions and verified the results before continuing.
 

@@ -49,7 +49,7 @@ docker compose stop recommendations
 
 The profile starts Kafka and the topic initializer as dependencies. Inside Docker, the consumer uses `kafka:19092`. The multi-stage image contains the application and a distroless Java runtime; Maven and the JDK remain in the build stage. Run either the local JVM or the container when learning; running both with the same group splits partitions between them.
 
-This change adds no Kubernetes deployment. The consumer can be deployed independently later with the same group/topic settings and the cluster's reachable Kafka bootstrap address.
+For local Kubernetes, the root Helm chart includes this supporting consumer by default. Publish all images with `./scripts/push-images.sh`, then run `make k8s-up`; it prepares Kafka before deploying the application. Follow the [Helm guide](../../helm/README.md#verify-the-supporting-consumer) to inspect receipt logs and configure image/group settings. There is no public consumer endpoint or Service.
 
 ## Delivery and failures
 

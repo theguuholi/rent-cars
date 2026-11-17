@@ -23,6 +23,7 @@ Run the relevant check from the repository root and inspect the changed files in
 | React (run `make setup` on a fresh checkout) | `make check-web` | `apps/web/coverage/index.html` |
 | Recommendations (Docker running) | `make check-recommendations` | `apps/recommendations/target/site/jacoco/index.html` |
 | All Java | `make check-java` | Both Java reports |
+| Infrastructure (Python 3 + Helm) | `make check-infra` | Test output; Helm/script contracts |
 | Full repository | `make check` | Java and web reports above |
 
 Add tests for missed executable lines and branches. Document any path that cannot be tested reliably using the exception process below. Existing aggregate CI thresholds are a separate merge safeguard. Preserve the configured checks and coverage scope.
