@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: rent-cars-recommendations
+  main:
+    web-application-type: none
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${RECOMMENDATIONS_GROUP_ID:rent-cars-recommendations-v1}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        allow.auto.create.topics: false
+    listener:
+      ack-mode: record
+      missing-topics-fatal: true
+rent:
+  messaging:
+    topic: ${RENT_MESSAGING_TOPIC:rentals.events}

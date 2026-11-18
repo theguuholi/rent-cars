@@ -74,10 +74,9 @@ class RentalPricingTest {
     @ParameterizedTest
     @CsvSource({"-1,100,30", "0,-1,30", "0,100,-1"})
     void givenInvalidInputsWhenCalculatingThenRejectsCharge(long seconds, int daily, int fine) {
-      assertThatThrownBy(
-              () ->
-                  RentalPricing.calculate(
-                      start, start.plusSeconds(86400), start.plusSeconds(seconds), daily, fine))
+      assertThatThrownBy(() ->
+              RentalPricing.calculate(
+                  start, start.plusSeconds(86400), start.plusSeconds(seconds), daily, fine))
           .isInstanceOfSatisfying(
               RentalException.class,
               e -> assertThat(e.reason()).isEqualTo(RentalException.Reason.INVALID_RETURN));
@@ -86,14 +85,9 @@ class RentalPricingTest {
     @Test
     void givenOverflowWhenCalculatingThenRejectsInsteadOfWrapping() {
       var expectedReturn = Instant.MIN.plusSeconds(86400);
-      assertThatThrownBy(
-              () ->
-                  RentalPricing.calculate(
-                      Instant.MIN,
-                      expectedReturn,
-                      Instant.MAX,
-                      Integer.MAX_VALUE,
-                      Integer.MAX_VALUE))
+      assertThatThrownBy(() ->
+              RentalPricing.calculate(
+                  Instant.MIN, expectedReturn, Instant.MAX, Integer.MAX_VALUE, Integer.MAX_VALUE))
           .isInstanceOf(RentalException.class)
           .hasMessageContaining("exceeds");
     }

@@ -62,35 +62,33 @@ class RefreshSessions {
     var locked =
         db.sql(
                 """
-        select s.id,s.account_id,s.expires_at from refresh_sessions s
-        join refresh_tokens t on t.session_id=s.id
-        where t.digest=? and s.expires_at > clock_timestamp() for update of s
-        """)
+                select s.id,s.account_id,s.expires_at from refresh_sessions s
+                join refresh_tokens t on t.session_id=s.id
+                where t.digest=? and s.expires_at > clock_timestamp() for update of s
+                """)
             .param(digest)
-            .query(
-                (rs, n) ->
-                    new Family(
-                        rs.getObject(1, UUID.class),
-                        rs.getObject(2, UUID.class),
-                        rs.getTimestamp(3).toInstant()))
+            .query((rs, n) ->
+                new Family(
+                    rs.getObject(1, UUID.class),
+                    rs.getObject(2, UUID.class),
+                    rs.getTimestamp(3).toInstant()))
             .optional();
-    return locked.flatMap(
-        family -> {
-          // A separate statement sees the winning transaction after waiting for the family lock.
-          if (db.sql("update refresh_tokens set consumed=true where digest=? and not consumed")
-                  .param(digest)
-                  .update()
-              == 0) {
-            revoke(secret);
-            return Optional.empty();
-          }
-          var principal = accounts.findById(family.account()).orElseThrow().principal();
-          return Optional.of(
-              issue(
-                  family,
-                  UsernamePasswordAuthenticationToken.authenticated(
-                      principal, null, principal.getAuthorities())));
-        });
+    return locked.flatMap(family -> {
+      // A separate statement sees the winning transaction after waiting for the family lock.
+      if (db.sql("update refresh_tokens set consumed=true where digest=? and not consumed")
+              .param(digest)
+              .update()
+          == 0) {
+        revoke(secret);
+        return Optional.empty();
+      }
+      var principal = accounts.findById(family.account()).orElseThrow().principal();
+      return Optional.of(
+          issue(
+              family,
+              UsernamePasswordAuthenticationToken.authenticated(
+                  principal, null, principal.getAuthorities())));
+    });
   }
 
   @Transactional

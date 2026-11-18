@@ -29,6 +29,18 @@
 	<properties>
 		<java.version>25</java.version>
 	</properties>
+	<!-- Keep the Logback bridge, SDK and incubating APIs on the same tested release train. -->
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>io.opentelemetry.instrumentation</groupId>
+				<artifactId>opentelemetry-instrumentation-bom-alpha</artifactId>
+				<version>2.33.1-alpha</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -39,6 +51,11 @@
             <artifactId>testcontainers-kafka</artifactId>
             <scope>test</scope>
         </dependency>
+		<dependency>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-sdk-testing</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
@@ -54,7 +71,6 @@
 		<dependency>
 			<groupId>io.opentelemetry.instrumentation</groupId>
 			<artifactId>opentelemetry-logback-appender-1.0</artifactId>
-			<version>2.28.1-alpha</version>
 		</dependency>
 		<dependency>
 			<groupId>com.tngtech.archunit</groupId>
@@ -65,7 +81,7 @@
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>s3</artifactId>
-			<version>2.57.10</version>
+			<version>2.59.0</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-codec</groupId>
@@ -162,7 +178,7 @@
 			<plugin>
 				<groupId>com.diffplug.spotless</groupId>
 				<artifactId>spotless-maven-plugin</artifactId>
-				<version>3.10.4</version>
+				<version>3.11.0</version>
 				<configuration>
 					<java><googleJavaFormat/></java>
 				</configuration>

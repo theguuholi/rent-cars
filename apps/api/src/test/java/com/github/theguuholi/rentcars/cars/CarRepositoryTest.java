@@ -113,30 +113,28 @@ class CarRepositoryTest {
       var id =
           jdbc.queryForObject(
               """
-        insert into cars (name,description,brand,license_plate,category_id,daily_rate_cents,fine_amount_cents)
-        select 'Test','Sedan','Honda','LOCK123',id,100,0 from categories where name='SEDAN'
-        returning id
-        """,
+              insert into cars (name,description,brand,license_plate,category_id,daily_rate_cents,fine_amount_cents)
+              select 'Test','Sedan','Honda','LOCK123',id,100,0 from categories where name='SEDAN'
+              returning id
+              """,
               UUID.class);
       try (var workers = Executors.newVirtualThreadPerTaskExecutor()) {
         Future<Integer> waiting =
-            tx.execute(
-                status -> {
-                  assertThat(cars.findForUpdate(id)).isPresent();
-                  int owner = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
-                  var next =
-                      workers.submit(
-                          () -> jdbc.update("update cars set name='Updated' where id=?", id));
-                  await()
-                      .atMost(Duration.ofSeconds(10))
-                      .until(
-                          () ->
-                              jdbc.queryForObject(
-                                  "select exists (select 1 from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
-                                  Boolean.class,
-                                  owner));
-                  return next;
-                });
+            tx.execute(status -> {
+              assertThat(cars.findForUpdate(id)).isPresent();
+              int owner = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
+              var next =
+                  workers.submit(
+                      () -> jdbc.update("update cars set name='Updated' where id=?", id));
+              await()
+                  .atMost(Duration.ofSeconds(10))
+                  .until(() ->
+                      jdbc.queryForObject(
+                          "select exists (select 1 from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
+                          Boolean.class,
+                          owner));
+              return next;
+            });
         assertThat(waiting.get(10, TimeUnit.SECONDS)).isEqualTo(1);
         assertThat(jdbc.queryForObject("select name from cars where id=?", String.class, id))
             .isEqualTo("Updated");

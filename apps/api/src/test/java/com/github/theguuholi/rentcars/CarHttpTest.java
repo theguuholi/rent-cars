@@ -176,33 +176,29 @@ class CarHttpTest {
     car.putArray("specificationIds").add(gps);
     try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
       var seeded =
-          transactions.execute(
-              status -> {
-                try {
-                  create(car).andExpect(status().isCreated());
-                } catch (Exception failure) {
-                  throw new AssertionError(failure);
-                }
-                int owner = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
-                var worker =
-                    pool.submit(
-                        () ->
-                            transactions.executeWithoutResult(
-                                tx ->
-                                    new ResourceDatabasePopulator(
-                                            new ClassPathResource(
-                                                "db/dev/R__seed_vehicle_specifications_for_cars.sql"))
-                                        .execute(jdbc.getDataSource())));
-                Awaitility.await()
-                    .atMost(Duration.ofSeconds(10))
-                    .until(
-                        () ->
-                            jdbc.queryForObject(
-                                "select exists(select from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
-                                Boolean.class,
-                                owner));
-                return worker;
-              });
+          transactions.execute(status -> {
+            try {
+              create(car).andExpect(status().isCreated());
+            } catch (Exception failure) {
+              throw new AssertionError(failure);
+            }
+            int owner = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
+            var worker =
+                pool.submit(() ->
+                    transactions.executeWithoutResult(tx ->
+                        new ResourceDatabasePopulator(
+                                new ClassPathResource(
+                                    "db/dev/R__seed_vehicle_specifications_for_cars.sql"))
+                            .execute(jdbc.getDataSource())));
+            Awaitility.await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() ->
+                    jdbc.queryForObject(
+                        "select exists(select from pg_stat_activity where ? = any(pg_blocking_pids(pid)))",
+                        Boolean.class,
+                        owner));
+            return worker;
+          });
       seeded.get(15, TimeUnit.SECONDS);
     }
     String location =
@@ -224,40 +220,40 @@ class CarHttpTest {
 
   static Stream<String> invalidInputs() {
     return """
-        null
-        []
-        42
-        {"extra":1}
-        {"id":"12ac672c-89bd-4da2-bdb4-73f3733509ca"}
-        {"insertedAt":"2025-01-01T00:00:00Z"}
-        {"updatedAt":"2025-01-01T00:00:00Z"}
-        {"name":42}
-        {"brand":true}
-        {"description":1.75}
-        {"licensePlate":{}}
-        {"categoryId":"invalid"}
-        {"categoryId":4}
-        {"specificationIds":{}}
-        {"specificationIds":[null]}
-        {"specificationIds":["invalid"]}
-        {"available":"true"}
-        {"available":1}
-        {"dailyRateCents":0.5}
-        {"dailyRateCents":"15050"}
-        {"fineAmountCents":150.9}
-        {"dailyRateCents":2147483648}
-        {"fineAmountCents":"0"}
-        {"fineAmountCents":false}
-        {"name":null}
-        {"description":null}
-        {"brand":null}
-        {"licensePlate":null}
-        {"available":null}
-        {"dailyRateCents":null}
-        {"fineAmountCents":null}
-        {"categoryId":null}
-        {"specificationIds":null}
-        """
+    null
+    []
+    42
+    {"extra":1}
+    {"id":"12ac672c-89bd-4da2-bdb4-73f3733509ca"}
+    {"insertedAt":"2025-01-01T00:00:00Z"}
+    {"updatedAt":"2025-01-01T00:00:00Z"}
+    {"name":42}
+    {"brand":true}
+    {"description":1.75}
+    {"licensePlate":{}}
+    {"categoryId":"invalid"}
+    {"categoryId":4}
+    {"specificationIds":{}}
+    {"specificationIds":[null]}
+    {"specificationIds":["invalid"]}
+    {"available":"true"}
+    {"available":1}
+    {"dailyRateCents":0.5}
+    {"dailyRateCents":"15050"}
+    {"fineAmountCents":150.9}
+    {"dailyRateCents":2147483648}
+    {"fineAmountCents":"0"}
+    {"fineAmountCents":false}
+    {"name":null}
+    {"description":null}
+    {"brand":null}
+    {"licensePlate":null}
+    {"available":null}
+    {"dailyRateCents":null}
+    {"fineAmountCents":null}
+    {"categoryId":null}
+    {"specificationIds":null}
+    """
         .lines();
   }
 
@@ -459,12 +455,11 @@ class CarHttpTest {
         var futures = new java.util.ArrayList<Future<Integer>>();
         for (String plate : List.of("XYZ1234", " xyz1234 ")) {
           futures.add(
-              pool.submit(
-                  () -> {
-                    var payload = input().put("licensePlate", plate);
-                    start.await(10, TimeUnit.SECONDS);
-                    return create(payload).andReturn().getResponse().getStatus();
-                  }));
+              pool.submit(() -> {
+                var payload = input().put("licensePlate", plate);
+                start.await(10, TimeUnit.SECONDS);
+                return create(payload).andReturn().getResponse().getStatus();
+              }));
         }
         assertThat(
                 List.of(

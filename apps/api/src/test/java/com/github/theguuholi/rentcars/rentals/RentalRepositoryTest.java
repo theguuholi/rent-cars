@@ -41,11 +41,9 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
       assertThat(rows).extracting(Rental::id).containsExactly(rental.id());
       assertThat(rows.getFirst())
           .extracting("car")
-          .satisfies(
-              value ->
-                  assertThat(
-                          ((com.github.theguuholi.rentcars.cars.Car) value).rentalDailyRateCents())
-                      .isEqualTo(10000));
+          .satisfies(value ->
+              assertThat(((com.github.theguuholi.rentcars.cars.Car) value).rentalDailyRateCents())
+                  .isEqualTo(10000));
     }
   }
 
@@ -54,12 +52,11 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
     @Test
     void givenOwnerWhenLockingThenHidesForeignAndUnknownRentals() {
       var rental = service.create(owner, carId, NOW.plusSeconds(86400));
-      tx.executeWithoutResult(
-          s -> {
-            assertThat(repository.findForReturn(rental.id(), owner)).isPresent();
-            assertThat(repository.findForReturn(rental.id(), other)).isEmpty();
-            assertThat(repository.findForReturn(UUID.randomUUID(), owner)).isEmpty();
-          });
+      tx.executeWithoutResult(s -> {
+        assertThat(repository.findForReturn(rental.id(), owner)).isPresent();
+        assertThat(repository.findForReturn(rental.id(), other)).isEmpty();
+        assertThat(repository.findForReturn(UUID.randomUUID(), owner)).isEmpty();
+      });
     }
   }
 
@@ -91,12 +88,11 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
             """);
         assertThatThrownBy(() -> service.create(owner, carId, expectedReturn))
             .hasRootCauseInstanceOf(PSQLException.class)
-            .satisfies(
-                error -> {
-                  var postgres = (PSQLException) NestedExceptionUtils.getMostSpecificCause(error);
-                  assertThat(postgres.getSQLState()).isEqualTo("P0001");
-                  assertThat(postgres.getMessage()).contains("Simulated failure after both writes");
-                });
+            .satisfies(error -> {
+              var postgres = (PSQLException) NestedExceptionUtils.getMostSpecificCause(error);
+              assertThat(postgres.getSQLState()).isEqualTo("P0001");
+              assertThat(postgres.getMessage()).contains("Simulated failure after both writes");
+            });
       } finally {
         jdbc.execute("DROP TRIGGER IF EXISTS fail_rental_commit ON rentals");
         jdbc.execute("DROP FUNCTION fail_rental_commit()");
@@ -117,31 +113,28 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
     @Test
     void givenFlushedWritesWhenRuntimeFailureEscapesThenOtherConnectionsNeverSeePartialState() {
       var expectedReturn = NOW.plusSeconds(86400);
-      assertThatThrownBy(
-              () ->
-                  tx.executeWithoutResult(
-                      status -> {
-                        var saved = service.create(owner, carId, expectedReturn);
-                        assertThat(available(carId)).isFalse();
-                        assertThat(repository.existsById(saved.id())).isTrue();
-                        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-                          var observed =
-                              CompletableFuture.runAsync(
-                                  () -> {
-                                    assertThat(available(carId)).isTrue();
-                                    assertThat(
-                                            jdbc.queryForObject(
-                                                "select count(*) from rentals where id=?",
-                                                Integer.class,
-                                                saved.id()))
-                                        .isZero();
-                                  },
-                                  executor);
-                          observed.orTimeout(5, TimeUnit.SECONDS).join();
-                        }
-                        throw new IllegalStateException(
-                            "Simulated application failure after flush");
-                      }))
+      assertThatThrownBy(() ->
+              tx.executeWithoutResult(status -> {
+                var saved = service.create(owner, carId, expectedReturn);
+                assertThat(available(carId)).isFalse();
+                assertThat(repository.existsById(saved.id())).isTrue();
+                try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+                  var observed =
+                      CompletableFuture.runAsync(
+                          () -> {
+                            assertThat(available(carId)).isTrue();
+                            assertThat(
+                                    jdbc.queryForObject(
+                                        "select count(*) from rentals where id=?",
+                                        Integer.class,
+                                        saved.id()))
+                                .isZero();
+                          },
+                          executor);
+                  observed.orTimeout(5, TimeUnit.SECONDS).join();
+                }
+                throw new IllegalStateException("Simulated application failure after flush");
+              }))
           .isInstanceOf(IllegalStateException.class)
           .hasMessage("Simulated application failure after flush");
       assertThat(available(carId)).isTrue();
@@ -261,13 +254,11 @@ class RentalRepositoryTest extends RentalIntegrationSupport {
       assertThatThrownBy(write)
           .isInstanceOf(DataIntegrityViolationException.class)
           .hasRootCauseInstanceOf(PSQLException.class)
-          .satisfies(
-              error -> {
-                var postgresError = (PSQLException) error.getCause();
-                assertThat(postgresError.getSQLState()).isEqualTo(state);
-                assertThat(postgresError.getServerErrorMessage().getConstraint())
-                    .isEqualTo(constraint);
-              });
+          .satisfies(error -> {
+            var postgresError = (PSQLException) error.getCause();
+            assertThat(postgresError.getSQLState()).isEqualTo(state);
+            assertThat(postgresError.getServerErrorMessage().getConstraint()).isEqualTo(constraint);
+          });
     }
   }
 }

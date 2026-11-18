@@ -54,9 +54,9 @@ class CarQueryCountTest {
       var id =
           jdbc.queryForObject(
               """
-          insert into cars(name,description,brand,license_plate,category_id,daily_rate_cents,fine_amount_cents)
-          select ?, 'Query lab', 'QueryLab', ?, id, 10000, 0 from categories where name='SEDAN' returning id
-          """,
+              insert into cars(name,description,brand,license_plate,category_id,daily_rate_cents,fine_amount_cents)
+              select ?, 'Query lab', 'QueryLab', ?, id, 10000, 0 from categories where name='SEDAN' returning id
+              """,
               UUID.class,
               "Query car " + n,
               "QUERYLAB" + n);
@@ -94,25 +94,24 @@ class CarQueryCountTest {
                 "QUERYCAT" + n);
         jdbc.update("update cars set category_id=? where id=?", category, ids.get(n));
       }
-      tx.executeWithoutResult(
-          status -> {
-            statistics.clear();
-            var page =
-                cars.search(
-                    false,
-                    "%",
-                    "%querylab%",
-                    "%",
-                    org.springframework.data.domain.PageRequest.of(
-                        0, 6, org.springframework.data.domain.Sort.by("name", "id")));
-            assertThat(statistics.getPrepareStatementCount()).isEqualTo(3);
-            for (var car : page) {
-              assertThat(factory.getPersistenceUnitUtil().isLoaded(car, "category")).isFalse();
-              org.hibernate.Hibernate.initialize(
-                  org.springframework.test.util.ReflectionTestUtils.getField(car, "category"));
-            }
-            assertThat(statistics.getPrepareStatementCount()).isEqualTo(9);
-          });
+      tx.executeWithoutResult(status -> {
+        statistics.clear();
+        var page =
+            cars.search(
+                false,
+                "%",
+                "%querylab%",
+                "%",
+                org.springframework.data.domain.PageRequest.of(
+                    0, 6, org.springframework.data.domain.Sort.by("name", "id")));
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(3);
+        for (var car : page) {
+          assertThat(factory.getPersistenceUnitUtil().isLoaded(car, "category")).isFalse();
+          org.hibernate.Hibernate.initialize(
+              org.springframework.test.util.ReflectionTestUtils.getField(car, "category"));
+        }
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(9);
+      });
     }
 
     @Test
@@ -165,31 +164,29 @@ class CarQueryCountTest {
   class CollectionPagination {
     @Test
     void givenCollectionRowsWhenPaginatingThenHibernateLimitsCarsInsteadOfJoinedRows() {
-      tx.executeWithoutResult(
-          status -> {
-            var joinedIds =
-                jdbc.queryForList(
-                    """
-            select c.id from cars c join cars_specifications s on s.car_id=c.id
-            where c.brand='QueryLab' order by c.name,c.id limit 2
-            """,
-                    UUID.class);
-            assertThat(joinedIds).containsExactly(ids.getFirst(), ids.getFirst());
-            var page =
-                entityManager
-                    .createQuery(
-                        "select c from Car c left join fetch c.specifications where c.brand=:brand order by c.name,c.id",
-                        Car.class)
-                    .setParameter("brand", "QueryLab")
-                    .setMaxResults(2)
-                    .getResultList();
-            assertThat(page).extracting(Car::id).containsExactly(ids.get(0), ids.get(1));
-            assertThat(page)
-                .allSatisfy(
-                    car ->
-                        assertThat(factory.getPersistenceUnitUtil().isLoaded(car, "specifications"))
-                            .isTrue());
-          });
+      tx.executeWithoutResult(status -> {
+        var joinedIds =
+            jdbc.queryForList(
+                """
+                select c.id from cars c join cars_specifications s on s.car_id=c.id
+                where c.brand='QueryLab' order by c.name,c.id limit 2
+                """,
+                UUID.class);
+        assertThat(joinedIds).containsExactly(ids.getFirst(), ids.getFirst());
+        var page =
+            entityManager
+                .createQuery(
+                    "select c from Car c left join fetch c.specifications where c.brand=:brand order by c.name,c.id",
+                    Car.class)
+                .setParameter("brand", "QueryLab")
+                .setMaxResults(2)
+                .getResultList();
+        assertThat(page).extracting(Car::id).containsExactly(ids.get(0), ids.get(1));
+        assertThat(page)
+            .allSatisfy(car ->
+                assertThat(factory.getPersistenceUnitUtil().isLoaded(car, "specifications"))
+                    .isTrue());
+      });
     }
   }
 }

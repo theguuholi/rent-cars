@@ -99,11 +99,10 @@ class CarImageHttpTest {
   MockMultipartHttpServletRequestBuilder upload(String location, MockMultipartFile... files) {
     var request = multipart(location + "/images");
     for (var file : files) request.file(file);
-    request.with(
-        req -> {
-          req.setMethod("PATCH");
-          return req;
-        });
+    request.with(req -> {
+      req.setMethod("PATCH");
+      return req;
+    });
     return request;
   }
 
@@ -295,25 +294,22 @@ class CarImageHttpTest {
         "Given a commit failure after upload, when rolling back, then new image rows and files are removed")
     void failedCommit() throws Exception {
       String location = created();
-      assertThatThrownBy(
-              () ->
-                  transactions.executeWithoutResult(
-                      status -> {
-                        try {
-                          mvc.perform(
-                                  upload(location, new MockMultipartFile("images", image("png"))))
-                              .andExpect(status().isCreated());
-                        } catch (Exception e) {
-                          throw new AssertionError(e);
-                        }
-                        TransactionSynchronizationManager.registerSynchronization(
-                            new TransactionSynchronization() {
-                              @Override
-                              public void beforeCommit(boolean readOnly) {
-                                throw new IllegalStateException("Commit rejected");
-                              }
-                            });
-                      }))
+      assertThatThrownBy(() ->
+              transactions.executeWithoutResult(status -> {
+                try {
+                  mvc.perform(upload(location, new MockMultipartFile("images", image("png"))))
+                      .andExpect(status().isCreated());
+                } catch (Exception e) {
+                  throw new AssertionError(e);
+                }
+                TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                      @Override
+                      public void beforeCommit(boolean readOnly) {
+                        throw new IllegalStateException("Commit rejected");
+                      }
+                    });
+              }))
           .isInstanceOf(IllegalStateException.class)
           .hasMessage("Commit rejected");
       assertThat(jdbc.queryForObject("select count(*) from cars_images", Long.class)).isZero();
@@ -359,15 +355,14 @@ class CarImageHttpTest {
     void rollback() throws Exception {
       String location = uploaded();
       String id = firstImage(location);
-      transactions.executeWithoutResult(
-          status -> {
-            try {
-              mvc.perform(delete(location + "/images/" + id)).andExpect(status().isNoContent());
-            } catch (Exception e) {
-              throw new AssertionError(e);
-            }
-            status.setRollbackOnly();
-          });
+      transactions.executeWithoutResult(status -> {
+        try {
+          mvc.perform(delete(location + "/images/" + id)).andExpect(status().isNoContent());
+        } catch (Exception e) {
+          throw new AssertionError(e);
+        }
+        status.setRollbackOnly();
+      });
       mvc.perform(get(location).param("imageId", id)).andExpect(status().isOk());
     }
 
@@ -396,11 +391,10 @@ class CarImageHttpTest {
       mvc.perform(
               get(location)
                   .param("imageId", id)
-                  .with(
-                      req -> {
-                        req.removeHeader("Authorization");
-                        return req;
-                      }))
+                  .with(req -> {
+                    req.removeHeader("Authorization");
+                    return req;
+                  }))
           .andExpect(status().isOk());
       mvc.perform(get(location).param("imageId", UUID.randomUUID().toString()))
           .andExpect(status().isNotFound());
@@ -460,19 +454,17 @@ class CarImageHttpTest {
       String id = firstImage(location);
       mvc.perform(
               upload(location, new MockMultipartFile("images", image("png")))
-                  .with(
-                      req -> {
-                        req.removeHeader("Authorization");
-                        return req;
-                      }))
+                  .with(req -> {
+                    req.removeHeader("Authorization");
+                    return req;
+                  }))
           .andExpect(status().isUnauthorized());
       mvc.perform(
               delete(location + "/images/" + id)
-                  .with(
-                      req -> {
-                        req.removeHeader("Authorization");
-                        return req;
-                      }))
+                  .with(req -> {
+                    req.removeHeader("Authorization");
+                    return req;
+                  }))
           .andExpect(status().isUnauthorized());
       var now = Instant.now();
       String token =

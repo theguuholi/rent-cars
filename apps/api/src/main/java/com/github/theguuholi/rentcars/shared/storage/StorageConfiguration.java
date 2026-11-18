@@ -32,10 +32,9 @@ class StorageConfiguration {
             .region(Region.of(properties.s3().region()))
             .credentialsProvider(credentials)
             .forcePathStyle(properties.s3().pathStyle())
-            .overrideConfiguration(
-                c ->
-                    c.apiCallTimeout(Duration.ofSeconds(30))
-                        .apiCallAttemptTimeout(Duration.ofSeconds(10)));
+            .overrideConfiguration(c ->
+                c.apiCallTimeout(Duration.ofSeconds(30))
+                    .apiCallAttemptTimeout(Duration.ofSeconds(10)));
     if (properties.s3().endpoint() != null) {
       builder.endpointOverride(properties.s3().endpoint());
     }
