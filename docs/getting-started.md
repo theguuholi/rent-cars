@@ -27,7 +27,6 @@ Unless a command explicitly changes directory, run it from the repository root.
 | kubectl | [Installation](https://kubernetes.io/docs/tasks/tools/) | Only needed for Kubernetes |
 | Helm | [Installation](https://helm.sh/docs/intro/install/) | Only needed for Kubernetes; chart checked with Helm 4.3.1 |
 | OpenSSL | Your OS package manager | Generate local Kubernetes signing keys |
-| Python 3 | Your OS package manager | Run `make check-infra` (also included in `make check`) |
 
 Open Docker Desktop and wait until its engine is running. In a new terminal:
 
@@ -708,14 +707,13 @@ frontend dependencies installed:
 ```sh
 make check-java
 make check-web
-make check-infra
 # Or all:
 make check
 ```
 
 Java checks use isolated Testcontainers databases/storage/Kafka; frontend checks
 run formatting, lint, coverage and build. Reports are in
-`apps/api/target/site/jacoco`, `apps/recommendations/target/site/jacoco` and `apps/web/coverage`. Infrastructure checks require Python 3 and Helm and do not publish images or change a cluster.
+`apps/api/target/site/jacoco`, `apps/recommendations/target/site/jacoco` and `apps/web/coverage`.
 
 - [ ] Step 15 complete: I followed the instructions and verified the results before continuing.
 

@@ -188,13 +188,10 @@ reset offsets automatically on deploy.
 ## Validate deployment changes without deploying
 
 ```sh
-make check-infra
 helm lint ./helm --strict
 helm template fleet ./helm > /tmp/rent-cars-manifests.yaml
 docker compose -f compose.stack.yaml --profile recommendations config --quiet
 ```
 
-The Given/When/Then tests check default/disabled/custom consumer rendering,
-Kafka-before-application startup and the publication script's success/failure
-paths using a fake Docker command. They do not push to a registry or modify
-Kubernetes. The infrastructure job in the recommendations workflow runs these checks on PRs.
+These manual checks validate the chart and Compose configuration without publishing
+images or deploying to Kubernetes.

@@ -72,7 +72,7 @@ To recover, inspect the failing partition/offset, correct the consumer or upstre
 
 ## Quality checks
 
-The existing Java harness applies here, including Given/When/Then tests, Spotless, JaCoCo, PIT and the repository's Sonar quality gate. No quality threshold is lowered.
+The existing Java harness applies here, including Given/When/Then tests, Spotless, JaCoCo, PIT and this application's Sonar quality gate. No quality threshold is lowered.
 
 ```sh
 make check-recommendations  # Formatting, unit/integration tests, coverage and packaging
@@ -87,4 +87,24 @@ Reports: `apps/recommendations/target/site/jacoco/index.html` and `apps/recommen
 
 There is no root POM. API and recommendations each own their Spring Boot parent, Maven Wrapper, build and Docker context. `make check-java` is only a convenience target that invokes both builds. Keep quality plugin versions aligned.
 
-CI files use `api-*`, `frontend-*` and `recommendations-*` prefixes, with quality and mutation separated for each application. This application has its own verification, PIT and infrastructure jobs, and a separate Sonar project selected by `SONAR_RECOMMENDATIONS_PROJECT_KEY`. On first use the workflow provisions it in the existing organization and binds the API quality gate and profiles, using `SONAR_TOKEN`; the token needs project creation/administration rights. The API project and its policy are not changed.
+CI quality and mutation steps live in .github/actions/recommendations/.
+The root workflow orchestrates independent application jobs. Recommendations runs
+its own Maven Wrapper directly; it does not build the API or frontend.
+
+### Sonar setup
+
+Create the recommendations project in Sonar before its first analysis. Configure
+its quality gate and quality profiles there, independently of the API. CI only
+submits the analysis and waits for this project's gate; it does not provision
+projects or copy another application's policy.
+
+GitHub Actions settings:
+
+- Variable SONAR_RECOMMENDATIONS_PROJECT_KEY: this consumer's Sonar project key.
+- Variable SONAR_ORGANIZATION: organization containing that project.
+- Secret SONAR_TOKEN: token authorized to execute analysis on this project.
+
+The API uses its own SONAR_PROJECT_KEY. Recommendations does not read that key.
+A shared organization or authorized token does not combine the analyses.
+Fork and Dependabot PRs still run Maven verification; Sonar runs only when the
+workflow can access the analysis credential.

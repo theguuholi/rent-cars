@@ -1,0 +1,29 @@
+name: API mutation
+description: Run api mutation checks and publish their reports.
+inputs:
+  package-name:
+    description: Package name used to identify the PIT report.
+    required: true
+  targets:
+    description: Production classes assigned to this PIT shard.
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+      with:
+        distribution: temurin
+        java-version: '25'
+        cache: maven
+        cache-dependency-path: apps/api/pom.xml
+    - name: Mutate this package using the full API test suite
+      shell: bash
+      working-directory: apps/api
+      env:
+        MUTATION_TARGETS: ${{ inputs.targets }}
+      run: ./mvnw -B -Pmutation -DtargetClasses="$MUTATION_TARGETS" test-compile org.pitest:pitest-maven:mutationCoverage
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: pitest-api-${{ inputs.package-name }}
+        path: apps/api/target/pit-reports/
+        if-no-files-found: error

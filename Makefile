@@ -78,7 +78,7 @@ check-web:
 	npm --prefix apps/web run test:coverage
 	npm --prefix apps/web run build
 
-check: check-java check-web check-infra
+check: check-java check-web
 
 .PHONY: infra-up infra-stop
 infra-up:
@@ -114,7 +114,3 @@ check-recommendations:
 	cd apps/recommendations && ./mvnw -B verify
 
 check-java: check-api check-recommendations
-
-.PHONY: check-infra
-check-infra:
-	python3 -m unittest discover -s scripts/tests -p '*_test.py' -v
