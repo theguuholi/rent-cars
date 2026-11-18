@@ -1,4 +1,6 @@
 api:
+  service:
+    type: LoadBalancer
   image:
     repository: docker.io/guuhworship/rent-cars-api
     tag: latest
@@ -15,7 +17,7 @@ api:
 web:
   service:
     type: LoadBalancer
-    port: 8082
+    port: 5173
   image:
     repository: docker.io/guuhworship/rent-cars-web
     tag: latest
@@ -58,6 +60,8 @@ s3Emulator:
       memory: 512Mi
 
 mailpit:
+  service:
+    type: LoadBalancer
   image: axllent/mailpit:v1.32.0
   resources:
     requests:
@@ -68,6 +72,8 @@ mailpit:
 
 # Local-only Grafana LGTM (Prometheus, Tempo, Loki and OTLP collector).
 observability:
+  service:
+    type: LoadBalancer
   enabled: true
   image: grafana/otel-lgtm:0.37.0
   storage: 2Gi
@@ -80,7 +86,7 @@ observability:
 
 mail:
   from: no-reply@rent-cars.local
-  webBaseUrl: http://localhost:8082
+  webBaseUrl: http://localhost:5173
 
 storage:
   bucket: rent-cars-images

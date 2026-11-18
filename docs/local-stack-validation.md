@@ -100,9 +100,9 @@ helm upgrade --install fleet ./helm -n rent-cars --wait --timeout 6m \
   --set-string api.image.tag="$TAG" --set-string web.image.tag="$TAG"
 kubectl get pods,pvc -n rent-cars
 helm test fleet -n rent-cars --logs
-kubectl port-forward -n rent-cars svc/fleet-web 8082:8080
+kubectl --context docker-desktop -n rent-cars get services
 ```
 
-Open [the Kubernetes web app](http://localhost:8082) in a separate browser profile or private session. Cookies on localhost can be shared across ports. Sign in, reload and check for a successful refresh. Sign out and confirm a protected route redirects to login. Unlike local development with generated keys, this chart mounts a persistent JWT key. Restarting the API consequently preserves a valid JWT. Plain HTTP testing is intended for localhost: access via a non-loopback hostname requires HTTPS for secure cookies and Web Locks.
+Open [the Kubernetes web app](http://localhost:5173) in a separate browser profile or private session. Cookies on localhost can be shared across ports. Sign in, reload and check for a successful refresh. Sign out and confirm a protected route redirects to login. Unlike local development with generated keys, this chart mounts a persistent JWT key. Restarting the API consequently preserves a valid JWT. Plain HTTP testing is intended for localhost: access via a non-loopback hostname requires HTTPS for secure cookies and Web Locks.
 
 Stop port forwarding with Ctrl+C. Stop the local application terminals and use `make infra-stop` to stop infrastructure while keeping its data. To remove the Kubernetes release, run `helm uninstall fleet -n rent-cars`. Deleting the dedicated kind cluster also deletes its database.

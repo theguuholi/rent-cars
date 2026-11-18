@@ -565,22 +565,17 @@ helm test fleet --kube-context docker-desktop -n rent-cars --logs
 ```
 
 The command first prepares Strimzi, Kafka and the rental topic in `rent-kafka`. Expect the API, web, recommendations, PostgreSQL, SeaweedFS, Mailpit and Grafana LGTM pods to become ready and their
-persistent claims to be bound. Open React at **http://localhost:8082** and choose
-**k8s** in HTTP Yac. Its API base URL is **http://localhost:8082/api**. Repeat the
+persistent claims to be bound. Open React at **http://localhost:5173** and choose
+**k8s** in HTTP Yac. Its API base URL is **http://localhost:8080**. Repeat the
 same numbered HTTP Yac walkthrough with fresh logins and IDs.
 
 To inspect Kubernetes metrics, traces and logs in Grafana, follow
-[Verify observability](../helm/README.md#verify-observability). Forward
-`svc/fleet-observability` to local port 3001, then check the API in Tempo,
+[Verify observability](../helm/README.md#verify-observability). Open
+Grafana at `http://localhost:3000`, then check the API in Tempo,
 Prometheus and Loki. Browser traces are available in the `make dev` workflow;
 the published React image does not export them.
 
-For the password-recovery inbox examples, keep this command running in a second
-terminal while sending `password-recovery.http`:
-
-```sh
-kubectl --context docker-desktop -n rent-cars port-forward svc/fleet-mailpit 8025:8025
-```
+For the password-recovery inbox examples, open http://localhost:8025 while sending `password-recovery.http`. No port forwarding is needed.
 
 ```sh
 # From requests/http:
@@ -638,7 +633,7 @@ namespace is retained. To keep publication but omit this consumer, set
 | Mode | React | HTTP Yac API base URL | Database and photos |
 | --- | --- | --- | --- |
 | `make dev` | `http://localhost:5173` | `http://localhost:8080` (`local`) | Development Compose volumes |
-| Docker Desktop Kubernetes | `http://localhost:8082` | `http://localhost:8082/api` (`k8s`) | PVCs in `rent-cars` |
+| Docker Desktop Kubernetes | `http://localhost:5173` | `http://localhost:8080` (`k8s`) | PVCs in `rent-cars` |
 
 The `/api` prefix belongs to the web proxy. Direct Spring requests on port 8080
 do **not** include it. Each environment needs its own login and record IDs.

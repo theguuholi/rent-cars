@@ -91,7 +91,7 @@ Choose one path first. Each environment has its own database, photo storage and 
 | Mode | Startup | React | Supporting consumer |
 | --- | --- | --- | --- |
 | Daily development | `make dev` | http://localhost:5173 | Start separately with `make recommendations-dev` |
-| Local Kubernetes | Publish images, then `make k8s-up` | http://localhost:8082 | Included by default, with Kafka prepared first |
+| Local Kubernetes | Publish images, then `make k8s-up` | http://localhost:5173 | Included by default, with Kafka prepared first |
 
 For the optional local consumer, follow [onboarding step 12](docs/getting-started.md#step-12-run-the-supporting-consumer-locally). For Kubernetes, follow [step 13](docs/getting-started.md#step-13-alternative-docker-desktop-kubernetes) and the [Helm guide](helm/README.md). Kubernetes is a local deployment exercise, not a production-ready environment.
 
@@ -186,3 +186,5 @@ For local development, press Ctrl+C in both the application and optional consume
 - [Kafka](docs/kafka.md) and [consumer](apps/recommendations/README.md): outbox, delivery, offsets and independent processing.
 - [Observability](docs/observability.md): logs, metrics and traces.
 - [API storage](apps/api/README.md#s3-configuration): local S3 and external bucket configuration.
+
+Use only one environment at a time. See [switching environments](helm/README.md#switch-between-local-development-and-kubernetes) for the safe stop/start commands and shared ports.

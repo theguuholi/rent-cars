@@ -42,7 +42,7 @@ Open **http://localhost:8084** → `rent-cars-local` → Topics → `rentals.eve
 
 ### Read, publish and resend messages
 
-After updating the configuration, recreate the UI with `make kafka-ui`. For Kubernetes, apply `kubectl --context docker-desktop -n rent-kafka apply -f deploy/kafka/ui-local.yaml` and wait for `kubectl --context docker-desktop -n rent-kafka rollout status deployment/kafka-ui`.
+After updating the configuration, recreate the UI with `make kafka-ui`. For Kubernetes, apply `kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/ui-local.yaml` and wait for `kubectl --context docker-desktop -n rent-kafka rollout status deployment/kafka-ui`.
 
 1. Open `rentals.events` → **Messages**, select the earliest offset to inspect retained messages, and start browsing. Expand a row to inspect its key and JSON value.
 2. To publish, use **Produce Message**, set the key to the rental UUID and paste a valid rental-event JSON value. Keep the key and `rentalId` consistent.
@@ -148,7 +148,7 @@ kubectl --context docker-desktop -n rent-kafka exec -it rent-combined-0 -- \
 For the browser UI (stop the Compose UI first to free 8084):
 
 ```sh
-kubectl --context docker-desktop -n rent-kafka apply -f deploy/kafka/ui-local.yaml
+kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/ui-local.yaml
 kubectl --context docker-desktop -n rent-kafka rollout status deployment/kafka-ui --timeout=180s
 kubectl --context docker-desktop -n rent-kafka get service kafka-ui
 ```
