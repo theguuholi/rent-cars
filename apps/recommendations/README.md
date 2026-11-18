@@ -36,18 +36,16 @@ RECOMMENDATIONS_GROUP_ID=rent-cars-recommendations-study ./mvnw spring-boot:run
 
 If you change the Compose host Kafka port, also set `KAFKA_BOOTSTRAP_SERVERS=localhost:<port>` when running the JVM locally. Instances sharing a group divide partitions; distinct groups each receive their own stream.
 
-## Run in Docker
+## Local runtime and deployment image
 
-Use the existing root Compose file:
+Run this application on the host with `make recommendations-dev`.
+The root `compose.yaml` runs infrastructure only; Kafka is available to the local
+JVM at `localhost:9092`. Recommendations does not need the API or frontend to
+start; it can consume retained events while they are stopped.
 
-```sh
-docker compose --profile recommendations up -d --build recommendations
-docker compose logs -f recommendations
-# Stop only this consumer, preserving Kafka and its data.
-docker compose stop recommendations
-```
-
-The profile starts Kafka and the topic initializer as dependencies. Inside Docker, the consumer uses `kafka:19092`. The multi-stage image contains the application and a distroless Java runtime; Maven and the JDK remain in the build stage. Run either the local JVM or the container when learning; running both with the same group splits partitions between them.
+The Dockerfile remains available for Kubernetes deployment. Its multi-stage
+image contains the application and a distroless Java runtime; Maven and the JDK
+remain in the build stage.
 
 For local Kubernetes, the root Helm chart includes this supporting consumer by default. Publish all images with `./scripts/push-images.sh`, then run `make k8s-up`; it prepares Kafka before deploying the application. Follow the [Helm guide](../../helm/README.md#verify-the-supporting-consumer) to inspect receipt logs and configure image/group settings. There is no public consumer endpoint or Service.
 

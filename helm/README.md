@@ -190,7 +190,7 @@ reset offsets automatically on deploy.
 ```sh
 helm lint ./helm --strict
 helm template fleet ./helm > /tmp/rent-cars-manifests.yaml
-docker compose -f compose.stack.yaml --profile recommendations config --quiet
+docker compose --profile kafka-ui config --quiet
 ```
 
 These manual checks validate the chart and Compose configuration without publishing

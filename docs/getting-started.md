@@ -164,7 +164,7 @@ For the exact queries, browser tracing test and production configuration, see
    workspace (Extensions → REST Client → gear → Disable (Workspace)).
 3. Local is the default (`http://localhost:8080`), even without an environment
    selected. For another deployment, use **httpyac: Select Environment** and
-   choose `compose` or `k8s` from `http-client.env.json`.
+   choose `k8s` from `http-client.env.json`.
 4. Send requests manually in the order below. Check each response before moving
    to the next request. You can switch files and tabs without copying tokens.
 
@@ -353,9 +353,8 @@ while the example driver still exists. Keep the browser and HTTP Yac open.
 The link expires after 30 minutes and only its hash is kept in PostgreSQL.
 Requesting another link replaces the earlier one. If you use the sample driver
 again in Step 5 or the HTTP Yac smoke flow, restore its original password by
-requesting a new reset link or register a different driver. In Compose, use the
-Mailpit inbox at http://localhost:8026 and select the `compose` HTTP Yac
-environment. In Kubernetes, forward `svc/fleet-mailpit` as shown below.
+requesting a new reset link or register a different driver. Local development uses
+the Mailpit inbox at http://localhost:8025 and the `local` HTTP Yac environment. In Kubernetes, forward `svc/fleet-mailpit` as shown below.
 
 - [ ] Step 9a complete: I requested, opened and used a reset link, then verified that it cannot be reused.
 
@@ -521,50 +520,26 @@ for another API host, set `RENT_CARS_API_URL`; for another Mailpit inbox, set
 
 - [ ] Step 11 complete: I ran the public API and all twelve browser journeys and checked that they passed.
 
-## Step 12: Alternative: run everything in containers
+## Step 12: Run the supporting consumer locally
 
-You can skip running Java and React on the host in this mode. Docker builds both
-applications using their Dockerfiles; host Node is only needed for HTTP Yac CLI.
-From the repository root:
+Keep `make dev` running for the API and React. In another terminal:
 
 ```sh
-docker compose -f compose.stack.yaml up --build -d --wait
-docker compose -f compose.stack.yaml ps
-curl -i http://localhost:8081/api/cars
+make recommendations-dev
 ```
 
-Open React at **http://localhost:8081** and the email inbox at
-**http://localhost:8026**. Select `compose` with
-**httpyac: Select Environment**, or use the CLI:
+This starts Kafka and initializes the topic if needed, then runs the consumer
+with its Maven Wrapper on your machine. It does not build an application image.
+If you already completed Step 9b and the consumer is running, reuse that terminal.
 
-```sh
-cd requests/http
-npx --yes httpyac@6.16.7 send auth.http categories.http specifications.http cars.http car-images.http rentals.http --tag smoke --bail --output short --env compose
-```
+Rent or return a car and look for `Rental event received` in the consumer
+terminal. Inspect the event and consumer group at http://localhost:8084.
 
-To include the supporting consumer in this same container environment:
+All application processes run locally: React on port 5173, the API on port 8080
+and recommendations without an HTTP port. Docker Compose runs only PostgreSQL,
+storage, email, observability and Kafka infrastructure.
 
-```sh
-docker compose -f compose.stack.yaml --profile recommendations up --build -d --wait
-docker compose -f compose.stack.yaml logs -f recommendations
-```
-
-Use the `compose` rental flow, then expect `Rental event received` in these logs.
-Do not start `make recommendations-dev` against a different environment's broker
-and expect it to see this stack's events.
-
-Compose has its **own database and photo volumes**. Records created in host
-local development will not appear here. Repeat the HTTP Yac logins/setup rather
-than reusing IDs or tokens from the other environment.
-
-Inspect startup failures with:
-
-```sh
-# Repository root:
-docker compose -f compose.stack.yaml logs --tail=100 api web postgres s3 mailpit
-```
-
-- [ ] Step 12 complete: I executed and verified this optional workflow, or intentionally skipped it for my chosen setup.
+- [ ] Step 12 complete: I ran the local consumer and observed a rental event, or intentionally skipped this optional service.
 
 ## Step 13: Alternative: Docker Desktop Kubernetes
 
@@ -663,7 +638,6 @@ namespace is retained. To keep publication but omit this consumer, set
 | Mode | React | HTTP Yac API base URL | Database and photos |
 | --- | --- | --- | --- |
 | `make dev` | `http://localhost:5173` | `http://localhost:8080` (`local`) | Development Compose volumes |
-| Full Compose | `http://localhost:8081` | `http://localhost:8081/api` (override) | Separate stack volumes |
 | Docker Desktop Kubernetes | `http://localhost:8082` | `http://localhost:8082/api` (`k8s`) | PVCs in `rent-cars` |
 
 The `/api` prefix belongs to the web proxy. Direct Spring requests on port 8080
@@ -679,19 +653,8 @@ For local development, press Ctrl+C in the application and optional recommendati
 make infra-stop
 ```
 
-For the all-container stack:
-
-```sh
-docker compose -f compose.stack.yaml down
-```
-
-Both preserve data volumes. To deliberately reset **only** the full Compose stack:
-
-```sh
-# DESTRUCTIVE: deletes that stack's database and uploaded photos.
-docker compose -f compose.stack.yaml down -v
-docker compose -f compose.stack.yaml up --build -d --wait
-```
+This preserves local infrastructure volumes. Application processes are stopped
+in their own terminals; restarting them does not require building Docker images.
 
 For Kubernetes, the provided down command is a **reset**, not a data-preserving pause:
 

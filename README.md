@@ -91,10 +91,9 @@ Choose one path first. Each environment has its own database, photo storage and 
 | Mode | Startup | React | Supporting consumer |
 | --- | --- | --- | --- |
 | Daily development | `make dev` | http://localhost:5173 | Start separately with `make recommendations-dev` |
-| All containers | `docker compose -f compose.stack.yaml up --build -d --wait` | http://localhost:8081 | Add `--profile recommendations` before `up` to include it |
 | Local Kubernetes | Publish images, then `make k8s-up` | http://localhost:8082 | Included by default, with Kafka prepared first |
 
-For containers and Kubernetes, follow [onboarding steps 12–13](docs/getting-started.md#step-12-alternative-run-everything-in-containers) and the [Helm guide](helm/README.md). Kubernetes is a local deployment exercise, not a production-ready environment.
+For the optional local consumer, follow [onboarding step 12](docs/getting-started.md#step-12-run-the-supporting-consumer-locally). For Kubernetes, follow [step 13](docs/getting-started.md#step-13-alternative-docker-desktop-kubernetes) and the [Helm guide](helm/README.md). Kubernetes is a local deployment exercise, not a production-ready environment.
 
 ### Publish all application images
 
@@ -117,7 +116,7 @@ Follow the [developer walkthrough](docs/project-walkthrough.md) to trace a scree
 | `apps/web/` | React, TypeScript, feature routes and component tests |
 | `apps/recommendations/` | Supporting Spring Boot Kafka consumer and its tests |
 | `requests/` | Executable HTTP Yac workflows |
-| `helm/`, `compose*.yaml`, `scripts/` | Runtime definitions and image publication |
+| `helm/`, `compose.yaml`, `scripts/` | Runtime definitions and image publication |
 | `docs/` | Onboarding, architecture walkthroughs and study labs |
 | `.github/workflows/`, `.github/actions/` | CI orchestration and application-specific checks |
 
@@ -175,7 +174,7 @@ needs list too.
 
 ## 7. Stop without losing your work
 
-For local development, press Ctrl+C in both the application and optional consumer terminals, then run `make infra-stop`. If you started the consumer through Compose, also run `docker compose stop recommendations`. For the container stack, run `docker compose -f compose.stack.yaml down`. These commands preserve volumes.
+For local development, press Ctrl+C in both the application and optional consumer terminals, then run `make infra-stop`. This stops the Docker infrastructure and preserves its volumes.
 
 `docker compose down -v` removes that Compose project's data. **`make k8s-down` deletes the application namespace, including its database, photos and credentials.** Kafka lives in a separate Kubernetes namespace and is retained; see the Helm guide before resetting/replaying across a fresh database.
 

@@ -12,26 +12,41 @@ make setup
 npm --prefix apps/web run test:ci -- src/features/auth/renewal.test.ts src/features/auth/components/SessionLayout/SessionLayout.test.tsx
 ```
 
-## 2. Build and run the full stack
+## 2. Run the applications locally
+
+Use separate terminals so the API can be restarted without stopping the browser
+development server:
 
 ```sh
-export TAG=$(git rev-parse --short=7 HEAD)
-export API_IMAGE=rent-cars-api:$TAG WEB_IMAGE=rent-cars-web:$TAG
-docker compose -f compose.stack.yaml up -d --build --wait
-docker compose -f compose.stack.yaml ps
-curl -fsS http://localhost:8081/api/cars
+# Terminal 1:
+make api-dev
+
+# Terminal 2:
+make web-dev
+
+# Optional terminal 3:
+make recommendations-dev
 ```
 
-This Compose project owns its own database volume and exposes only the web proxy on loopback. Change `WEB_PORT` before starting if 8081 is occupied. Open [the local web app](http://localhost:8081), sign in with the development credentials from the root README, edit a car name and leave it unsaved. In DevTools, open Network, clear the list and switch to a blank browser tab.
+Open React at http://localhost:5173 and the Mailpit inbox at
+http://localhost:8025. Docker Compose runs the supporting infrastructure only.
 
-```sh
-docker compose -f compose.stack.yaml restart api
-until curl -fsS http://localhost:8081/api/csrf >/dev/null; do sleep 1; done
-```
+Sign in, edit a car name and leave it unsaved. In DevTools, open Network, clear
+the list and switch to a blank browser tab. Stop only the API with Ctrl+C in
+terminal 1, then run `make api-dev` again. Keep the React process running and do
+not reload the editor.
 
-Return to the editor tab. In the dev profile, restarting the API changes its signing key, so the old JWT yields 401 immediately. The database-backed refresh cookie is still valid. Expect both catalog reads to return 401, one successful POST to `/api/sessions/refresh`, and successful retries. The unsaved name and URL should be intact. A full page reload discards the draft and tests a different behavior. To verify session restoration, reload separately after finishing the draft test.
+When development signing keys are generated at startup, restarting the API
+invalidates the old JWT while retaining the database-backed refresh session.
+Return to the editor and trigger a protected request. Expect a successful
+`POST /api/sessions/refresh` followed by a retry; the unsaved draft must remain.
+If you configured persistent signing keys, restarting alone does not expire
+the JWT; use the expiry procedure in the authentication guide.
 
-For HTTP Yac, open `requests/http/auth.http` and select the `compose` environment. Run `auth.http → auth_login_admin` and `auth.http → auth_me_admin`, restart the Compose API, and repeat `auth.http → auth_me_admin` with the original bearer (401). Run `auth.http → auth_refresh`, `auth.http → auth_me_session`, then `auth.http → auth_logout`. Expect 200, 200 and 204. Use `scenarios-auth.http → scenarios_auth_refresh_after_logout` to verify the ended session returns 401. Keep the cookie jar enabled; each cookie-authenticated write reuses `auth.http → auth_csrf` automatically.
+For HTTP Yac, select `local`. Run `auth_login_admin` and `auth_me_admin`,
+restart the API with generated development keys, then repeat `auth_me_admin`
+with the old bearer (401). Run `auth_refresh`, `auth_me_session` and
+`auth_logout`; expect 200, 200 and 204. Keep the cookie jar enabled.
 
 ## 3. Publish each tested image
 
@@ -39,7 +54,11 @@ Sign in to your registry using an account with package write access. For Docker 
 
 ```sh
 docker login -u guuhworship
+export TAG=$(git rev-parse --short=7 HEAD)
+export API_IMAGE=rent-cars-api:$TAG WEB_IMAGE=rent-cars-web:$TAG
 export REGISTRY=docker.io/guuhworship
+docker build -t "$API_IMAGE" apps/api
+docker build -t "$WEB_IMAGE" apps/web
 docker tag "$API_IMAGE" "$REGISTRY/rent-cars-api:$TAG"
 docker push "$REGISTRY/rent-cars-api:$TAG"
 docker tag "$WEB_IMAGE" "$REGISTRY/rent-cars-web:$TAG"
@@ -84,6 +103,6 @@ helm test fleet -n rent-cars --logs
 kubectl port-forward -n rent-cars svc/fleet-web 8082:8080
 ```
 
-Open [the Kubernetes web app](http://localhost:8082) in a separate browser profile or private session. Cookies on localhost can be shared across ports. Sign in, reload and check for a successful refresh. Sign out and confirm a protected route redirects to login. Unlike Compose dev, this chart mounts a persistent JWT key. Restarting the API consequently preserves a valid JWT. Plain HTTP testing is intended for localhost: access via a non-loopback hostname requires HTTPS for secure cookies and Web Locks.
+Open [the Kubernetes web app](http://localhost:8082) in a separate browser profile or private session. Cookies on localhost can be shared across ports. Sign in, reload and check for a successful refresh. Sign out and confirm a protected route redirects to login. Unlike local development with generated keys, this chart mounts a persistent JWT key. Restarting the API consequently preserves a valid JWT. Plain HTTP testing is intended for localhost: access via a non-loopback hostname requires HTTPS for secure cookies and Web Locks.
 
-Stop port forwarding with Ctrl+C. Use `docker compose -f compose.stack.yaml down` to stop Compose while keeping the database. To remove the Kubernetes release, run `helm uninstall fleet -n rent-cars`. Deleting the dedicated kind cluster also deletes its database.
+Stop port forwarding with Ctrl+C. Stop the local application terminals and use `make infra-stop` to stop infrastructure while keeping its data. To remove the Kubernetes release, run `helm uninstall fleet -n rent-cars`. Deleting the dedicated kind cluster also deletes its database.
