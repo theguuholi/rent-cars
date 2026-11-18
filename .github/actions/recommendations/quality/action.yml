@@ -1,0 +1,83 @@
+name: Recommendations quality
+description: Run recommendations quality checks and publish their reports.
+inputs:
+  run-sonar:
+    description: Whether this trusted run can access Sonar credentials.
+    required: true
+  sonar-token:
+    description: Sonar authentication token.
+    required: false
+  sonar-project-key:
+    description: Sonar project for this application.
+    required: false
+  sonar-organization:
+    description: Sonar organization.
+    required: false
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+      with:
+        distribution: temurin
+        java-version: '25'
+        cache: maven
+        cache-dependency-path: apps/recommendations/pom.xml
+    - name: Check formatting, run tests and generate coverage
+      shell: bash
+      working-directory: apps/recommendations
+      run: ./mvnw -B verify
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: jacoco-recommendations
+        path: apps/recommendations/target/site/jacoco/
+        if-no-files-found: error
+    - name: Analyze code and wait for the Sonar quality gate
+      shell: bash
+      working-directory: apps/recommendations
+      id: sonar
+      if: inputs.run-sonar == 'true'
+      env:
+        SONAR_TOKEN: ${{ inputs.sonar-token }}
+        SONAR_PROJECT_KEY: ${{ inputs.sonar-project-key }}
+        SONAR_ORGANIZATION: ${{ inputs.sonar-organization }}
+        SONAR_HOST_URL: https://sonarcloud.io
+      run: |
+        : "${SONAR_TOKEN:?Configure the Sonar token in repository secrets}"
+        : "${SONAR_PROJECT_KEY:?Configure the Sonar project key in repository variables}"
+        : "${SONAR_ORGANIZATION:?Configure the Sonar organization in repository variables}"
+        ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar \
+          -Dsonar.projectKey="$SONAR_PROJECT_KEY" -Dsonar.organization="$SONAR_ORGANIZATION" \
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+          -Dsonar.qualitygate.wait=true
+    - name: Explain the failed Sonar analysis
+      shell: bash
+      working-directory: apps/recommendations
+      if: failure() && steps.sonar.outcome == 'failure'
+      env:
+        SONAR_TOKEN: ${{ inputs.sonar-token }}
+      run: |
+        report=target/sonar/report-task.txt
+        if [[ ! -s "$report" ]]; then
+          echo 'Sonar produced no analysis report. Check the scanner log above.' >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+        task_id=$(sed -n 's/^ceTaskId=//p' "$report")
+        dashboard=$(sed -n 's/^dashboardUrl=//p' "$report")
+        echo "### [Sonar analysis]($dashboard)" >> "$GITHUB_STEP_SUMMARY"
+        sonar_api() {
+          local endpoint="$1"
+          local parameter="$2"
+          curl --fail --silent --show-error --max-time 20 --retry 2 \
+            -H "Authorization: Bearer $SONAR_TOKEN" --get \
+            "https://sonarcloud.io/api/$endpoint" --data-urlencode "$parameter"
+        }
+        task=$(sonar_api ce/task "id=$task_id")
+        analysis_id=$(jq -r '.task.analysisId // empty' <<< "$task")
+        if [[ -z "$analysis_id" ]]; then
+          jq -r '"Analysis task status: " + .task.status' <<< "$task" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+        sonar_api qualitygates/project_status "analysisId=$analysis_id" |
+          jq -r '.projectStatus | "Gate status: " + .status,
+            (.conditions[] | select(.status == "ERROR") |
+             "- `\(.metricKey)`: measured \(.actualValue), failure threshold \(.comparator) \(.errorThreshold)")' >> "$GITHUB_STEP_SUMMARY"

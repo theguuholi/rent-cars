@@ -1,0 +1,131 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  api-quality:
+    name: Java verification
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/api/quality
+        with:
+          run-sonar: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          sonar-project-key: ${{ vars.SONAR_PROJECT_KEY }}
+          sonar-organization: ${{ vars.SONAR_ORGANIZATION }}
+
+  frontend-quality:
+    name: Web verification
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/frontend/quality
+
+  recommendations-quality:
+    name: Recommendations verification
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/recommendations/quality
+        with:
+          run-sonar: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          sonar-project-key: ${{ vars.SONAR_RECOMMENDATIONS_PROJECT_KEY }}
+          sonar-organization: ${{ vars.SONAR_ORGANIZATION }}
+
+  api-mutation:
+    name: API mutation (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - name: auth
+            targets: com.github.theguuholi.rentcars.auth.*,com.github.theguuholi.rentcars.RentCarsApiApplication*
+          - name: cars
+            targets: com.github.theguuholi.rentcars.cars.*
+          - name: categories
+            targets: com.github.theguuholi.rentcars.categories.*
+          - name: outbox
+            targets: com.github.theguuholi.rentcars.outbox.*
+          - name: rentals
+            targets: com.github.theguuholi.rentcars.rentals.*
+          - name: shared
+            targets: com.github.theguuholi.rentcars.shared.*
+          - name: specifications
+            targets: com.github.theguuholi.rentcars.specifications.*
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/api/mutation
+        with:
+          package-name: ${{ matrix.name }}
+          targets: ${{ matrix.targets }}
+
+  frontend-mutation:
+    name: Web mutation analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/frontend/mutation
+
+  recommendations-mutation:
+    name: Recommendations mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/recommendations/mutation
+
+  frontend-e2e:
+    name: api-and-browser
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/frontend/e2e
+
+  merge-readiness:
+    name: Merge readiness
+    if: always() && github.event_name == 'pull_request'
+    needs:
+      - api-quality
+      - frontend-quality
+      - recommendations-quality
+      - api-mutation
+      - frontend-mutation
+      - recommendations-mutation
+      - frontend-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every CI job to succeed
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$JOB_RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$JOB_RESULTS" | jq -e 'length > 0 and all(.[]; .result == "success")'

@@ -11,12 +11,58 @@ After building and pushing the API, web and recommendations images:
 make k8s-up
 ```
 
-Open http://localhost:8082. Sign in with `test@test` / `test@tesT@dev`.
+Open http://localhost:5173. Sign in with `test@test` / `test@tesT@dev`.
 
 The command creates the `rent-cars` namespace and credentials when absent,
 prepares Kafka, installs the `fleet` Helm release and restarts API/web/recommendations to pull the published
 `latest` images. Existing database records and uploaded photos are preserved.
 It uses the `docker-desktop` context and does not build or push images.
+
+## Switch between local development and Kubernetes
+
+Run one environment at a time. Both use the same browser and API addresses:
+
+| Interface | URL |
+| --- | --- |
+| React | http://localhost:5173 |
+| API / Swagger | http://localhost:8080/swagger-ui.html |
+| Kafka UI | http://localhost:8084 |
+| Grafana | http://localhost:3000 |
+| Mailpit | http://localhost:8025 |
+
+The Make startup commands check for the other environment before starting services.
+Install `jq` for these checks. They never stop an environment automatically.
+Do not bypass the checks with direct Compose, Helm or Maven startup commands.
+If Docker Desktop Kubernetes is configured but unreachable, restore access so the
+check can confirm that it is stopped; it does not assume an unreachable cluster is safe.
+
+**Local → Kubernetes:** press Ctrl+C in the terminals running the API, React and
+recommendations, then run:
+
+```sh
+make infra-stop
+make k8s-up
+```
+
+**Kubernetes → local:**
+
+```sh
+make k8s-stop
+make dev
+# Optional, in another terminal:
+make recommendations-dev
+```
+
+`k8s-stop` scales the application workloads down, stops the dedicated Strimzi
+operator before stopping Kafka, and changes LoadBalancer services to ClusterIP
+to release host ports. It retains PVCs, Kafka events/offsets and credentials.
+`k8s-up` restores the operator, workloads and public services. In-memory data and
+Mailpit's temporary inbox are not retained. This targets only the local
+`rent-cars` and `rent-kafka` namespaces, which must not contain unrelated workloads.
+
+The databases and Kafka clusters remain separate: switching does not copy data.
+Sign in again after switching because localhost cookies can belong to the previous
+environment. Use `k8s-stop` to switch; `k8s-down` is a destructive reset.
 
 ## Delete everything and start fresh
 
@@ -42,13 +88,13 @@ Run `make help` to list the commands.
 - Mailpit: local SMTP sink and browser inbox for development mail.
 - Grafana LGTM: local Prometheus metrics, Tempo traces, Loki logs and an OTLP collector, with a persistent volume.
 
-The chart defaults target local Docker Desktop: release `fleet`, port `8082`,
+The chart defaults target local Docker Desktop: release `fleet`, port `5173`,
 demo data enabled and SeaweedFS storage. Images and storage settings are in
 `values.yaml`. API/web/recommendations use
 `imagePullPolicy: Always`, so restarting them pulls the current published tag.
 The credentials Secret is created once and reused until `k8s-down`.
 The API exports telemetry to `fleet-observability:4318` with full trace sampling
-in this local chart. Grafana and the collector are internal ClusterIP services;
+in this local chart. Grafana and the collector use local LoadBalancer ports 3000 and 4318;
 Grafana's anonymous Admin access is intended only for this local test cluster.
 For a different release name, change `storage.endpoint` and
 `storage.credentialsSecret` to match its S3 Service and Secret.
@@ -60,7 +106,6 @@ To disable demo data on a fresh database, set `api.flywayLocations` to
 ```sh
 kubectl --context docker-desktop -n rent-cars get pods,svc,pvc
 helm test fleet --kube-context docker-desktop -n rent-cars --logs
-kubectl --context docker-desktop -n rent-cars port-forward svc/fleet-mailpit 8025:8025
 ```
 
 Open a car, upload the two PNG files from `requests/fixtures`, and refresh.
@@ -81,15 +126,10 @@ survives pod restarts; in-flight Tempo state can be lost during a restart.
    kubectl --context docker-desktop -n rent-cars get pods,pvc
    ```
 
-2. In a separate terminal, forward Grafana to port **3001** so it does not
-   conflict with the Compose Grafana on port 3000:
+2. Open Grafana directly at <http://localhost:3000>. No port forwarding is needed.
 
-   ```sh
-   kubectl --context docker-desktop -n rent-cars port-forward svc/fleet-observability 3001:3000
-   ```
-
-3. Open <http://localhost:8082>, browse cars and rent/return one as a driver.
-   Open <http://localhost:3001>. In **Explore → Tempo**, search for service
+3. Open <http://localhost:5173>, browse cars and rent/return one as a driver.
+   Open <http://localhost:3000>. In **Explore → Tempo**, search for service
    `rent-cars-api` and confirm request traces and `rental.start` /
    `rental.return` observations. In **Prometheus**, query
    `http_server_requests_milliseconds_count` and
@@ -125,6 +165,24 @@ between stores automatically.
 
 ## Rental events and Kafka
 
+All Kubernetes configuration lives under this directory:
+
+- `templates/`: application chart resources.
+- `values.yaml`: application chart settings.
+- `kafka/local.yaml`: local Strimzi broker and rental topic.
+- `kafka/ui-local.yaml`: optional local Kafbat UI.
+
+The files in `kafka/` are standalone Kubernetes manifests, not chart templates.
+`make k8s-kafka-up` installs the Strimzi operator and applies `kafka/local.yaml`
+in the separate `rent-kafka` namespace. `make k8s-up` runs that preparation
+before deploying the application chart. A direct `helm upgrade` does not apply
+these standalone manifests; run `make k8s-kafka-up` first.
+
+Keeping Kafka in its own namespace preserves its lifecycle and data when the
+application namespace is removed. This organization does not change local
+development: `make dev` still uses the root `compose.yaml`.
+
+
 Follow the [Kafka producer walkthrough](../docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.
 
 ## Verify the supporting consumer
@@ -145,7 +203,7 @@ kubectl --context docker-desktop -n rent-cars get deployment fleet-recommendatio
 kubectl --context docker-desktop -n rent-cars logs -f deployment/fleet-recommendations
 ```
 
-Rent or return a car at http://localhost:8082. Expect `Rental event received`
+Rent or return a car at http://localhost:5173. Expect `Rental event received`
 with its event ID, type, rental ID, partition and offset. The consumer uses the
 same topic and bootstrap address as the API and its own consumer group. It has
 no public port or Kubernetes Service; it runs as non-root with a read-only
@@ -188,13 +246,10 @@ reset offsets automatically on deploy.
 ## Validate deployment changes without deploying
 
 ```sh
-make check-infra
 helm lint ./helm --strict
 helm template fleet ./helm > /tmp/rent-cars-manifests.yaml
-docker compose -f compose.stack.yaml --profile recommendations config --quiet
+docker compose --profile kafka-ui config --quiet
 ```
 
-The Given/When/Then tests check default/disabled/custom consumer rendering,
-Kafka-before-application startup and the publication script's success/failure
-paths using a fake Docker command. They do not push to a registry or modify
-Kubernetes. The infrastructure job in the recommendations workflow runs these checks on PRs.
+These manual checks validate the chart and Compose configuration without publishing
+images or deploying to Kubernetes.

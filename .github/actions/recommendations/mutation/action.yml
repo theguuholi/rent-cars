@@ -1,0 +1,20 @@
+name: Recommendations mutation
+description: Run recommendations mutation checks and publish their reports.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+      with:
+        distribution: temurin
+        java-version: '25'
+        cache: maven
+        cache-dependency-path: apps/recommendations/pom.xml
+    - name: Run mutation tests across recommendations
+      shell: bash
+      working-directory: apps/recommendations
+      run: ./mvnw -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: pitest-recommendations
+        path: apps/recommendations/target/pit-reports/
+        if-no-files-found: error

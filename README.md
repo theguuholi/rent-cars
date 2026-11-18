@@ -91,10 +91,9 @@ Choose one path first. Each environment has its own database, photo storage and 
 | Mode | Startup | React | Supporting consumer |
 | --- | --- | --- | --- |
 | Daily development | `make dev` | http://localhost:5173 | Start separately with `make recommendations-dev` |
-| All containers | `docker compose -f compose.stack.yaml up --build -d --wait` | http://localhost:8081 | Add `--profile recommendations` before `up` to include it |
-| Local Kubernetes | Publish images, then `make k8s-up` | http://localhost:8082 | Included by default, with Kafka prepared first |
+| Local Kubernetes | Publish images, then `make k8s-up` | http://localhost:5173 | Included by default, with Kafka prepared first |
 
-For containers and Kubernetes, follow [onboarding steps 12–13](docs/getting-started.md#step-12-alternative-run-everything-in-containers) and the [Helm guide](helm/README.md). Kubernetes is a local deployment exercise, not a production-ready environment.
+For the optional local consumer, follow [onboarding step 12](docs/getting-started.md#step-12-run-the-supporting-consumer-locally). For Kubernetes, follow [step 13](docs/getting-started.md#step-13-alternative-docker-desktop-kubernetes) and the [Helm guide](helm/README.md). Kubernetes is a local deployment exercise, not a production-ready environment.
 
 ### Publish all application images
 
@@ -117,9 +116,9 @@ Follow the [developer walkthrough](docs/project-walkthrough.md) to trace a scree
 | `apps/web/` | React, TypeScript, feature routes and component tests |
 | `apps/recommendations/` | Supporting Spring Boot Kafka consumer and its tests |
 | `requests/` | Executable HTTP Yac workflows |
-| `helm/`, `compose*.yaml`, `scripts/` | Runtime definitions and image publication |
+| `helm/`, `compose.yaml`, `scripts/` | Runtime definitions and image publication |
 | `docs/` | Onboarding, architecture walkthroughs and study labs |
-| `.github/workflows/` | Verification, coverage, mutation and infrastructure checks |
+| `.github/workflows/`, `.github/actions/` | CI orchestration and application-specific checks |
 
 Run commands from the repository root:
 
@@ -128,29 +127,54 @@ make check-api              # Java API with isolated PostgreSQL/storage tests
 make check-recommendations  # Consumer with isolated Kafka tests
 make check-java             # Both Java applications
 make check-web              # Format, lint, architecture, coverage and build
-make check-infra            # Helm and image-publication contracts (Python 3 + Helm)
 make check                  # All checks above
 ```
 
-Docker must be running for Java integration tests. Install frontend dependencies with `make setup`; install Python 3 and Helm for infrastructure checks. JaCoCo reports live under each Java application's `target/site/jacoco/`; web coverage lives in `apps/web/coverage/`. See [AGENTS.md](AGENTS.md) for testing conventions and the application READMEs for PIT/Stryker commands.
+Docker must be running for Java integration tests. Install frontend dependencies with `make setup`. JaCoCo reports live under each Java application's `target/site/jacoco/`; web coverage lives in `apps/web/coverage/`. See [AGENTS.md](AGENTS.md) for testing conventions and the application READMEs for PIT/Stryker commands.
 
-### CI by application
+### CI by application and responsibility
 
-- `api-quality.yml` and `api-mutation.yml`: API verification/Sonar and package-partitioned PIT with every production class included.
-- `frontend-quality.yml`, `frontend-mutation.yml` and `frontend-e2e.yml`: frontend verification, Stryker and Playwright journeys.
-- `recommendations-quality.yml` and `recommendations-mutation.yml`: consumer verification/Sonar, infrastructure checks and PIT.
+The [main workflow](.github/workflows/ci.yml) handles PR/push/manual triggers,
+runners, timeouts and an explicit API mutation matrix. Jobs run independently in parallel.
+When adding an API package or root-level application class, update that matrix to keep
+all production classes in the PIT scope.
+Weekly runs execute mutation checks only.
 
-GitHub Actions does not discover workflows in subfolders, so filenames use application prefixes and displayed names follow `API / Quality`, `Frontend / Mutation` and `Recommendations / Quality`. Existing required check names are preserved for branch protection.
+Each local composite action owns one application's checks:
 
-Each Java application owns its POM and Maven Wrapper. There is no root POM; `make check-java` simply invokes the two independent builds. Sonar projects share the API's quality policy without overwriting each other's analysis.
+| Application | Quality | Mutation | End-to-end |
+| --- | --- | --- | --- |
+| API | [.github/actions/api/quality](.github/actions/api/quality/action.yml): Maven verification, JaCoCo and Sonar | [.github/actions/api/mutation](.github/actions/api/mutation/action.yml): PIT per package | Covered by the browser journey |
+| Frontend | [.github/actions/frontend/quality](.github/actions/frontend/quality/action.yml): formatting, lint, coverage and build | [.github/actions/frontend/mutation](.github/actions/frontend/mutation/action.yml): Stryker | [.github/actions/frontend/e2e](.github/actions/frontend/e2e/action.yml): API and Playwright |
+| Recommendations | [.github/actions/recommendations/quality](.github/actions/recommendations/quality/action.yml): Maven verification, JaCoCo and Sonar | [.github/actions/recommendations/mutation](.github/actions/recommendations/mutation/action.yml): PIT | No browser interface |
+
+Quality and mutation actions invoke Maven or npm directly inside each application.
+Root Make commands remain optional shortcuts for local use.
+Actions contain steps, not job scheduling or runner selection. GitHub workflows
+must remain directly in .github/workflows; actions can be organized in subfolders.
+See [.github/actions/README.md](.github/actions/README.md) before adding a check.
+
+Each Java application owns its POM and Maven Wrapper. There is no root POM.
+The API and recommendations use separate Sonar project keys and independent analyses.
+Configure each project's gate and profiles in Sonar; CI does not provision projects
+or copy policies between them. The frontend retains its own lint, coverage and
+Stryker checks. E2E is an integration job that intentionally uses both API and web.
 
 ### Merge a reviewed PR after CI
 
-Use GitHub's **Enable auto-merge → Squash and merge**, or `gh pr merge <number> --auto --squash`. This is opt-in per PR. The required `Merge readiness` check waits for every triggered PR workflow on the current commit, including mutation tests; Java's workflow also waits for the Sonar gate. Failed, cancelled or timed-out workflows block the merge. If you rerun a failed workflow without a new commit, rerun `PR merge readiness` as well. New commits trigger fresh checks.
+Use GitHub's **Enable auto-merge → Squash and merge**. This is opt-in per PR.
+The required **Merge readiness** job depends on every CI job, including all PIT
+shards, Stryker, browser tests and both Java quality jobs that wait for Sonar.
+A failed, cancelled or skipped dependency blocks the gate. There is no polling
+script or separate workflow to rerun: use **Re-run failed jobs** in the CI run.
+
+The existing required check names **Java verification**, **Web verification** and
+**Merge readiness** are preserved. When adding another CI job, add it to the gate's
+needs list too.
 
 ## 7. Stop without losing your work
 
-For local development, press Ctrl+C in both the application and optional consumer terminals, then run `make infra-stop`. If you started the consumer through Compose, also run `docker compose stop recommendations`. For the container stack, run `docker compose -f compose.stack.yaml down`. These commands preserve volumes.
+For local development, press Ctrl+C in both the application and optional consumer terminals, then run `make infra-stop`. This stops the Docker infrastructure and preserves its volumes.
 
 `docker compose down -v` removes that Compose project's data. **`make k8s-down` deletes the application namespace, including its database, photos and credentials.** Kafka lives in a separate Kubernetes namespace and is retained; see the Helm guide before resetting/replaying across a fresh database.
 
@@ -162,3 +186,5 @@ For local development, press Ctrl+C in both the application and optional consume
 - [Kafka](docs/kafka.md) and [consumer](apps/recommendations/README.md): outbox, delivery, offsets and independent processing.
 - [Observability](docs/observability.md): logs, metrics and traces.
 - [API storage](apps/api/README.md#s3-configuration): local S3 and external bucket configuration.
+
+Use only one environment at a time. See [switching environments](helm/README.md#switch-between-local-development-and-kubernetes) for the safe stop/start commands and shared ports.

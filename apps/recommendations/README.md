@@ -36,18 +36,16 @@ RECOMMENDATIONS_GROUP_ID=rent-cars-recommendations-study ./mvnw spring-boot:run
 
 If you change the Compose host Kafka port, also set `KAFKA_BOOTSTRAP_SERVERS=localhost:<port>` when running the JVM locally. Instances sharing a group divide partitions; distinct groups each receive their own stream.
 
-## Run in Docker
+## Local runtime and deployment image
 
-Use the existing root Compose file:
+Run this application on the host with `make recommendations-dev`.
+The root `compose.yaml` runs infrastructure only; Kafka is available to the local
+JVM at `localhost:9092`. Recommendations does not need the API or frontend to
+start; it can consume retained events while they are stopped.
 
-```sh
-docker compose --profile recommendations up -d --build recommendations
-docker compose logs -f recommendations
-# Stop only this consumer, preserving Kafka and its data.
-docker compose stop recommendations
-```
-
-The profile starts Kafka and the topic initializer as dependencies. Inside Docker, the consumer uses `kafka:19092`. The multi-stage image contains the application and a distroless Java runtime; Maven and the JDK remain in the build stage. Run either the local JVM or the container when learning; running both with the same group splits partitions between them.
+The Dockerfile remains available for Kubernetes deployment. Its multi-stage
+image contains the application and a distroless Java runtime; Maven and the JDK
+remain in the build stage.
 
 For local Kubernetes, the root Helm chart includes this supporting consumer by default. Publish all images with `./scripts/push-images.sh`, then run `make k8s-up`; it prepares Kafka before deploying the application. Follow the [Helm guide](../../helm/README.md#verify-the-supporting-consumer) to inspect receipt logs and configure image/group settings. There is no public consumer endpoint or Service.
 
@@ -72,7 +70,7 @@ To recover, inspect the failing partition/offset, correct the consumer or upstre
 
 ## Quality checks
 
-The existing Java harness applies here, including Given/When/Then tests, Spotless, JaCoCo, PIT and the repository's Sonar quality gate. No quality threshold is lowered.
+The existing Java harness applies here, including Given/When/Then tests, Spotless, JaCoCo, PIT and this application's Sonar quality gate. No quality threshold is lowered.
 
 ```sh
 make check-recommendations  # Formatting, unit/integration tests, coverage and packaging
@@ -87,4 +85,24 @@ Reports: `apps/recommendations/target/site/jacoco/index.html` and `apps/recommen
 
 There is no root POM. API and recommendations each own their Spring Boot parent, Maven Wrapper, build and Docker context. `make check-java` is only a convenience target that invokes both builds. Keep quality plugin versions aligned.
 
-CI files use `api-*`, `frontend-*` and `recommendations-*` prefixes, with quality and mutation separated for each application. This application has its own verification, PIT and infrastructure jobs, and a separate Sonar project selected by `SONAR_RECOMMENDATIONS_PROJECT_KEY`. On first use the workflow provisions it in the existing organization and binds the API quality gate and profiles, using `SONAR_TOKEN`; the token needs project creation/administration rights. The API project and its policy are not changed.
+CI quality and mutation steps live in .github/actions/recommendations/.
+The root workflow orchestrates independent application jobs. Recommendations runs
+its own Maven Wrapper directly; it does not build the API or frontend.
+
+### Sonar setup
+
+Create the recommendations project in Sonar before its first analysis. Configure
+its quality gate and quality profiles there, independently of the API. CI only
+submits the analysis and waits for this project's gate; it does not provision
+projects or copy another application's policy.
+
+GitHub Actions settings:
+
+- Variable SONAR_RECOMMENDATIONS_PROJECT_KEY: this consumer's Sonar project key.
+- Variable SONAR_ORGANIZATION: organization containing that project.
+- Secret SONAR_TOKEN: token authorized to execute analysis on this project.
+
+The API uses its own SONAR_PROJECT_KEY. Recommendations does not read that key.
+A shared organization or authorized token does not combine the analyses.
+Fork and Dependabot PRs still run Maven verification; Sonar runs only when the
+workflow can access the analysis credential.

@@ -42,7 +42,7 @@ Open **http://localhost:8084** → `rent-cars-local` → Topics → `rentals.eve
 
 ### Read, publish and resend messages
 
-After updating the configuration, recreate the UI with `make kafka-ui`. For Kubernetes, apply `kubectl --context docker-desktop -n rent-kafka apply -f deploy/kafka/ui-local.yaml` and wait for `kubectl --context docker-desktop -n rent-kafka rollout status deployment/kafka-ui`.
+After updating the configuration, recreate the UI with `make kafka-ui`. For Kubernetes, apply `kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/ui-local.yaml` and wait for `kubectl --context docker-desktop -n rent-kafka rollout status deployment/kafka-ui`.
 
 1. Open `rentals.events` → **Messages**, select the earliest offset to inspect retained messages, and start browsing. Expand a row to inspect its key and JSON value.
 2. To publish, use **Produce Message**, set the key to the rental UUID and paste a valid rental-event JSON value. Keep the key and `rentalId` consistent.
@@ -96,17 +96,21 @@ Wait for the current retry deadline (at most five minutes of application backoff
 
 An ambiguous send can be delivered twice. Compare `eventId`: future consumers must persist deduplication together with their database effect. Producer idempotence alone does not solve this. The automated test `givenAcknowledgedSendAndDatabaseRollbackWhenRetryingThenSameEventCanArriveTwice` demonstrates it deterministically.
 
-## 5. Run both application images in Compose
+## 5. Run the independent consumer locally
 
-Choose this or the host workflow; both default to Kafka 9092 and UI 8084 and cannot bind those ports simultaneously.
+Keep `make dev` running and open another terminal:
 
 ```sh
-docker compose -f compose.stack.yaml up -d --build
-# Optional browser interface:
-docker compose -f compose.stack.yaml --profile kafka-ui up -d kafka-ui
+make recommendations-dev
 ```
 
-Open the application at http://localhost:8081 and Kafka UI at http://localhost:8084. The API uses `kafka:19092`. Kafka initialization can finish after the API starts: the Outbox holds messages until the topic is available. There is intentionally no API startup dependency on broker health. Use `-f compose.stack.yaml` for subsequent logs/exec/stop commands. The UI checks the broker, not domain correctness.
+The API and recommendations connect to Kafka at `localhost:9092`.
+The UI runs inside Docker and connects to `kafka:19092`.
+The single `compose.yaml` owns the broker, topic initializer and Kafka UI along
+with the remaining local infrastructure. Application code runs on the host.
+
+Rent or return a car, then compare `Rental event received` in the consumer logs
+with the event and offsets at http://localhost:8084.
 
 ## 6. Kubernetes on Docker Desktop
 
@@ -144,7 +148,7 @@ kubectl --context docker-desktop -n rent-kafka exec -it rent-combined-0 -- \
 For the browser UI (stop the Compose UI first to free 8084):
 
 ```sh
-kubectl --context docker-desktop -n rent-kafka apply -f deploy/kafka/ui-local.yaml
+kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/ui-local.yaml
 kubectl --context docker-desktop -n rent-kafka rollout status deployment/kafka-ui --timeout=180s
 kubectl --context docker-desktop -n rent-kafka get service kafka-ui
 ```
