@@ -3,9 +3,3 @@
 
 # Personal HTTP client environment overrides
 http-client.private.env.json
-
-# Maven reactor / Sonar analysis
-/target/
-
-# Python infrastructure test cache
-__pycache__/

@@ -5,7 +5,7 @@ Run the commands below from the repository root.
 
 ## Start or update
 
-After building and pushing the API, web and recommendations images:
+After building and pushing the API and web images:
 
 ```sh
 make k8s-up
@@ -14,7 +14,7 @@ make k8s-up
 Open http://localhost:8082. Sign in with `test@test` / `test@tesT@dev`.
 
 The command creates the `rent-cars` namespace and credentials when absent,
-prepares Kafka, installs the `fleet` Helm release and restarts API/web/recommendations to pull the published
+installs the `fleet` Helm release and restarts API/web to pull the published
 `latest` images. Existing database records and uploaded photos are preserved.
 It uses the `docker-desktop` context and does not build or push images.
 
@@ -35,7 +35,6 @@ Run `make help` to list the commands.
 ## What runs
 
 - API: Spring Boot, with database migrations and demo data.
-- Recommendations: supporting Spring Boot consumer that logs rental event receipts.
 - Web: Nginx serving React and forwarding `/api` to the API.
 - PostgreSQL: persistent database volume.
 - SeaweedFS: S3-compatible storage with a persistent photo volume.
@@ -44,7 +43,7 @@ Run `make help` to list the commands.
 
 The chart defaults target local Docker Desktop: release `fleet`, port `8082`,
 demo data enabled and SeaweedFS storage. Images and storage settings are in
-`values.yaml`. API/web/recommendations use
+`values.yaml`. API/web use
 `imagePullPolicy: Always`, so restarting them pulls the current published tag.
 The credentials Secret is created once and reused until `k8s-down`.
 The API exports telemetry to `fleet-observability:4318` with full trace sampling
@@ -126,75 +125,3 @@ between stores automatically.
 ## Rental events and Kafka
 
 Follow the [Kafka producer walkthrough](../docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.
-
-## Verify the supporting consumer
-
-Recommendations is an independent Kafka consumer used to study event processing,
-not an HTTP dependency of the rental API. `make k8s-up` now prepares the existing
-Strimzi/Kafka resources in `rent-kafka`, waits for the broker and topic, and then
-installs the application including `fleet-recommendations` in `rent-cars`.
-If invoking Helm directly, first run `make k8s-kafka-up` yourself.
-
-Publish all three images first:
-
-```sh
-docker login -u guuhworship
-./scripts/push-images.sh
-make k8s-up
-kubectl --context docker-desktop -n rent-cars get deployment fleet-recommendations
-kubectl --context docker-desktop -n rent-cars logs -f deployment/fleet-recommendations
-```
-
-Rent or return a car at http://localhost:8082. Expect `Rental event received`
-with its event ID, type, rental ID, partition and offset. The consumer uses the
-same topic and bootstrap address as the API and its own consumer group. It has
-no public port or Kubernetes Service; it runs as non-root with a read-only
-filesystem and a writable temporary volume, like the API.
-
-A running/Ready pod only confirms process startup here, not successful event
-processing. No synthetic HTTP/TCP probe is attached to this non-web process.
-The current error policy stops the listener on an invalid record while leaving
-the JVM alive. Inspect receipt logs and group lag; fix the underlying cause
-before restarting. Production listener health and retry/dead-letter policy
-remain future work, as explained in the [consumer guide](../apps/recommendations/README.md).
-
-The image push script publishes:
-
-- `docker.io/guuhworship/rent-cars-api:latest`
-- `docker.io/guuhworship/rent-cars-web:latest`
-- `docker.io/guuhworship/rent-cars-recommendations:latest`
-
-For another registry, set `IMAGE_NAMESPACE` when pushing and change all three
-`*.image.repository` values in `values.yaml`. The recommendations image tag,
-pull policy, resource requests/limits and `groupId` are configurable there.
-`make k8s-up` uses `--reset-values`; persist overrides in that file or use your
-own Helm command with a values file rather than expecting earlier `--set`
-arguments to survive the Make target.
-
-To omit only this consumer, set `recommendations.enabled: false` in the values
-file. To skip both Kafka provisioning and API event publication, run:
-
-```sh
-make k8s-up KAFKA_ENABLED=false
-```
-
-The chart omits recommendations when messaging is disabled, even if its own
-flag is true. Neither option deletes an existing Kafka namespace. `make k8s-down`
-deletes application data but retains Kafka and its offsets/events; after a fresh
-application database, retained events can refer to rentals that no longer exist
-in that database. Choose a new group intentionally when studying replay; do not
-reset offsets automatically on deploy.
-
-## Validate deployment changes without deploying
-
-```sh
-make check-infra
-helm lint ./helm --strict
-helm template fleet ./helm > /tmp/rent-cars-manifests.yaml
-docker compose -f compose.stack.yaml --profile recommendations config --quiet
-```
-
-The Given/When/Then tests check default/disabled/custom consumer rendering,
-Kafka-before-application startup and the publication script's success/failure
-paths using a fake Docker command. They do not push to a registry or modify
-Kubernetes. The infrastructure job in the recommendations workflow runs these checks on PRs.

@@ -4,10 +4,6 @@ updates:
     directory: /apps/api
     schedule:
       interval: weekly
-  - package-ecosystem: maven
-    directory: /apps/recommendations
-    schedule:
-      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -1,4 +1,4 @@
-name: API / Quality
+name: Java quality
 on:
   pull_request:
   push:
@@ -64,11 +64,9 @@ jobs:
           dashboard=$(sed -n 's/^dashboardUrl=//p' "$report")
           echo "### [Sonar analysis]($dashboard)" >> "$GITHUB_STEP_SUMMARY"
           sonar_api() {
-            local endpoint="$1"
-            local parameter="$2"
             curl --fail --silent --show-error --max-time 20 --retry 2 \
               -H "Authorization: Bearer $SONAR_TOKEN" --get \
-              "https://sonarcloud.io/api/$endpoint" --data-urlencode "$parameter"
+              "https://sonarcloud.io/api/$1" --data-urlencode "$2"
           }
           task=$(sonar_api ce/task "id=$task_id")
           analysis_id=$(jq -r '.task.analysisId // empty' <<< "$task")

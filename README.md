@@ -1,12 +1,17 @@
 # Rent Cars
 
-Rent Cars is a car rental application built to practice Java, React and system design. Visitors browse cars; drivers register, sign in, rent and return vehicles; administrators manage cars, categories, specifications and photos.
+Rent Cars is a fleet management application. Register vehicles, assign their category and equipment, and manage availability, daily rates and fines. The React frontend calls a Spring Boot API backed by PostgreSQL.
 
-**Start with the product: React + Spring Boot + PostgreSQL.** Once you can complete a rental, use the supporting services to study storage, email, observability and asynchronous events. You do not need to understand all the infrastructure before using the application.
+New to the project? Follow the [step-by-step onboarding tutorial](docs/getting-started.md): tools, React/Java startup, HTTP Yac requests, containers and Kubernetes.
 
-## 1. Run your first rental locally
+To study the PostgreSQL schema, constraints, race conditions and locks behind
+rentals, follow the [rental database integrity lab](docs/studies/rental-database-integrity.md).
 
-Install **JDK 25**, **Node 24.16.0 with npm**, **Make** and **Docker with Compose v2**. Start Docker, then run:
+The local stack also includes [Grafana observability](docs/observability.md) for API logs, metrics and traces and browser request traces. After starting `make dev`, follow [Step 3a of the onboarding tutorial](docs/getting-started.md#step-3a-verify-observability) to confirm that all three signals reach Grafana.
+
+## Run the full stack locally
+
+Install JDK 25, Node.js 24.16.0 with npm, Make, and Docker with Compose v2. Start Docker and make sure ports 5173 (web), 8080 (API), 5432 (PostgreSQL), 8333 (development S3), 8025 (email inbox), 1025 (development SMTP) and 3000 (Grafana) are available.
 
 ```sh
 git clone https://github.com/theguuholi/rent-cars.git
@@ -15,150 +20,137 @@ make setup
 make dev
 ```
 
-Keep this terminal open. `make setup` installs the frontend dependencies. `make dev` starts the API and React on your machine, with PostgreSQL and the supporting infrastructure in Docker. The API applies Flyway migrations and development seeds automatically.
+Open the [web application](http://localhost:5173) or explore the endpoints in [Swagger UI](http://localhost:8080/swagger-ui.html). The API applies migrations and seeds the development catalogs on startup. `make dev` and `make api-dev` also start SeaweedFS, an S3-compatible object store with a persistent Docker volume and an automatically created `rent-cars-images` bucket. No cloud account or activation token is required. Press Ctrl+C to stop the applications and run `make infra-stop` to stop PostgreSQL, SeaweedFS, Mailpit, Grafana LGTM, Kafka and Kafka UI.
 
-1. Open [React](http://localhost:5173) and browse the cars as a visitor.
-2. Sign in as the development administrator: `test@test` / `test@tesT@dev`. Explore categories, specifications and car editing.
-3. Sign out, register a driver and complete a rental/return from a car's detail page.
-4. Open [Swagger](http://localhost:8080/swagger-ui.html) to see the HTTP contracts behind those screens.
+Password recovery emails are captured in Mailpit. Open the inbox that matches
+how you started the application:
 
-Expected result: a rented car becomes unavailable; returning it makes it available again. The rental history remains visible.
+| Environment | Mailpit inbox |
+| --- | --- |
+| `make dev` or `make api-dev` | [http://localhost:8025](http://localhost:8025) |
+| `docker compose -f compose.stack.yaml up --build -d --wait` | [http://localhost:8026](http://localhost:8026) |
+| Kubernetes (`make k8s-up`) | Run `kubectl --context docker-desktop -n rent-cars port-forward svc/fleet-mailpit 8025:8025`, then open [http://localhost:8025](http://localhost:8025) |
 
-Need help with tools, roles or request order? Follow the [step-by-step onboarding](docs/getting-started.md). It includes checkpoints and troubleshooting. These accounts and seeds are for local learning only.
+The local API sends email to Mailpit over SMTP on port 1025. Production uses
+the SMTP server configured in `application-prod.yaml` and the
+`MAIL_FROM`/`WEB_BASE_URL` variables. See the [recovery walkthrough](docs/getting-started.md#step-9a-recover-a-drivers-password)
+for the full flow.
 
-## 2. Know what each part does
+For container images and a local Kubernetes deployment, follow the [Docker and Helm guide](helm/README.md). The Kubernetes chart also runs the local Grafana LGTM simulator; use the [observability walkthrough](helm/README.md#verify-observability) to inspect API traces, metrics and logs.
 
-The main request path is:
+### Publish the latest application images
 
-```text
-Browser → React → Spring Boot API → PostgreSQL
-                          ├─ photos → S3-compatible storage
-                          ├─ recovery email → SMTP
-                          └─ rental + outbox → Kafka → optional event consumers
-```
-
-| Part | Responsibility | When to explore it |
-| --- | --- | --- |
-| [React](apps/web/README.md) | Screens, forms, authentication and HTTP calls | Start here to use the product |
-| [Spring Boot API](apps/api/README.md) | Business rules, security, persistence and rental transactions | Trace a request or implement a feature |
-| PostgreSQL | Accounts, fleet, rentals and transactional outbox | Study constraints, transactions and concurrency |
-| SeaweedFS | Local S3-compatible photo storage | Upload/read/delete car and profile images |
-| Mailpit | Captures development email | Test password recovery without sending real email |
-| Grafana LGTM | API logs, metrics and traces | Investigate requests and failures |
-| Kafka + Kafbat | Retains rental events and lets you inspect them | Study publication, partitions, offsets and replay |
-| [Recommendations consumer](apps/recommendations/README.md) | Validates and logs rental event receipts | Study a separate consumer after completing the rental flow |
-
-**Recommendations is a supporting learning service, not part of the synchronous rental request.** It currently consumes `RentalOpened` and `RentalReturned`; it does not calculate suggestions or use Spark/Hadoop yet. Stopping it does not prevent the API from completing a rental. Events can be consumed later, within Kafka's retention period.
-
-## 3. Open the development tools
-
-`make dev` starts these interfaces:
-
-| Interface | URL | Try this |
-| --- | --- | --- |
-| React | http://localhost:5173 | Browse, rent and return a car |
-| Swagger | http://localhost:8080/swagger-ui.html | Inspect API schemas and endpoints |
-| Mailpit | http://localhost:8025 | Read a password recovery email |
-| Grafana | http://localhost:3000 | Follow the [observability walkthrough](docs/observability.md) |
-| Kafka UI | http://localhost:8084 | Inspect `rentals.events` and consumer group offsets |
-
-Ports 5432 (PostgreSQL), 8333 (local S3), 1025 (SMTP), 4318 (telemetry) and 9092 (Kafka) are also used. Avoid running another environment on the same ports. `SERVER_PORT` and `KAFKA_UI_PORT` can override their corresponding local ports.
-
-For executable API examples, install **HTTP Yac** in VS Code and follow [requests/README.md](requests/README.md). Start with `requests/http/auth.http`; successful requests share tokens, IDs and versions across files. No manual token copying is needed.
-
-## 4. Follow a rental into Kafka
-
-Do this after the rental flow works. Keep `make dev` running and open a second terminal:
-
-```sh
-make recommendations-dev
-```
-
-Then rent or return a car. Follow the flow:
-
-1. The API commits the rental and its outbox event in one database transaction.
-2. The outbox publisher sends that event to `rentals.events`.
-3. Recommendations consumes it using its own group, `rent-cars-recommendations-v1`.
-4. Its terminal prints `Rental event received` with the event ID, partition and offset.
-5. In [Kafka UI](http://localhost:8084), compare the message and the group's committed offset.
-
-Stop/restart the consumer to study resuming from committed offsets. Use a different group to study replay. Follow the [consumer guide](apps/recommendations/README.md) for exact commands and invalid-event recovery; use the [Kafka guide](docs/kafka.md) for publisher retries and broker outages. `make kafka-events` is just a terminal viewer, not a required service.
-
-## 5. Choose a runtime
-
-Choose one path first. Each environment has its own database, photo storage and sessions; repeat login/setup when switching.
-
-| Mode | Startup | React | Supporting consumer |
-| --- | --- | --- | --- |
-| Daily development | `make dev` | http://localhost:5173 | Start separately with `make recommendations-dev` |
-| All containers | `docker compose -f compose.stack.yaml up --build -d --wait` | http://localhost:8081 | Add `--profile recommendations` before `up` to include it |
-| Local Kubernetes | Publish images, then `make k8s-up` | http://localhost:8082 | Included by default, with Kafka prepared first |
-
-For containers and Kubernetes, follow [onboarding steps 12–13](docs/getting-started.md#step-12-alternative-run-everything-in-containers) and the [Helm guide](helm/README.md). Kubernetes is a local deployment exercise, not a production-ready environment.
-
-### Publish all application images
+Authenticate with Docker Hub and run the script from the repository root:
 
 ```sh
 docker login -u guuhworship
 ./scripts/push-images.sh
 ```
 
-The script builds API, web and recommendations from your working tree **before publishing any image**, then pushes their `latest` tags under `docker.io/guuhworship`. Set `IMAGE_NAMESPACE` to use your own registry/namespace. If a build fails, nothing is pushed; if a push fails, earlier pushes are not rolled back. Images use your build machine's platform.
+The script builds both images from the current working tree for the local Docker platform, then pushes `guuhworship/rent-cars-api:latest` and `guuhworship/rent-cars-web:latest`. Set `IMAGE_NAMESPACE` to publish to a different registry and namespace.
 
-`make k8s-up` pulls these published images; it does not build your source. Set all three image repositories in `helm/values.yaml` when using another namespace. See the [deployment guide](helm/README.md) for checking the consumer and disabling the event stack when needed.
+### Explore the API in VS Code
 
-## 6. Navigate and verify the code
+1. Start Docker and run `make api-dev` from the repository root. If `make dev` is already running, use that API.
+2. Install the recommended **HTTP Yac** extension in VS Code and open `requests/http/auth.http`. Click **Send** above a request.
+3. Local is the default. Follow the [HTTP Yac walkthrough](requests/README.md); tokens and IDs are shared across files.
 
-Follow the [developer walkthrough](docs/project-walkthrough.md) to trace a screen into an API operation and its tests.
+Login requests capture separate administrator and driver tokens. Catalog queries and creation responses capture IDs and versions for the following requests. Credentials are development-only; tokens remain in runtime memory. On 401, sign in again. The walkthrough documents refresh, uploads, rentals and expected errors.
 
-| Location | Contents |
+## Explore the codebase
+
+Follow [the developer walkthrough](docs/project-walkthrough.md) to try visitor, driver and admin access, trace a browser request into Spring and locate the tests for each layer.
+
+## Repository layout
+
+| Directory | Contents |
 | --- | --- |
-| `apps/api/` | Spring Boot API, Maven Wrapper, Flyway and backend tests |
-| `apps/web/` | React, TypeScript, feature routes and component tests |
-| `apps/recommendations/` | Supporting Spring Boot Kafka consumer and its tests |
-| `requests/` | Executable HTTP Yac workflows |
-| `helm/`, `compose*.yaml`, `scripts/` | Runtime definitions and image publication |
-| `docs/` | Onboarding, architecture walkthroughs and study labs |
-| `.github/workflows/` | Verification, coverage, mutation and infrastructure checks |
+| [apps/api/](apps/api/README.md) | Java API, Maven Wrapper, Flyway migrations and backend tests |
+| [apps/web/](apps/web/README.md) | React and TypeScript application, feature routes and frontend tests |
+| [requests/](requests/) | HTTP Yac files for authentication, catalogs, images and rentals |
+| [.github/workflows/](.github/workflows/) | CI workflows for verification, coverage and mutation testing |
 
-Run commands from the repository root:
+From the repository root, run `make dev` to start PostgreSQL, the API and the frontend together. Use `make api-dev` or `make web-dev` to start a single application, and `make check` to verify both. See the [contributor guide](AGENTS.md) for development conventions.
+
+## Development S3 storage
+
+Both development Compose files use SeaweedFS 4.52. The API uses its existing S3
+adapter with path-style requests, and the browser continues to access images
+through `/api/cars/{id}?imageId={imageId}`. Only the S3 port is published locally,
+at `http://localhost:8333`; the full container stack keeps it internal.
 
 ```sh
-make check-api              # Java API with isolated PostgreSQL/storage tests
-make check-recommendations  # Consumer with isolated Kafka tests
-make check-java             # Both Java applications
-make check-web              # Format, lint, architecture, coverage and build
-make check-infra            # Helm and image-publication contracts (Python 3 + Helm)
-make check                  # All checks above
+# Spring and React on the host, PostgreSQL and S3 in Docker:
+make setup
+make dev
+
+# Alternatively, everything in Docker (open http://localhost:8081):
+docker compose -f compose.stack.yaml up --build -d --wait
 ```
 
-Docker must be running for Java integration tests. Install frontend dependencies with `make setup`; install Python 3 and Helm for infrastructure checks. JaCoCo reports live under each Java application's `target/site/jacoco/`; web coverage lives in `apps/web/coverage/`. See [AGENTS.md](AGENTS.md) for testing conventions and the application READMEs for PIT/Stryker commands.
+The Make targets provide the development-only AWS credentials. When launching
+Spring directly from an IDE, set `AWS_ACCESS_KEY_ID=rent-cars-dev` and
+`AWS_SECRET_ACCESS_KEY=rent-cars-dev-secret`. These are public local credentials,
+not AWS credentials. Production still uses the default AWS credential chain.
 
-### CI by application
+Images survive container recreation in the `s3_data` volume. `make infra-stop`
+and `docker compose -f compose.stack.yaml down` preserve volumes; removing
+volumes discards their data. Existing disk uploads are not automatically moved
+into the new bucket. See the [API storage guide](apps/api/README.md#s3-configuration)
+for migration instructions and the [Kubernetes guide](helm/README.md) for the
+same storage setup in a cluster.
 
-- `api-quality.yml` and `api-mutation.yml`: API verification/Sonar and package-partitioned PIT with every production class included.
-- `frontend-quality.yml`, `frontend-mutation.yml` and `frontend-e2e.yml`: frontend verification, Stryker and Playwright journeys.
-- `recommendations-quality.yml` and `recommendations-mutation.yml`: consumer verification/Sonar, infrastructure checks and PIT.
+## Verify the complete environment
 
-GitHub Actions does not discover workflows in subfolders, so filenames use application prefixes and displayed names follow `API / Quality`, `Frontend / Mutation` and `Recommendations / Quality`. Existing required check names are preserved for branch protection.
+Run `make check-api` and `make check-web` with Docker running. Backend image HTTP
+tests use PostgreSQL and a real SeaweedFS container, including failed upload
+rollback, ownership, authorization and object deletion. Every runtime uses the
+same S3 implementation; endpoint, bucket, region and credentials select the service.
 
-Each Java application owns its POM and Maven Wrapper. There is no root POM; `make check-java` simply invokes the two independent builds. Sonar projects share the API's quality policy without overwriting each other's analysis.
+For a full local stack, run `docker compose -f compose.stack.yaml up --build -d --wait`
+and open http://localhost:8081. For Kubernetes, run `make k8s-up` with published images as described in
+[the Helm guide](helm/README.md), then open http://localhost:8082.
+In each environment check:
 
-### Merge a reviewed PR after CI
+1. Sign in as the development admin, create a car and upload both Argo fixtures.
+2. Open each original image, reload the page and confirm both photos remain.
+3. Add another image; the previous images must remain visible.
+4. Reject a non-JPEG/PNG file and a file larger than 5 MiB without altering the gallery.
+5. Sign out: photos remain readable, but upload controls disappear. Anonymous
+   upload/removal requests must return 401.
+6. Restart the API, database and S3 service, then reopen the car and photos.
+7. Use the HTTP Yac `car-images.http → car_images_delete` request: expect 204, then 404 when reading that image.
+8. Delete the car and verify its remaining images are no longer available.
 
-Use GitHub's **Enable auto-merge → Squash and merge**, or `gh pr merge <number> --auto --squash`. This is opt-in per PR. The required `Merge readiness` check waits for every triggered PR workflow on the current commit, including mutation tests; Java's workflow also waits for the Sonar gate. Failed, cancelled or timed-out workflows block the merge. If you rerun a failed workflow without a new commit, rerun `PR merge readiness` as well. New commits trigger fresh checks.
+For Compose persistence checks, use
+`docker compose -f compose.stack.yaml restart api postgres s3`, followed by
+`docker compose -f compose.stack.yaml up -d --wait`. Do not delete volumes.
+For Kubernetes use the rollout commands in the Helm guide and run
+`helm test fleet -n rent-cars --logs` to verify the web proxy and API routing.
+These checks validate the S3-compatible development setup; repeat the image
+lifecycle against the real AWS bucket before deploying there to validate IAM
+permissions and AWS-specific behavior.
 
-## 7. Stop without losing your work
+## Study: rental transactions and recovery
 
-For local development, press Ctrl+C in both the application and optional consumer terminals, then run `make infra-stop`. If you started the consumer through Compose, also run `docker compose stop recommendations`. For the container stack, run `docker compose -f compose.stack.yaml down`. These commands preserve volumes.
+Follow the [ACID and rollback lab](docs/studies/rental-acid-rollback.md) to trace the Spring transaction, force a failure after both database writes, and test recovery from a failed or lost rental response without automatically repeating the request.
 
-`docker compose down -v` removes that Compose project's data. **`make k8s-down` deletes the application namespace, including its database, photos and credentials.** Kafka lives in a separate Kubernetes namespace and is retained; see the Helm guide before resetting/replaying across a fresh database.
+Study PostgreSQL through the running application with the [full-stack database labs](docs/studies/README.md): concurrency, query plans and ORM pagination.
 
-## Learn one topic at a time
+## Interfaces started by `make dev`
 
-- [Onboarding](docs/getting-started.md): first successful end-to-end journey.
-- [Code walkthrough](docs/project-walkthrough.md): Java/React responsibilities and tests.
-- [Database labs](docs/studies/README.md): integrity, ACID/rollback, concurrency and query plans.
-- [Kafka](docs/kafka.md) and [consumer](apps/recommendations/README.md): outbox, delivery, offsets and independent processing.
-- [Observability](docs/observability.md): logs, metrics and traces.
-- [API storage](apps/api/README.md#s3-configuration): local S3 and external bucket configuration.
+`make dev` also starts the Kafka UI automatically. No second Make command is needed.
+
+| Interface | Default URL |
+| --- | --- |
+| React | http://localhost:5173 |
+| Swagger | http://localhost:8080/swagger-ui.html |
+| Grafana | http://localhost:3000 |
+| Mailpit | http://localhost:8025 |
+| Kafka UI | http://localhost:8084 |
+
+`SERVER_PORT` and `KAFKA_UI_PORT` override the corresponding ports printed at startup. Stop the Kubernetes Kafka UI before using the same local port, or choose another `KAFKA_UI_PORT`. `make api-dev` keeps the Kafka UI optional: run `make kafka-ui` when needed. `make kafka-events` is an optional terminal consumer, not an application dependency.
+
+## Rental events and Kafka
+
+Follow the [Kafka producer walkthrough](docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.

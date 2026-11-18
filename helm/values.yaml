@@ -91,23 +91,8 @@ storage:
   pathStyle: true
   credentialsSecret: fleet-s3
 
-# make k8s-up prepares the separate Kafka namespace before deploying the app.
+# Kafka lifecycle is separate: make k8s-kafka-up, then enable publication.
 messaging:
-  enabled: true
+  enabled: false
   bootstrapServers: rent-kafka-bootstrap.rent-kafka.svc.cluster.local:9092
   topic: rentals.events
-
-# Supporting event consumer; no public HTTP service.
-recommendations:
-  enabled: true
-  groupId: rent-cars-recommendations-v1
-  image:
-    repository: docker.io/guuhworship/rent-cars-recommendations
-    tag: latest
-    pullPolicy: Always
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      memory: 256Mi

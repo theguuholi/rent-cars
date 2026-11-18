@@ -120,17 +120,14 @@ kubectl --context docker-desktop -n rent-kafka get kafka,kafkanodepool,kafkatopi
 
 This installs the operator and a **single broker/controller with persistent storage** in namespace `rent-kafka`. Three topic partitions do not mean three replicas. There is no broker high availability, TLS or authentication in this local lab.
 
-Publish API, web and recommendations with `./scripts/push-images.sh`, then run
-`make k8s-up`. It now prepares Kafka first and deploys the application with
-publication and the supporting consumer enabled by default. `make k8s-kafka-up`
-remains useful when you only want the broker for a study session.
+Deploy your built/published API image using the existing [Helm guide](../helm/README.md). Use `make k8s-up KAFKA_ENABLED=true` to deploy the app with publication enabled. To enable it on an existing release:
 
-The chart bootstrap defaults to the internal Kafka DNS name. `make k8s-up`
-resets Helm values; persist image/group settings in `helm/values.yaml` or use an
-explicit values file with your own Helm command. `make k8s-up KAFKA_ENABLED=false`
-omits recommendations and disables API publication, without deleting Kafka.
-See the [consumer verification](../helm/README.md#verify-the-supporting-consumer)
-for receipt logs and the distinction between pod readiness and consumer health.
+```sh
+helm upgrade fleet ./helm --kube-context docker-desktop -n rent-cars \
+  --reuse-values --set messaging.enabled=true --wait --timeout 6m
+```
+
+Use the new API image from this branch; an older image cannot publish events. The chart bootstrap defaults to the internal Kafka DNS name. Existing `make k8s-up` resets values; pass `KAFKA_ENABLED=true` whenever publication should be enabled, or deploy with explicit versioned values.
 
 To see messages from inside the cluster:
 

@@ -1,8 +1,22 @@
-name: Frontend / E2E
+name: Playwright journeys
 on:
   pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/e2e/**'
+      - 'apps/web/src/**'
+      - 'apps/web/playwright.config.ts'
+      - 'apps/web/package*.json'
+      - '.github/workflows/playwright-public-api.yml'
   push:
     branches: [master]
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/e2e/**'
+      - 'apps/web/src/**'
+      - 'apps/web/playwright.config.ts'
+      - 'apps/web/package*.json'
+      - '.github/workflows/playwright-public-api.yml'
   workflow_dispatch:
 
 permissions:

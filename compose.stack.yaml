@@ -1,9 +1,5 @@
 name: rent-cars-stack
 services:
-  recommendations:
-    extends:
-      file: compose.yaml
-      service: recommendations
   kafka:
     extends:
       file: compose.kafka.yaml
