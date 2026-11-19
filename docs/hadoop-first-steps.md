@@ -2,13 +2,41 @@
 
 Start here if Hadoop is new to you. Work through the **local** exercises first,
 then repeat them in **Kubernetes**. Do not start both environments simultaneously.
-This guide requires the HDFS implementation from PR #71.
+The HDFS implementation and this guide are delivered together in this repository.
+Start from this guide, then follow its links to the code and system design.
 
 By the end you should be able to explain where an event lives, locate its file,
 prove a replay does not overwrite it, and diagnose an unavailable archive.
 You do not need Spark, a Hadoop certification or a new Java service for this lab.
 
+<a id="step-1"></a>
+
 ## 1. Learn six words before running anything
+
+<a id="phase-1-reading"></a>
+
+### Read before the first lab
+
+Follow this short reading checklist in order. Each item explains what to look
+for; you do not need to read every page or install another tool yet.
+
+- [ ] Read the introduction on [Apache Hadoop](https://hadoop.apache.org/).
+  Identify Hadoop as an ecosystem that includes storage and processing, rather
+  than a single database. In this lab we use its HDFS storage components.
+- [ ] Read **Introduction** and **NameNode and DataNodes** in the
+  [HDFS architecture guide](https://hadoop.apache.org/docs/r3.5.0/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html).
+  Explain who stores file metadata and who stores the actual blocks.
+- [ ] Read the overview of [HttpFS: Hadoop HDFS over HTTP](https://hadoop.apache.org/docs/r3.5.0/hadoop-hdfs-httpfs/index.html).
+  Explain why a Java HTTP client can access HDFS through a gateway.
+- [ ] Read the opening explanation of [Spark SQL](https://spark.apache.org/sql/).
+  Distinguish querying/processing data from storing files. Spark is a future
+  stage, not a prerequisite to run this lab.
+- [ ] Read the [project architecture diagram](recommendations-hdfs.md#boundaries-and-topology)
+  and locate those components in [compose.yaml](../compose.yaml).
+  Find `hdfs-namenode`, `hdfs-datanode` and `hdfs-httpfs`; do not change them yet.
+- [ ] Use the glossary below to explain all six terms before continuing to
+  [step 2](#step-2).
+
 
 | Word | Plain explanation | In this project |
 | --- | --- | --- |
@@ -37,6 +65,8 @@ flowchart LR
 HDFS retaining a file. Both persist data, but they serve different access and
 processing models. Kafka retention does not delete an archived HDFS file.
 
+<a id="step-2"></a>
+
 ## 2. Know what is and is not connected
 
 The API saves a rental and an outbox record in PostgreSQL. Its publisher sends
@@ -55,6 +85,8 @@ starts disabled. There is no Spark job or recommendation model yet.
 
 One rental can have separate `RentalOpened` and `RentalReturned` events, each
 with a different event ID. Counting all files is not the same as counting rentals.
+
+<a id="step-3"></a>
 
 ## 3. Prepare your workstation
 
@@ -86,6 +118,8 @@ make k8s-stop
 
 This stops application workloads, not Docker Desktop's Kubernetes engine, and
 preserves volumes. Do not use reset/delete-volume commands for these exercises.
+
+<a id="step-4"></a>
 
 ## 4. Start everything locally with archival enabled
 
@@ -126,6 +160,8 @@ curl --fail --silent --show-error \
 
 Port 14000 is an HTTP file API, not a graphical dashboard.
 
+<a id="step-5"></a>
+
 ## 5. Create a real event through the application
 
 1. Open the web application and register/sign in as a driver.
@@ -142,6 +178,8 @@ Port 14000 is an HTTP file API, not a graphical dashboard.
 **Expected:** a real rental exists in PostgreSQL, an event exists in Kafka and a
 receipt appears after archival. Kafka lag may briefly be nonzero while work is
 pending. The committed offset represents the next record to consume.
+
+<a id="step-6"></a>
 
 ## 6. Find and read the exact file
 
@@ -174,6 +212,8 @@ if browser links to internal DataNode addresses are not reachable from your Mac.
 **Checkpoint:** can you locate the same fact in the API, Kafka and HDFS without
 confusing rental ID, event ID and offset?
 
+<a id="step-7"></a>
+
 ## 7. Read the Java code in execution order
 
 Do not start with every file in the repository. Follow this small path:
@@ -195,6 +235,8 @@ ID throws instead of overwriting history.
 Read the [sequence diagram and failure table](recommendations-hdfs.md) after you
 have opened these files. This is **at-least-once processing**, with idempotent
 final files. There is no transaction spanning Kafka and HDFS.
+
+<a id="step-8"></a>
 
 ## 8. Replay an event and prove idempotency
 
@@ -225,6 +267,8 @@ Now read [RentalEventArchiveTest.java](../apps/recommendations/src/test/java/com
 and find the Given/When/Then scenarios for identical replay, conflicting content
 and concurrent publication. A changed value with the same ID must be rejected.
 
+<a id="step-9"></a>
+
 ## 9. Make storage fail, then recover
 
 1. Stop only the local gateway:
@@ -254,6 +298,8 @@ The DLT is not drained automatically when HDFS returns. It requires investigatio
 and deliberate replay. If both storage and DLT are unavailable, the source offset
 must remain pending; the integration tests below verify that case.
 
+<a id="step-10"></a>
+
 ## 10. Restart storage and prove persistence
 
 In terminal B:
@@ -268,6 +314,8 @@ curl --fail --silent --show-error \
 **Expected:** the file from step 6 remains readable. Named Docker volumes retain
 the NameNode metadata and DataNode blocks. Retain **both**; keeping only one is
 not a backup strategy. An application database reset does not reset HDFS.
+
+<a id="step-11"></a>
 
 ## 11. Run and navigate the automated tests
 
@@ -291,6 +339,8 @@ For mutation testing, follow [the recommendations README](../apps/recommendation
 A 100% report proves the configured checks passed, not that every imaginable
 production failure has been modeled.
 
+<a id="step-12"></a>
+
 ## 12. Stop local mode before Kubernetes
 
 In terminal A, press Ctrl+C. Then, from the repository root:
@@ -302,6 +352,8 @@ make infra-stop
 Close any other independently started API/web/consumer terminals. The environment
 guard intentionally blocks Kubernetes startup while local services are active.
 Do not delete volumes to get past that guard.
+
+<a id="step-13"></a>
 
 ## 13. Check Kubernetes prerequisites before deployment
 
@@ -340,6 +392,8 @@ registry, use `IMAGE_NAMESPACE=your-namespace ./scripts/push-images.sh` and upda
 the matching `api.image.repository`, `web.image.repository` and
 `recommendations.image.repository` Helm values before deployment. Publishing
 images does not update an already running pod by itself.
+
+<a id="step-14"></a>
 
 ## 14. Deploy and inspect Kubernetes
 
@@ -381,6 +435,8 @@ Read [helm/templates/hdfs.yaml](../helm/templates/hdfs.yaml), then
 Find the Services, persistent volumes, enabled flag and startup wait. Compare
 them with the local services in [compose.yaml](../compose.yaml).
 
+<a id="step-15"></a>
+
 ## 15. Repeat the failure exercise in Kubernetes
 
 In this lab only, temporarily stop the HttpFS gateway:
@@ -416,6 +472,8 @@ This preserves data. **Do not use `make k8s-down` for a normal pause:** in this
 branch it deletes namespace `rent-cars`, including its PVC objects; backing-disk
 deletion depends on the storage class reclaim policy.
 
+<a id="step-16"></a>
+
 ## 16. Troubleshoot by the failing boundary
 
 | Symptom | First check |
@@ -440,6 +498,8 @@ docker compose logs --tail=80 hdfs-namenode hdfs-datanode hdfs-httpfs
 kubectl --context docker-desktop -n rent-cars logs statefulset/fleet-hdfs-httpfs --tail=80
 kubectl --context docker-desktop -n rent-cars describe pod fleet-hdfs-httpfs-0
 ```
+
+<a id="step-17"></a>
 
 ## 17. Explain what you learned before adding Spark
 
