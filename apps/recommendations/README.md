@@ -1,6 +1,6 @@
 # Recommendations consumer
 
-An independent Spring Boot application that consumes rental events from Kafka. This first step validates the event envelope and logs a receipt. It does not calculate recommendations, write business data or expose an HTTP server.
+An independent Spring Boot application that consumes rental events from Kafka. It validates the event envelope and logs a receipt; an optional HDFS lab archives the original JSON before the offset can advance. It does not calculate recommendations, write business data or expose an HTTP server.
 
 ## Run locally
 
@@ -53,7 +53,7 @@ For local Kubernetes, the root Helm chart includes this supporting consumer by d
 
 The source is the [versioned rental event contract](../../docs/events/rentals.md), keyed by `rentalId`. The consumer accepts `RentalOpened` and `RentalReturned`, schema version 1, required envelope fields and an object payload. Additional envelope fields are ignored for additive compatibility. Payload business fields are deliberately opaque until this service uses them.
 
-`enable-auto-commit: false` and listener `ack-mode: record` commit the next offset after a successful listener invocation. A crash after logging but before the offset commit may replay that receipt: delivery is **at least once**, not exactly once. Duplicate `eventId` values may appear in logs. There are no business side effects yet; add durable deduplication before introducing them.
+`enable-auto-commit: false` and listener `ack-mode: record` commit the next offset after a successful listener invocation. A crash after logging but before the offset commit may replay that receipt: delivery is **at least once**, not exactly once. Duplicate `eventId` values may appear in logs. With HDFS enabled, immutable files keyed by `eventId` provide archive replay safety. Other future side effects need their own idempotency design.
 
 Malformed JSON, invalid envelopes and key mismatches go directly to
 `rentals.events.recommendations.DLT`. Other processing failures receive three
@@ -71,7 +71,7 @@ still has no HTTP server.
 
 - `RecommendationsApplication`: Spring Boot entry point.
 - `rentals/RentalEvent`: consumer-owned integration envelope, independent of API entities.
-- `rentals/RentalEventsConsumer.consume`: deserialize, validate, verify key, log receipt.
+- `rentals/RentalEventsConsumer.consume`: deserialize, validate, verify key, optionally archive, log receipt.
 - `rentals/KafkaConsumerConfiguration`: classify failures, retry and publish to DLT.
 - `rentals/RentalEventRecoveryObserver`: recovery counters and coordinate-only logs.
 - `application.yaml`: broker, group and commit policy.
@@ -115,3 +115,11 @@ The API uses its own SONAR_PROJECT_KEY. Recommendations does not read that key.
 A shared organization or authorized token does not combine the analyses.
 Fork and Dependabot PRs still run Maven verification; Sonar runs only when the
 workflow can access the analysis credential.
+
+## Optional HDFS archive
+
+Run `make dev HDFS_ENABLED=true` from the repository root to include the archive lab. Read the [system design and local/Kubernetes walkthrough](../../docs/recommendations-hdfs.md) before switching consumer groups or replaying records. It explains atomic publication, retries/DLT, storage inspection, platform requirements and production limitations.
+
+## New to Hadoop?
+
+Follow [Hadoop from zero: local first, then Kubernetes](../../docs/hadoop-first-steps.md) for a guided code tour, hands-on exercises, expected results and troubleshooting.

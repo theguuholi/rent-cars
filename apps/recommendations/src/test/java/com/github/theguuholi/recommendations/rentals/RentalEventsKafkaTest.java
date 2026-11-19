@@ -47,6 +47,8 @@ class RentalEventsKafkaTest {
   static final KafkaContainer KAFKA =
       new KafkaContainer("apache/kafka:4.1.1").withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "false");
 
+  @Container static final HdfsTestContainer HDFS = new HdfsTestContainer();
+
   final String topic = "rentals-" + UUID.randomUUID();
   final String group = "recommendations-" + UUID.randomUUID();
 
@@ -96,6 +98,8 @@ class RentalEventsKafkaTest {
                       }
                     }))
         .run(
+            "--rent.archive.enabled=true",
+            "--rent.archive.url=" + HDFS.endpoint(),
             "--spring.kafka.bootstrap-servers=" + KAFKA.getBootstrapServers(),
             "--spring.kafka.consumer.group-id=" + groupId,
             "--rent.messaging.topic=" + topic,
@@ -196,6 +200,12 @@ class RentalEventsKafkaTest {
         assertThat(container.getContainerProperties().getAckMode())
             .isEqualTo(ContainerProperties.AckMode.RECORD);
         awaitCommit(group, 3);
+        var stored =
+            new HdfsArchiveClient(
+                org.springframework.web.client.RestClient.create(HDFS.endpoint()), "hadoop");
+        assertThat(stored.read("/rent-cars/raw/rentals/b2/" + FIRST_ID + ".json")).contains(FIRST);
+        assertThat(stored.read("/rent-cars/raw/rentals/c2/" + SECOND_ID + ".json"))
+            .contains(SECOND);
         assertThat(receipts(output, FIRST_ID)).isEqualTo(2);
         assertThat(receipts(output, SECOND_ID)).isEqualTo(1);
       }
@@ -352,6 +362,73 @@ class RentalEventsKafkaTest {
         awaitCommit(group, 2);
         assertThat(deadLetter().value()).isEqualTo("not-json");
         assertThat(receipts(output, SECOND_ID)).isEqualTo(1);
+      }
+    }
+
+    @Test
+    void givenHdfsOutageWhenRetriesExhaustThenQuarantinesAndReplaysAfterRecovery()
+        throws Exception {
+      String eventId = UUID.randomUUID().toString();
+      String event = FIRST.replace(FIRST_ID, eventId);
+      HDFS.getDockerClient().pauseContainerCmd(HDFS.getContainerId()).exec();
+      try (var app = start(group)) {
+        send(event);
+        assertThat(app.isActive()).isTrue();
+        awaitCommit(group, 1);
+        assertThat(deadLetter().value()).isEqualTo(event);
+      } finally {
+        HDFS.getDockerClient().unpauseContainerCmd(HDFS.getContainerId()).exec();
+      }
+      send(event);
+      try (var app = start(group)) {
+        assertThat(app.isActive()).isTrue();
+        awaitCommit(group, 2);
+        var client =
+            new HdfsArchiveClient(
+                org.springframework.web.client.RestClient.create(HDFS.endpoint()), "hadoop");
+        assertThat(
+                client.read(
+                    "/rent-cars/raw/rentals/" + eventId.substring(0, 2) + "/" + eventId + ".json"))
+            .contains(event);
+      }
+    }
+
+    @Test
+    void givenHdfsAndDltUnavailableWhenRecoveryFailsThenDoesNotCommitUntilStorageReturns()
+        throws Exception {
+      String eventId = UUID.randomUUID().toString();
+      String event = FIRST.replace(FIRST_ID, eventId);
+      try (var admin = admin()) {
+        admin.deleteTopics(List.of(topic + ".DLT")).all().get(10, TimeUnit.SECONDS);
+      }
+      HDFS.getDockerClient().pauseContainerCmd(HDFS.getContainerId()).exec();
+      try (var app = start(group)) {
+        send(event);
+        var metrics = app.getBean(io.micrometer.core.instrument.MeterRegistry.class);
+        await()
+            .atMost(Duration.ofSeconds(60))
+            .untilAsserted(() ->
+                assertThat(metrics.find("rental.consumer.dlt.failures").counter()).isNotNull());
+        assertThat(committed(group)).isZero();
+      } finally {
+        HDFS.getDockerClient().unpauseContainerCmd(HDFS.getContainerId()).exec();
+      }
+      try (var admin = admin()) {
+        admin
+            .createTopics(List.of(new NewTopic(topic + ".DLT", 1, (short) 1)))
+            .all()
+            .get(10, TimeUnit.SECONDS);
+      }
+      try (var app = start(group)) {
+        assertThat(app.isActive()).isTrue();
+        awaitCommit(group, 1);
+        var client =
+            new HdfsArchiveClient(
+                org.springframework.web.client.RestClient.create(HDFS.endpoint()), "hadoop");
+        assertThat(
+                client.read(
+                    "/rent-cars/raw/rentals/" + eventId.substring(0, 2) + "/" + eventId + ".json"))
+            .contains(event);
       }
     }
   }

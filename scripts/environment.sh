@@ -26,7 +26,7 @@ check_local() {
 
 check_k8s() {
   local containers processes
-  containers=$(docker compose --profile kafka-ui ps --status running -q)
+  containers=$(docker compose --profile kafka-ui --profile hdfs ps --status running -q)
   processes=$(pgrep -f 'com.github.theguuholi.(rentcars.RentCarsApiApplication|recommendations.RecommendationsApplication)|/rent-cars/apps/web/node_modules/.bin/vite' || true)
   if [[ -n "$containers" || -n "$processes" ]]; then
     echo 'Local environment is active. Stop make dev/api-dev/web-dev/recommendations-dev with Ctrl+C in their terminals, then run make infra-stop and retry.' >&2
