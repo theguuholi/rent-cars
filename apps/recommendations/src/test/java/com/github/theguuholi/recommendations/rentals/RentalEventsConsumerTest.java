@@ -36,7 +36,8 @@ class RentalEventsConsumerTest {
   @BeforeEach
   void setUp() {
     validation = Validation.buildDefaultValidatorFactory();
-    consumer = new RentalEventsConsumer(json, validation.getValidator());
+    consumer =
+        new RentalEventsConsumer(json, validation.getValidator(), java.util.Optional.empty());
     logger = (Logger) LoggerFactory.getLogger(RentalEventsConsumer.class);
     logs = new ListAppender<>();
     logs.start();
@@ -56,6 +57,22 @@ class RentalEventsConsumerTest {
 
   @Nested
   class Consume {
+    @Test
+    void givenArchiveFailureWhenConsumingThenPropagatesWithoutLoggingSuccessfulReceipt() {
+      var archive = org.mockito.Mockito.mock(RentalEventArchive.class);
+      var failure = new IllegalStateException("storage unavailable");
+      org.mockito.Mockito.doThrow(failure)
+          .when(archive)
+          .store(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString());
+      var archivingConsumer =
+          new RentalEventsConsumer(json, validation.getValidator(), java.util.Optional.of(archive));
+      var record = message(RENTAL.toString(), JSON);
+      assertThatThrownBy(() -> archivingConsumer.consume(record)).isSameAs(failure);
+      org.mockito.Mockito.verify(archive)
+          .store(UUID.fromString("b2a088d3-f66d-4f47-af43-746de9fc0375"), JSON);
+      assertThat(logs.list).isEmpty();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"RentalOpened", "RentalReturned"})
     void givenSupportedEventWhenConsumedThenLogsItsIdentityAndKafkaPosition(String type) {

@@ -7,7 +7,7 @@ infra-up: check-local-environment
 	docker compose run --rm kafka-init
 
 infra-stop:
-	docker compose stop postgres s3 mailpit observability kafka kafka-ui
+	docker compose --profile hdfs stop postgres s3 mailpit observability kafka kafka-ui hdfs-httpfs hdfs-datanode hdfs-namenode
 
 db-up: check-local-environment
 	docker compose up -d --wait postgres

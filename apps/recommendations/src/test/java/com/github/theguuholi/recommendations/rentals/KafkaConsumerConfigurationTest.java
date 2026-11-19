@@ -48,12 +48,12 @@ class KafkaConsumerConfigurationTest {
     @Test
     void givenInvalidMessagesWhenHandlingThenRecoversWithoutRetry() {
       var recoverer = mock(DeadLetterPublishingRecoverer.class);
+      var metrics = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
       var handler =
           configuration.rentalEventsErrorHandler(
               recoverer,
               configuration.rentalRetryBackOff(3, 1),
-              new RentalEventRecoveryObserver(
-                  new io.micrometer.core.instrument.simple.SimpleMeterRegistry()));
+              new RentalEventRecoveryObserver(metrics));
       var consumer = mock(Consumer.class);
       var container = mock(MessageListenerContainer.class);
       var record = new ConsumerRecord<String, String>("rentals.events", 2, 17, "key", "value");
@@ -74,6 +74,8 @@ class KafkaConsumerConfigurationTest {
         verify(recoverer).accept(record, consumer, failure);
       }
       assertThat(handler.isAckAfterHandle()).isTrue();
+      assertThat(metrics.get("rental.consumer.failures").counter().count()).isEqualTo(3);
+      assertThat(metrics.get("rental.consumer.dlt.published").counter().count()).isEqualTo(3);
     }
   }
 

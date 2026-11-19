@@ -38,3 +38,7 @@ the original key/payload and source headers; recovery is at-least-once. It is no
 new business-event type and does not change schema version 1. The API's PostgreSQL
 Outbox remains unchanged. See the [recovery design](../recommendations-dlt.md) for
 retries, offset guarantees, retention and replay implications for other groups.
+
+## Optional HDFS archival
+
+See the [HDFS system design and step-by-step lab](../recommendations-hdfs.md) for `make dev HDFS_ENABLED=true`, Kubernetes, replay safety, retries/DLT and storage inspection. Use a new consumer group when backfilling retained events; enabling storage does not replay already committed offsets.
