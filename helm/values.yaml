@@ -102,6 +102,7 @@ messaging:
   enabled: true
   bootstrapServers: rent-kafka-bootstrap.rent-kafka.svc.cluster.local:9092
   topic: rentals.events
+  deadLetterTopic: rentals.events.recommendations.DLT
 
 # Supporting event consumer; no public HTTP service.
 recommendations:

@@ -209,10 +209,10 @@ filesystem and a writable temporary volume, like the API.
 
 A running/Ready pod only confirms process startup here, not successful event
 processing. No synthetic HTTP/TCP probe is attached to this non-web process.
-The current error policy stops the listener on an invalid record while leaving
-the JVM alive. Inspect receipt logs and group lag; fix the underlying cause
-before restarting. Production listener health and retry/dead-letter policy
-remain future work, as explained in the [consumer guide](../apps/recommendations/README.md).
+The recommendations consumer retries temporary failures and quarantines invalid or
+exhausted records in `rentals.events.recommendations.DLT`. Source offsets advance
+only after confirmed recovery. See the [DLT exercise](../docs/recommendations-dlt.md)
+for Kubernetes verification, recovery failures and manual replay.
 
 The image push script publishes:
 

@@ -37,7 +37,7 @@ k8s-kafka-up: check-k8s-environment
 	kubectl --context docker-desktop -n rent-kafka rollout status deployment/strimzi-cluster-operator --timeout=120s
 	kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/local.yaml
 	kubectl --context docker-desktop -n rent-kafka wait kafka/rent --for=condition=Ready --timeout=300s
-	kubectl --context docker-desktop -n rent-kafka wait kafkatopic/rentals-events --for=condition=Ready --timeout=120s
+	kubectl --context docker-desktop -n rent-kafka wait kafkatopic/rentals-events kafkatopic/rentals-events-recommendations-dlt --for=condition=Ready --timeout=120s
 	kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/ui-local.yaml
 	kubectl --context docker-desktop -n rent-kafka scale deployment/kafka-ui --replicas=1
 

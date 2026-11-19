@@ -94,13 +94,12 @@ producer bottleneck. Preserve delivery/ordering guarantees when evolving it.
 
 - Producer: Kafka internal retries plus Outbox retry with increasing delay,
   capped at five minutes. The row remains pending until acknowledged.
-- Consumer: `CommonContainerStoppingErrorHandler` stops the listener on a failed
-  record. Earlier successful records can be committed; the failing record is
-  not silently skipped. There is no consumer retry/DLQ policy yet.
+- Consumer: `DefaultErrorHandler` retries transient failures and publishes invalid
+  or exhausted records to a dedicated DLT. Publication must be confirmed before
+  advancing the source offset. See the [DLT design](recommendations-dlt.md).
 - Restart resumes from committed offsets. `earliest` applies when no valid offset
   exists, not on every restart. Replay only reaches data still retained.
-- A running recommendations JVM/pod can have a stopped listener. Check group
-  membership, lag and receipt logs, not only process health.
+- Check group membership, lag and recovery logs, not only process health.
 
 Read: [Spring Kafka error handling](https://docs.spring.io/spring-kafka/reference/kafka/annotation-error-handling.html).
 

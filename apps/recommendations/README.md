@@ -55,16 +55,25 @@ The source is the [versioned rental event contract](../../docs/events/rentals.md
 
 `enable-auto-commit: false` and listener `ack-mode: record` commit the next offset after a successful listener invocation. A crash after logging but before the offset commit may replay that receipt: delivery is **at least once**, not exactly once. Duplicate `eventId` values may appear in logs. There are no business side effects yet; add durable deduplication before introducing them.
 
-Malformed JSON, missing required fields, unsupported types/versions and mismatched keys stop the listener through Spring Kafka's `CommonContainerStoppingErrorHandler`. There is no automatic retry loop, discard or dead-letter topic in this first step. The failed offset remains uncommitted and later records are not processed. The JVM remains running even when the listener stops; inspect logs and group lag rather than treating a running process as consumer health.
+Malformed JSON, invalid envelopes and key mismatches go directly to
+`rentals.events.recommendations.DLT`. Other processing failures receive three
+retries (1s, 2s, 4s) before DLT recovery. The source offset advances only after
+confirmed DLT publication; if that publication fails, the record stays pending.
+Recovery is at-least-once and can duplicate a DLT record after a crash.
 
-To recover, inspect the failing partition/offset, correct the consumer or upstream contract as appropriate, and restart the application. Restart alone repeats a permanently invalid record. Kafka records cannot be edited in place: a deliberate offset skip loses that record for the group and requires an explicit operator decision. A later production deployment needs monitored listener health and a defined retry/dead-letter policy.
+Follow the [DLT design and local/Kubernetes exercises](../../docs/recommendations-dlt.md)
+for explicit PostgreSQL/Outbox boundaries, retention, production durability,
+observability, configuration and safe manual replay. No new table or migration
+is introduced. Micrometer recovery counters are exported via JMX; this consumer
+still has no HTTP server.
 
 ## Code navigation
 
 - `RecommendationsApplication`: Spring Boot entry point.
 - `rentals/RentalEvent`: consumer-owned integration envelope, independent of API entities.
 - `rentals/RentalEventsConsumer.consume`: deserialize, validate, verify key, log receipt.
-- `rentals/KafkaConsumerConfiguration`: stop consumption on failure.
+- `rentals/KafkaConsumerConfiguration`: classify failures, retry and publish to DLT.
+- `rentals/RentalEventRecoveryObserver`: recovery counters and coordinate-only logs.
 - `application.yaml`: broker, group and commit policy.
 - Tests mirror these responsibilities; `RentalEventsKafkaTest` verifies broker behavior with a disposable Kafka.
 
@@ -81,7 +90,7 @@ make check                 # Both Java applications plus the web checks
 ./apps/recommendations/mvnw -f apps/recommendations/pom.xml -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
 ```
 
-Reports: `apps/recommendations/target/site/jacoco/index.html` and `apps/recommendations/target/pit-reports/index.html`. This module enforces 100% line and branch coverage and a 100% PIT mutation score. Integration tests cover retained events, both event types, duplicate delivery, independent groups, restart from committed offsets and failure without skipping the invalid record.
+Reports: `apps/recommendations/target/site/jacoco/index.html` and `apps/recommendations/target/pit-reports/index.html`. This module enforces 100% line and branch coverage and a 100% PIT mutation score. Integration tests cover retained events, both event types, duplicate delivery, independent groups, restart from committed offsets and confirmed quarantine, retries and recovery failure without offset advancement.
 
 There is no root POM. API and recommendations each own their Spring Boot parent, Maven Wrapper, build and Docker context. `make check-java` is only a convenience target that invokes both builds. Keep quality plugin versions aligned.
 

@@ -33,8 +33,11 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    entrypoint: [/opt/kafka/bin/kafka-topics.sh]
-    command: [--bootstrap-server, 'kafka:19092', --create, --if-not-exists, --topic, rentals.events, --partitions, '3', --replication-factor, '1', --config, retention.ms=604800000]
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic rentals.events --partitions 3 --replication-factor 1 --config retention.ms=604800000
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic rentals.events.recommendations.DLT --partitions 3 --replication-factor 1 --config retention.ms=1209600000 --config min.insync.replicas=1 --config cleanup.policy=delete
   kafka-ui:
     image: ghcr.io/kafbat/kafka-ui:v1.3.0
     profiles: [kafka-ui]
