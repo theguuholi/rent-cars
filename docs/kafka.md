@@ -96,21 +96,17 @@ Wait for the current retry deadline (at most five minutes of application backoff
 
 An ambiguous send can be delivered twice. Compare `eventId`: future consumers must persist deduplication together with their database effect. Producer idempotence alone does not solve this. The automated test `givenAcknowledgedSendAndDatabaseRollbackWhenRetryingThenSameEventCanArriveTwice` demonstrates it deterministically.
 
-## 5. Run the independent consumer locally
+## 5. Observe recommendations
 
-Keep `make dev` running and open another terminal:
+`make dev` already starts recommendations alongside API and React. Inspect the
+`recommendations` log prefix and the group in Kafbat. Do not start a second
+consumer unless you are intentionally studying group rebalancing.
 
-```sh
-make recommendations-dev
-```
-
-The API and recommendations connect to Kafka at `localhost:9092`.
-The UI runs inside Docker and connects to `kafka:19092`.
-The single `compose.yaml` owns the broker, topic initializer and Kafka UI along
-with the remaining local infrastructure. Application code runs on the host.
-
-Rent or return a car, then compare `Rental event received` in the consumer logs
-with the event and offsets at http://localhost:8084.
+To stop/restart only this consumer for study, first stop `make dev`, then use
+three separate terminals: `make api-dev`, `make web-dev` and
+`make recommendations-dev`. Kafka keeps retained messages while this consumer
+is stopped. See [the E2E walkthrough](local-stack-validation.md) and
+[ACKs, partitions and hot partitions](kafka-concepts.md).
 
 ## 6. Kubernetes on Docker Desktop
 
@@ -180,3 +176,5 @@ cd apps/api
 The integration tests use disposable PostgreSQL/Kafka containers, including a paused broker, real records, retry, duplicate publication and competing database transactions. No notification or analytics service is needed to validate the producer.
 
 Study checkpoints: explain commit vs acknowledgment; identify every crash window; distinguish application replay from producer idempotence; justify the serial relay's connection/throughput cost; explain why a stuck head blocks later events; design consumer deduplication before adding external side effects.
+
+`make dev` now includes recommendations. Use `make recommendations-dev` only when running applications independently; do not start it alongside the full stack. See [the E2E walkthrough](local-stack-validation.md).

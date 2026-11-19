@@ -1,5 +1,20 @@
 # Navigate Rent Cars as a developer
 
+## Learning order
+
+1. Use the product: guest catalog, administrator management and driver rental/return.
+2. Start/stop one environment and distinguish persistence from application processes.
+3. Trace a browser action through its HTTP client, controller, service, repository and migration.
+4. Understand JWT/refresh, authorization, optimistic versions and rental transactions/locks.
+5. Follow a committed rental through Outbox, Kafka, recommendations and its committed offset.
+6. Diagnose using Network, logs, Grafana and Kafbat before changing code.
+7. Read the scoped AGENTS.md, add Given/When/Then tests and run the relevant quality checks.
+
+Use [the local and Kubernetes E2E checklist](local-stack-validation.md) for actions
+and expected results. `make dev` starts all three applications and infrastructure;
+`make k8s-up` deploys the equivalent stack. Recommendations is a supporting
+consumer, not a prerequisite concept for understanding your first rental.
+
 ## Run the application
 
 1. Start Docker. From the repository root run `make setup` once, then `make dev`. Open [the web app](http://localhost:5173).

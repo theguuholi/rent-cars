@@ -11,7 +11,7 @@ Prerequisites: Java 25 and Docker. Run all commands from the repository root.
 make recommendations-dev
 ```
 
-In another terminal, run `make dev` to start the API, web application and Kafka UI. Open or return a rental using the web application or the existing [HTTP examples](../../requests/). The API's outbox publishes the event; this application logs:
+For the complete stack, run only `make dev`: it already starts this consumer, the API, React and Kafka UI. Do not run both commands together. For independent consumer study, use the command above and start API/React with `make api-dev` and `make web-dev` in separate terminals. Open or return a rental using the web application or the existing [HTTP examples](../../requests/). The API's outbox publishes the event; this application logs:
 
 ```text
 Rental event received: eventId=... eventType=RentalOpened rentalId=... partition=... offset=...

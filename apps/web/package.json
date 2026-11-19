@@ -16,7 +16,7 @@
     "format:check": "oxfmt --check .",
     "lint:fix": "oxlint --fix",
     "test:coverage": "vitest run --coverage",
-    "dev:stack": "concurrently --kill-others --names api,web \"cd ../api && ./mvnw spring-boot:run\" \"vite --strictPort\"",
+    "dev:stack": "concurrently --kill-others --names api,web,recommendations \"cd ../api && ./mvnw spring-boot:run\" \"vite --strictPort\" \"cd ../recommendations && ./mvnw spring-boot:run\"",
     "mutation": "stryker run"
   },
   "dependencies": {
