@@ -45,7 +45,7 @@ for rental scenarios, preserving the separate `carId` used by car CRUD examples.
 Availability can change between listing and renting; a 409 still needs to be
 handled. Sending the request again refreshes the list.
 
-Use **httpyac: Select Environment** for `local` (8080) or `k8s` (8080).
+Use **httpyac: Select Environment** for `local` or `k8s` (both use API port 8080).
 Environment URLs live in [http-client.env.json](http/http-client.env.json).
 The image examples read the existing PNG fixtures relative to each HTTP file.
 

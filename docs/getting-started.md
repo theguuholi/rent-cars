@@ -2,7 +2,7 @@
 
 This tutorial takes a new contributor from installing tools to running React,
 Spring Boot, image storage and the basic API workflows in HTTP Yac. Start with
-**local development**, then try Docker Compose or Kubernetes as alternatives.
+**local development**, then repeat the same journey in Kubernetes.
 Commands use a POSIX shell (macOS/Linux, or a configured WSL2 environment on Windows).
 Unless a command explicitly changes directory, run it from the repository root.
 
@@ -10,8 +10,8 @@ Unless a command explicitly changes directory, run it from the repository root.
 
 1. **Use the product first:** complete steps 1–3, browse cars, then register a driver and rent/return one. React and the API are the main applications.
 2. **Understand the HTTP flow:** steps 4–9 walk through authentication, fleet and rentals with HTTP Yac. Check each response before continuing.
-3. **Explore supporting services:** observability (3a), recovery email (9a) and the optional Kafka consumer (9b) explain what happens around the main request. Recommendations currently logs events; it does not generate suggestions and is not required for renting.
-4. **Try another runtime:** steps 12–13 run the same product in containers or Kubernetes. Choose one mode at a time; do not repeat all setup modes in parallel.
+3. **Explore supporting services:** observability (3a), recovery email (9a) and the Kafka consumer (9b) explain what happens around the main request. Recommendations currently logs events; it does not generate suggestions and is not required for renting.
+4. **Try another runtime:** steps 12–13 explain independent consumer study and Kubernetes. Choose one mode at a time; do not repeat all setup modes in parallel.
 5. **Verify and troubleshoot:** use steps 15–16 whenever you change the code or get stuck.
 
 ## Step 1: Install and verify the tools
@@ -22,6 +22,7 @@ Unless a command explicitly changes directory, run it from the repository root.
 | JDK | [Temurin JDK 25](https://adoptium.net/temurin/releases/?version=25), **JDK**, matching your CPU | Run/build/test Spring locally |
 | Node.js and npm | [Node 24.16.0](https://nodejs.org/dist/v24.16.0/) | Match the web Dockerfile; run React and HTTP Yac CLI |
 | Docker Desktop | [Install for your OS](https://docs.docker.com/desktop/) | PostgreSQL, SeaweedFS, containers and local Kubernetes |
+| jq | Your OS package manager | Environment startup checks |
 | Make | macOS command-line developer tools; Linux/WSL package manager | Repository shortcuts |
 | VS Code + HTTP Yac | [Install HTTP Yac](https://marketplace.visualstudio.com/items?itemName=anweber.vscode-httpyac) | Send the checked-in HTTP requests directly from the editor |
 | kubectl | [Installation](https://kubernetes.io/docs/tasks/tools/) | Only needed for Kubernetes |
@@ -77,7 +78,7 @@ make dev
 
 Leave this terminal running. This starts PostgreSQL, SeaweedFS, Mailpit and the local
 Grafana observability stack, Kafka and Kafka UI in Docker,
-then starts the Spring API and Vite/React on your machine. It supplies the local
+then starts the Spring API, Vite/React and recommendations together on your machine. It supplies the local
 S3 credentials. Flyway creates/updates the schema and loads development catalogs
 and the development administrator automatically.
 
@@ -109,7 +110,7 @@ Browse cars, open the editor, and inspect categories/specifications. Car editing
 and image uploads require the administrator. Sign in as a driver to rent and
 return a car from its detail page in React, or use the HTTP Yac examples below.
 
-To run the two applications separately, use two terminals instead of `make dev`:
+For debugging, start applications independently instead of `make dev`:
 
 ```sh
 # Terminal 1, repository root:
@@ -121,7 +122,7 @@ make api-dev
 make web-dev
 ```
 
-Do not run these alongside another instance of `make dev`: they use the same
+For a separate consumer terminal, also run `make recommendations-dev`. Do not run these alongside another instance of `make dev`: they use the same
 ports. PostgreSQL uses 5432, the local S3 endpoint uses 8333, Mailpit uses
 8025 for its inbox and 1025 for SMTP, and Grafana uses 3000. See
 [Observe the application](observability.md) for the three signals and a short verification flow.
@@ -358,38 +359,22 @@ the Mailpit inbox at http://localhost:8025 and the `local` HTTP Yac environment.
 
 - [ ] Step 9a complete: I requested, opened and used a reset link, then verified that it cannot be reused.
 
-## Step 9b: Optional — follow rental events into a separate consumer
+## Step 9b: Follow rental events into recommendations
 
-Complete a rental from Step 8 before this exercise. Keep `make dev` running.
-Recommendations is a supporting learning application: it receives rental events
-independently, validates them and logs receipt. It does not participate in the
-HTTP response and does not calculate recommendations yet.
+Recommendations already runs inside `make dev`. Rent/return a car, then:
 
-1. In a second terminal at the repository root, run:
+1. In Kafbat at http://localhost:8084, inspect `rentals.events` messages.
+2. Match the rental response ID to the Kafka key and `rentalId`.
+3. Match `eventId` to `Rental event received` in the `recommendations` log.
+4. Under Consumers, inspect `rent-cars-recommendations-v1`: membership,
+   partition assignments, committed offsets and lag.
 
-   ```sh
-   make recommendations-dev
-   ```
+Follow [E2E step 4](local-stack-validation.md#4-prove-delivery-to-recommendations)
+for the detailed evidence checklist. Recommendations logs receipts only; it does
+not calculate recommendations. Delivery is at least once. For stop/restart and
+replay experiments, run processes independently as described in step 12.
 
-2. Open [Kafka UI](http://localhost:8084), choose `rentals.events`, and inspect
-   its messages. The consumer may immediately read retained rental events.
-3. Rent or return another car using React or the HTTP Yac flow. In the consumer
-   terminal, find `Rental event received`. Match its `eventId` with the Kafka
-   message and inspect group `rent-cars-recommendations-v1` in Kafka UI.
-4. Stop **only the consumer** with Ctrl+C. Complete another rental/return.
-   The API still succeeds: it does not wait for recommendations.
-5. Run `make recommendations-dev` again. Expect the new event to be received
-   from the group's saved position. Already committed events are not normally
-   replayed; crash recovery can still produce duplicates (at-least-once delivery).
-
-You have now traced: **React/HTTP → API transaction → outbox → Kafka → consumer**.
-For replay with a new group, invalid-event recovery and configuration, continue
-with the [consumer README](../apps/recommendations/README.md). No additional
-HTTP endpoint or Swagger page exists for this service. Do not inject malformed
-records into your main learning topic; use the isolated Kafka tests to study
-failures without stopping your normal consumer.
-
-- [ ] Step 9b complete: I matched a rental event to its receipt and verified that the API works while the consumer is stopped, or intentionally skipped this optional exercise.
+- [ ] I matched a rental to its Kafka message, consumer receipt and committed offset.
 
 ## Step 10: Run the normal workflow automatically
 
@@ -443,9 +428,7 @@ complete `make setup` from Step 2 once before running the test.
    npm --prefix apps/web run test:e2e
    ```
 
-   Expect `13 passed`: one public API check, one catalog journey, five authentication journeys, two
-   complete-registration journeys, two administrator form journeys, one rental journey and one
-   password-recovery journey that reads the reset link from Mailpit.
+   Expect all selected tests to pass; the count grows as journeys are added.
    The authentication tests cover driver registration and login, duplicate
    email, invalid admin credentials followed by a successful retry, session
    restore and sign out, redirect after admin login, and denial for a driver
@@ -522,24 +505,24 @@ for another API host, set `RENT_CARS_API_URL`; for another Mailpit inbox, set
 
 ## Step 12: Run the supporting consumer locally
 
-Keep `make dev` running for the API and React. In another terminal:
+The normal `make dev` flow already includes recommendations. Do not start a
+second copy accidentally. To study consumer downtime independently, stop
+`make dev` with Ctrl+C, then use three terminals:
 
 ```sh
+make api-dev
+# Another terminal:
+make web-dev
+# Another terminal:
 make recommendations-dev
 ```
 
-This starts Kafka and initializes the topic if needed, then runs the consumer
-with its Maven Wrapper on your machine. It does not build an application image.
-If you already completed Step 9b and the consumer is running, reuse that terminal.
+Stop only the recommendations terminal. Rent or return a car; the API must still
+succeed. Restart `make recommendations-dev` and verify it consumes pending events
+from its group's committed offsets. `earliest` does not replay committed events.
+The [consumer README](../apps/recommendations/README.md) explains new-group replay.
 
-Rent or return a car and look for `Rental event received` in the consumer
-terminal. Inspect the event and consumer group at http://localhost:8084.
-
-All application processes run locally: React on port 5173, the API on port 8080
-and recommendations without an HTTP port. Docker Compose runs only PostgreSQL,
-storage, email, observability and Kafka infrastructure.
-
-- [ ] Step 12 complete: I ran the local consumer and observed a rental event, or intentionally skipped this optional service.
+- [ ] I observed consumption and understood why the API does not wait for it.
 
 ## Step 13: Alternative: Docker Desktop Kubernetes
 
@@ -571,11 +554,11 @@ same numbered HTTP Yac walkthrough with fresh logins and IDs.
 
 To inspect Kubernetes metrics, traces and logs in Grafana, follow
 [Verify observability](../helm/README.md#verify-observability). Open
-Grafana at `http://localhost:3000`, then check the API in Tempo,
+http://localhost:3000, then check the API in Tempo,
 Prometheus and Loki. Browser traces are available in the `make dev` workflow;
 the published React image does not export them.
 
-For the password-recovery inbox examples, open http://localhost:8025 while sending `password-recovery.http`. No port forwarding is needed.
+For password recovery, open http://localhost:8025 while sending `password-recovery.http`; no port-forward is needed.
 
 ```sh
 # From requests/http:
@@ -701,3 +684,7 @@ roles, you can create/edit a car, upload/read/delete its photos, and a driver ca
 rent and return it with availability changing correctly.
 
 - [ ] Step 16 complete: I reviewed the troubleshooting guidance and resolved any issues encountered.
+
+## Full acceptance checklist
+
+Use [the E2E walkthrough](local-stack-validation.md) for explicit local and Kubernetes steps, expected results, consumer evidence and safe stop/reset commands. Learn the delivery model in [Kafka concepts](kafka-concepts.md).

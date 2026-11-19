@@ -76,7 +76,7 @@ browser export. Do not expose the collector directly to untrusted clients
 without access controls and rate limits. The local Kubernetes chart installs
 the same LGTM image and points the API to its in-cluster collector. See the
 [Kubernetes observability walkthrough](../helm/README.md#verify-observability)
-for the port-forward and Grafana queries. Browser traces remain disabled in the
+for direct access and Grafana queries. Browser traces remain disabled in the
 published web image. For a production cluster, use a managed collector and
 configure its endpoints and access controls instead of exposing local LGTM.
 

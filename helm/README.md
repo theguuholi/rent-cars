@@ -49,8 +49,6 @@ make k8s-up
 ```sh
 make k8s-stop
 make dev
-# Optional, in another terminal:
-make recommendations-dev
 ```
 
 `k8s-stop` scales the application workloads down, stops the dedicated Strimzi
@@ -253,3 +251,5 @@ docker compose --profile kafka-ui config --quiet
 
 These manual checks validate the chart and Compose configuration without publishing
 images or deploying to Kubernetes.
+
+Follow the [complete E2E checklist](../docs/local-stack-validation.md) to verify browser actions, rental events and consumer offsets after deployment.

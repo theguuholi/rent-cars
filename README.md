@@ -15,7 +15,7 @@ make setup
 make dev
 ```
 
-Keep this terminal open. `make setup` installs the frontend dependencies. `make dev` starts the API and React on your machine, with PostgreSQL and the supporting infrastructure in Docker. The API applies Flyway migrations and development seeds automatically.
+Keep this terminal open. `make setup` installs the frontend dependencies. `make dev` starts the API, React and recommendations on your machine, with PostgreSQL and the supporting infrastructure in Docker. The API applies Flyway migrations and development seeds automatically.
 
 1. Open [React](http://localhost:5173) and browse the cars as a visitor.
 2. Sign in as the development administrator: `test@test` / `test@tesT@dev`. Explore categories, specifications and car editing.
@@ -68,11 +68,7 @@ For executable API examples, install **HTTP Yac** in VS Code and follow [request
 
 ## 4. Follow a rental into Kafka
 
-Do this after the rental flow works. Keep `make dev` running and open a second terminal:
-
-```sh
-make recommendations-dev
-```
+Do this after the rental flow works. Keep `make dev` running; recommendations is already started in the same terminal.
 
 Then rent or return a car. Follow the flow:
 
@@ -90,7 +86,7 @@ Choose one path first. Each environment has its own database, photo storage and 
 
 | Mode | Startup | React | Supporting consumer |
 | --- | --- | --- | --- |
-| Daily development | `make dev` | http://localhost:5173 | Start separately with `make recommendations-dev` |
+| Daily development | `make dev` | http://localhost:5173 | Included in `make dev` |
 | Local Kubernetes | Publish images, then `make k8s-up` | http://localhost:5173 | Included by default, with Kafka prepared first |
 
 For the optional local consumer, follow [onboarding step 12](docs/getting-started.md#step-12-run-the-supporting-consumer-locally). For Kubernetes, follow [step 13](docs/getting-started.md#step-13-alternative-docker-desktop-kubernetes) and the [Helm guide](helm/README.md). Kubernetes is a local deployment exercise, not a production-ready environment.
@@ -174,7 +170,7 @@ needs list too.
 
 ## 7. Stop without losing your work
 
-For local development, press Ctrl+C in both the application and optional consumer terminals, then run `make infra-stop`. This stops the Docker infrastructure and preserves its volumes.
+For local development, press Ctrl+C in the `make dev` terminal, then run `make infra-stop`. This stops the Docker infrastructure and preserves its volumes.
 
 `docker compose down -v` removes that Compose project's data. **`make k8s-down` deletes the application namespace, including its database, photos and credentials.** Kafka lives in a separate Kubernetes namespace and is retained; see the Helm guide before resetting/replaying across a fresh database.
 
@@ -188,3 +184,7 @@ For local development, press Ctrl+C in both the application and optional consume
 - [API storage](apps/api/README.md#s3-configuration): local S3 and external bucket configuration.
 
 Use only one environment at a time. See [switching environments](helm/README.md#switch-between-local-development-and-kubernetes) for the safe stop/start commands and shared ports.
+
+For the complete local/Kubernetes acceptance checklist, follow [the end-to-end walkthrough](docs/local-stack-validation.md).
+
+Make commands are organized by responsibility under [`make/`](make/README.md). Continue running them from the repository root; the root Makefile includes the category files.
