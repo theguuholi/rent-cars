@@ -11,3 +11,20 @@
 - Keep a colocated suite for each production component, client and feature route. Use Vitest `describe` for the subject or shared behavior and Given/When/Then scenario names for observable outcomes. Test the HTTP client against fetch; test screens with a real query provider and a controlled API boundary. Use memory history for navigation scenarios.
 - Check the affected behavior, including loading, empty data, error recovery and the requested record on direct URLs when applicable. Run the root web check and inspect the coverage report for the files changed.
 - In Playwright scenarios, use a Given/When/Then name and `test.step` for real setup, actions and observable checks. For browser journeys, locate controls by accessible role or label, assert what the user sees after navigation or clicks, and avoid fixed sleeps. Keep each scenario focused on one business journey; keep API-only tests separate from browser tests.
+
+## Apply responsibility boundaries without fragmenting the screen
+
+Follow the root [readability review](../../AGENTS.md#single-responsibility-and-human-readable-code). Keep ownership clear:
+
+| Responsibility | Usual owner |
+| --- | --- |
+| Compose the screen and coordinate its route/query/form states | Feature page |
+| Render a meaningful UI section and its local interactions | Named component |
+| Encapsulate reused behavior or complex React coordination | Focused hook, when extraction helps |
+| Send HTTP requests and interpret transport responses | Feature API client |
+| Transform data without side effects | Plain function |
+| Validate and normalize related form fields | Colocated schema, following the form conventions above |
+
+For example, a car editor coordinates loading, its editable draft, save and conflict feedback. Its API client sends the PATCH request; a pure transformation can derive changed fields; a field component handles repeated labelled markup. Keep draft ownership and the submission sequence easy to locate. Do not extract a hook for every `useState`, move every JSX fragment into another file or create a generic editor for unrelated domain rules.
+
+Render loading, error, empty and success states explicitly when nested ternaries obscure them. Avoid hidden fetches in presentation helpers or effects that duplicate query/form state. When extracting a component or hook, preserve accessible labels, cancellation, pending-state behavior, cache updates and the user's draft after a failed save. Test these observable outcomes rather than the number of hooks or components used.
