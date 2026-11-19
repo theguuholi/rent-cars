@@ -48,7 +48,7 @@ sequenceDiagram
     A->>H: Read final eventId path
     alt Final file already exists
         H-->>A: Existing JSON
-        A->>A: Compare JSON content; reject a conflicting eventId
+        A->>A: Compare JSON content and reject a conflicting eventId
     else No final file
         A->>H: CREATE unique temporary file, overwrite=false
         H-->>A: Completed write
@@ -59,7 +59,7 @@ sequenceDiagram
         A->>H: Delete remaining temporary file, if present
     end
     A-->>C: Archive succeeded or identical replay
-    C-->>K: Listener returns; container commits next offset
+    C-->>K: Listener returns and container commits next offset
 ```
 
 The final layout is:
