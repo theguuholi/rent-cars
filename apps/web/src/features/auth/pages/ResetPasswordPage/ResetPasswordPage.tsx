@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { Link, useLocation } from '@tanstack/react-router'
+import { TextField } from '../../../../components/TextField/TextField'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { resetPassword } from '../../auth-api'
 import { passwordHint } from '../../password-schema'
-import { parseResetPassword, type ResetPasswordErrors } from './reset-password-schema'
+import { parseResetPassword } from './reset-password-schema'
 
 export function ResetPasswordPage() {
   const token = useLocation({
@@ -13,12 +14,11 @@ export function ResetPasswordPage() {
   })
   const [updated, setUpdated] = useState(false)
   const [error, setError] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<ResetPasswordErrors>({})
   const form = useForm({
     defaultValues: { password: '', passwordConfirmation: '' },
     onSubmit: async ({ value }) => {
       const { data, errors } = parseResetPassword(value)
-      setFieldErrors(errors)
+      form.setErrorMap({ onSubmit: { fields: errors } })
       if (!data) return
       setError('')
       try {
@@ -49,59 +49,27 @@ export function ResetPasswordPage() {
             void form.handleSubmit()
           }}
         >
-          <form.Field name="password">
-            {(field) => (
-              <label>
-                New password
-                <input
-                  className="control"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  minLength={12}
-                  maxLength={72}
-                  aria-invalid={Boolean(fieldErrors.password)}
-                  aria-describedby={
-                    fieldErrors.password
-                      ? 'reset-password-hint reset-password-error'
-                      : 'reset-password-hint'
-                  }
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                />
-                {fieldErrors.password && (
-                  <span id="reset-password-error" role="alert">
-                    {fieldErrors.password}
-                  </span>
-                )}
-              </label>
-            )}
-          </form.Field>
+          <TextField
+            form={form}
+            name="password"
+            label="New password"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={12}
+            maxLength={72}
+            aria-describedby="reset-password-hint"
+          />
           <p id="reset-password-hint">{passwordHint}</p>
-          <form.Field name="passwordConfirmation">
-            {(field) => (
-              <label>
-                Confirm new password
-                <input
-                  className="control"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  aria-invalid={Boolean(fieldErrors.passwordConfirmation)}
-                  aria-describedby={
-                    fieldErrors.passwordConfirmation ? 'reset-confirmation-error' : undefined
-                  }
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                />
-                {fieldErrors.passwordConfirmation && (
-                  <span id="reset-confirmation-error" role="alert">
-                    {fieldErrors.passwordConfirmation}
-                  </span>
-                )}
-              </label>
-            )}
-          </form.Field>
+          <TextField
+            form={form}
+            name="passwordConfirmation"
+            label="Confirm new password"
+            type="password"
+            autoComplete="new-password"
+            required
+            maxLength={72}
+          />
           {error && <p role="alert">{error}</p>}
           <form.Subscribe selector={(state) => state.isSubmitting}>
             {(busy) => (

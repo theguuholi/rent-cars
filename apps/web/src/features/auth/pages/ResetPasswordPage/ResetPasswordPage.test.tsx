@@ -110,3 +110,52 @@ describe('ResetPasswordPage', () => {
     },
   )
 })
+
+describe('ResetPasswordPage initial values and retry', () => {
+  afterEach(() => {
+    vi.resetAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  scenario(
+    'Given a fresh reset form, when submitted empty, then prevent navigation and show password rules for empty strings',
+    async () => {
+      openCatalogRoute('/reset-password?token=one-time-token', undefined, null)
+      expect(await screen.findByLabelText('New password', { exact: true })).toHaveValue('')
+      expect(screen.getByLabelText('Confirm new password')).toHaveValue('')
+      const event = new Event('submit', { bubbles: true, cancelable: true })
+      fireEvent(screen.getByRole('button', { name: 'Reset password' }).closest('form')!, event)
+      expect(event.defaultPrevented).toBe(true)
+      await waitFor(() =>
+        expect(screen.getByLabelText('New password', { exact: true })).toHaveAccessibleDescription(
+          /at least 12/,
+        ),
+      )
+      expect(screen.getByLabelText('Confirm new password')).toHaveAccessibleDescription(
+        'Confirm the new password.',
+      )
+      expect(resetPassword).not.toHaveBeenCalled()
+    },
+  )
+
+  scenario(
+    'Given a failed reset, when retrying valid passwords, then clear the server error while preserving values and preventing duplicate submission',
+    async () => {
+      vi.mocked(resetPassword)
+        .mockRejectedValueOnce(new Error('Server unavailable'))
+        .mockImplementationOnce(() => new Promise(() => {}))
+      openCatalogRoute('/reset-password?token=one-time-token', undefined, null)
+      await fill('replacement-password-123', 'replacement-password-123')
+      submit()
+      expect(await screen.findByRole('alert')).toHaveTextContent('Server unavailable')
+      submit()
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Reset password' })).toBeDisabled(),
+      )
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(screen.getByLabelText('New password', { exact: true })).toHaveValue(
+        'replacement-password-123',
+      )
+    },
+  )
+})

@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,8 @@ class ManagedUserHttpTest {
   @Autowired JdbcTemplate jdbc;
   @Autowired ObjectMapper json;
   @Autowired AccessTokenService tokens;
+  private final String driveLicense =
+      Long.toString(ThreadLocalRandom.current().nextLong(10_000_000_000L, 100_000_000_000L));
   private UUID adminId;
   private String adminToken;
 
@@ -76,7 +79,7 @@ class ManagedUserHttpTest {
                 "firstName", "Ada",
                 "lastName", "Driver",
                 "userName", "qa-" + UUID.randomUUID().toString().substring(0, 12),
-                "driveLicense", "12345678901",
+                "driveLicense", driveLicense,
                 "email", email,
                 "password", "driver-password-123",
                 "passwordConfirmation", "driver-password-123")));
@@ -93,12 +96,18 @@ class ManagedUserHttpTest {
   private String updateBody(String email, String role) {
     return json.writeValueAsString(
         Map.of(
-            "email", email,
-            "role", role,
-            "firstName", "Updated",
-            "lastName", "Driver",
-            "userName", "qa-updated",
-            "driveLicense", "12345678901"));
+            "email",
+            email,
+            "role",
+            role,
+            "firstName",
+            "Updated",
+            "lastName",
+            "Driver",
+            "userName",
+            "qa-updated",
+            "driveLicense",
+            driveLicense));
   }
 
   @Nested
@@ -177,7 +186,7 @@ class ManagedUserHttpTest {
               .andExpect(status().isCreated())
               .andExpect(header().exists("Location"))
               .andExpect(jsonPath("$.email").value(email))
-              .andExpect(jsonPath("$.driveLicense").value("12345678901"))
+              .andExpect(jsonPath("$.driveLicense").value(driveLicense))
               .andExpect(jsonPath("$.password").doesNotExist())
               .andReturn()
               .getResponse()
@@ -234,6 +243,7 @@ class ManagedUserHttpTest {
     void update() throws Exception {
       String location =
           create("qa-managed-" + UUID.randomUUID() + "@example.test")
+              .andExpect(status().isCreated())
               .andReturn()
               .getResponse()
               .getHeader("Location");
@@ -256,6 +266,7 @@ class ManagedUserHttpTest {
     void guarded() throws Exception {
       String location =
           create("qa-managed-" + UUID.randomUUID() + "@example.test")
+              .andExpect(status().isCreated())
               .andReturn()
               .getResponse()
               .getHeader("Location");
@@ -272,7 +283,7 @@ class ManagedUserHttpTest {
               "firstName", "Ada",
               "lastName", "Driver",
               "userName", "qa-managed-edit",
-              "driveLicense", "12345678901");
+              "driveLicense", driveLicense);
       for (String missing : List.of("firstName", "lastName", "userName", "driveLicense")) {
         var body = new HashMap<>(fields);
         body.remove(missing);
@@ -374,6 +385,7 @@ class ManagedUserHttpTest {
     void promoteDriver() throws Exception {
       String location =
           create("qa-managed-" + UUID.randomUUID() + "@example.test")
+              .andExpect(status().isCreated())
               .andReturn()
               .getResponse()
               .getHeader("Location");
@@ -415,6 +427,7 @@ class ManagedUserHttpTest {
     void deleteUser() throws Exception {
       String location =
           create("qa-managed-" + UUID.randomUUID() + "@example.test")
+              .andExpect(status().isCreated())
               .andReturn()
               .getResponse()
               .getHeader("Location");
@@ -440,6 +453,7 @@ class ManagedUserHttpTest {
     void rentalHistory() throws Exception {
       String location =
           create("qa-managed-" + UUID.randomUUID() + "@example.test")
+              .andExpect(status().isCreated())
               .andReturn()
               .getResponse()
               .getHeader("Location");
