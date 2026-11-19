@@ -1,5 +1,5 @@
 import { describe, expect, test as scenario } from 'vitest'
-import { parseResetPassword } from './reset-password-schema'
+import { resetPasswordSchema } from './reset-password-schema'
 
 describe('resetPasswordSchema', () => {
   scenario('Given matching valid passwords, when parsed, then return the submitted values', () => {
@@ -7,7 +7,7 @@ describe('resetPasswordSchema', () => {
       password: 'replacement-password-123',
       passwordConfirmation: 'replacement-password-123',
     }
-    expect(parseResetPassword(input)).toEqual({ data: input, errors: {} })
+    expect(resetPasswordSchema.parse(input)).toEqual(input)
   })
 
   scenario.each([
@@ -37,9 +37,10 @@ describe('resetPasswordSchema', () => {
       'Passwords do not match.',
     ],
   ] as const)('Given invalid input, when parsed, then report %s', (input, field, message) => {
-    expect(parseResetPassword(input)).toMatchObject({
-      data: null,
-      errors: { [field]: expect.stringContaining(message) },
-    })
+    expect(resetPasswordSchema.safeParse(input).error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: [field], message: expect.stringContaining(message) }),
+      ]),
+    )
   })
 })

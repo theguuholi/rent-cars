@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { expect, test } from '@playwright/test'
+import { createRentalCar } from './support/rental-car'
 
 const webBaseUrl = process.env.RENT_CARS_WEB_URL ?? 'http://localhost:5173'
 const driverPassword = 'qa-driver-password-123'
@@ -7,10 +8,12 @@ const driverPassword = 'qa-driver-password-123'
 for (const committed of [false, true]) {
   test(`Given ${committed ? 'a committed rental whose response is lost' : 'a rejected rental request'}, when the driver checks rental status, then the draft is preserved and the server state determines recovery`, async ({
     page,
+    request,
   }) => {
     await page.setViewportSize({ width: committed ? 390 : 1280, height: 900 })
     const email = `qa-rental-${randomUUID()}@example.test`
-    let carName = ''
+    const carName = await test.step('Given a dedicated available car exists for this journey', () =>
+      createRentalCar(request))
 
     await test.step('Given a new driver registers', async () => {
       await page.goto(`${webBaseUrl}/register`)
@@ -41,14 +44,10 @@ for (const committed of [false, true]) {
     })
 
     await test.step('And selects one available car from the catalog', async () => {
+      await page.getByRole('textbox', { name: 'Name', exact: true }).fill(carName)
       const catalog = page.getByRole('region', { name: 'Cars' })
-      const availableCar = catalog
-        .getByRole('listitem')
-        .filter({ has: page.getByText('Available', { exact: true }) })
-        .first()
-      await expect(availableCar).toBeVisible()
-      const carLink = availableCar.getByRole('link')
-      carName = await carLink.innerText()
+      const carLink = catalog.getByRole('link', { name: carName, exact: true })
+      await expect(carLink).toBeVisible()
       await carLink.click()
       await expect(page.getByRole('heading', { name: carName, exact: true })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Rent car' })).toBeVisible()

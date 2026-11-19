@@ -6,6 +6,7 @@ describe('Return after sign-in', () => {
     ['/specifications/new', 'ADMIN', '/specifications/new'],
     ['/categories', 'USER', '/cars'],
     ['/rentals', 'USER', '/rentals'],
+    ['/rentals', 'UNKNOWN', '/cars'],
     [undefined, 'ADMIN', '/cars'],
     ['//outside.example/path', 'ADMIN', '/cars'],
     ['/\\outside.example', 'ADMIN', '/cars'],
@@ -61,7 +62,11 @@ describe('Driver guard', () => {
         requireDriver({ context: { session }, location: { pathname: '/rentals' } }),
       ).toThrow(
         expect.objectContaining({
-          options: expect.objectContaining({ replace: true, to: destination }),
+          options: expect.objectContaining({
+            replace: true,
+            to: destination,
+            ...(identity ? {} : { state: { afterLogin: '/rentals' } }),
+          }),
         }),
       )
     },

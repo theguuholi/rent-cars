@@ -175,3 +175,34 @@ describe('CarEditor', () => {
     },
   )
 })
+
+describe('CarEditor field feedback', () => {
+  scenario(
+    'Given an untouched car draft, when one field becomes invalid, then show its error without marking the remaining fields invalid',
+    async () => {
+      render(
+        <CarEditor
+          categories={categories}
+          specifications={specifications}
+          busy={false}
+          onSave={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      )
+      fireEvent.change(screen.getByLabelText('Name'), { target: { value: ' ' } })
+      await waitFor(() =>
+        expect(screen.getByLabelText('Name')).toHaveAccessibleDescription('Enter a name.'),
+      )
+      for (const label of [
+        'Description',
+        'Brand',
+        'License plate',
+        'Daily rate (BRL)',
+        'Fine amount (BRL)',
+        'Category',
+      ]) {
+        expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'false')
+      }
+    },
+  )
+})

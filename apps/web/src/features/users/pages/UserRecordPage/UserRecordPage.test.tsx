@@ -1,3 +1,13 @@
+import { QueryClient } from '@tanstack/react-query'
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  createMemoryHistory,
+  RouterProvider,
+} from '@tanstack/react-router'
+import { renderWithQuery } from '../../../../test/render-with-query'
+import { UserRecordPage } from './UserRecordPage'
 import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { openCatalogRoute } from '../../../../test/open-catalog-route'
@@ -40,10 +50,20 @@ describe('UserRecordPage', () => {
     vi.mocked(api.getUser).mockResolvedValue(user)
     vi.mocked(api.deleteUser).mockResolvedValue()
     vi.mocked(api.listUsers).mockResolvedValue([])
-    const history = openCatalogRoute('/users/user-1/delete')
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    client.setQueryData(['managedUsers'], [user])
+    client.setQueryData(['managedUser', user.id], user)
+    client.setQueryData(['unrelated'], 'preserve this cache')
+    const history = openCatalogRoute('/users/user-1/delete', client)
     fireEvent.click(await screen.findByRole('button', { name: 'Confirm deletion' }))
     expect(await screen.findByText('No users found.')).toBeVisible()
     expect(history.location.pathname).toBe('/users')
+    expect(history.length).toBe(1)
+    expect(client.getQueryData(['managedUser', user.id])).toBeUndefined()
+    expect(client.getQueryData(['unrelated'])).toBe('preserve this cache')
+    expect(client.getQueryState(['unrelated'])?.isInvalidated).toBe(false)
     expect(api.deleteUser).toHaveBeenCalledWith('user-1')
   })
   test('Given rental history, when deletion fails, then keep the confirmation visible', async () => {
@@ -54,4 +74,40 @@ describe('UserRecordPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Rental history')
     expect(screen.getByRole('heading', { name: 'Delete driver@example.test?' })).toBeVisible()
   })
+})
+
+describe('UserRecordPage record identity', () => {
+  test.each(['detail', 'delete'] as const)(
+    'Given an embedded %s for a different user than the surrounding URL, when rendering actions, then links target the component record',
+    async (mode) => {
+      vi.mocked(api.getUser).mockResolvedValue(user)
+      const root = createRootRoute({ component: () => <UserRecordPage id={user.id} mode={mode} /> })
+      const detail = createRoute({ getParentRoute: () => root, path: '/users/$id' })
+      const edit = createRoute({ getParentRoute: () => root, path: '/users/$id/edit' })
+      const remove = createRoute({ getParentRoute: () => root, path: '/users/$id/delete' })
+      const router = createRouter({
+        routeTree: root.addChildren([detail, edit, remove]),
+        history: createMemoryHistory({ initialEntries: ['/users/context-user'] }),
+      })
+      renderWithQuery(<RouterProvider router={router} />)
+      if (mode === 'delete') {
+        expect(await screen.findByRole('link', { name: 'Cancel' })).toHaveAttribute(
+          'href',
+          '/users/user-1',
+        )
+        expect(
+          screen.getByRole('region', { name: 'Delete driver@example.test?' }),
+        ).toHaveTextContent('Confirm deletion Cancel')
+      } else {
+        expect(await screen.findByRole('link', { name: 'Edit user' })).toHaveAttribute(
+          'href',
+          '/users/user-1/edit',
+        )
+        expect(screen.getByRole('link', { name: 'Delete user' })).toHaveAttribute(
+          'href',
+          '/users/user-1/delete',
+        )
+      }
+    },
+  )
 })

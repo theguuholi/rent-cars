@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { Link } from '@tanstack/react-router'
+import { SubmitButton } from '../../../../components/SubmitButton/SubmitButton'
 import { TextField } from '../../../../components/TextField/TextField'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { registerAccount } from '../../auth-api'
-import { passwordHint, parseRegistration } from './registration-schema'
+import { passwordHint, registrationSchema } from '../../registration-schema'
 
 export function RegisterPage() {
   const [created, setCreated] = useState(false)
@@ -34,10 +35,9 @@ function RegisterForm({ onCreated }: { onCreated: () => void }) {
       password: '',
       passwordConfirmation: '',
     },
+    validators: { onSubmit: registrationSchema },
     onSubmit: async ({ value }) => {
-      const { data, errors } = parseRegistration(value)
-      form.setErrorMap({ onSubmit: { fields: errors } })
-      if (!data) return
+      const data = registrationSchema.parse(value)
       setError('')
       try {
         await registerAccount(data)
@@ -106,13 +106,7 @@ function RegisterForm({ onCreated }: { onCreated: () => void }) {
         maxLength={72}
       />
       {error && <p role="alert">{error}</p>}
-      <form.Subscribe selector={(state) => state.isSubmitting}>
-        {(busy) => (
-          <button className="btn-primary" type="submit" disabled={busy}>
-            Create account
-          </button>
-        )}
-      </form.Subscribe>
+      <SubmitButton form={form}>Create account</SubmitButton>
     </form>
   )
 }

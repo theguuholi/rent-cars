@@ -13,11 +13,3 @@ const specificationFields = {
 }
 
 export const specificationDraftSchema = z.object(specificationFields)
-
-export function specificationFieldError(
-  field: keyof typeof specificationFields,
-  value: string,
-): string | undefined {
-  const result = specificationFields[field].safeParse(value)
-  return result.success ? undefined : result.error.issues[0].message
-}

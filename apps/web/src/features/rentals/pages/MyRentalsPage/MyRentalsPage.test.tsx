@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { QueryClient } from '@tanstack/react-query'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { openCatalogRoute } from '../../../../test/open-catalog-route'
 import { listRentals, type Rental } from '../../rentals-api'
@@ -34,7 +35,14 @@ describe('MyRentalsPage', () => {
       '/rentals',
     )
     const receipt = await screen.findByRole('article', { name: 'Argo rental' })
-    expect(receipt).toHaveTextContent('Returned')
+    expect(within(receipt).getByText('Returned', { exact: true })).toBeVisible()
+    expect(screen.queryByText('No rentals yet.')).not.toBeInTheDocument()
+    expect(within(receipt).getByText('Returned at').nextElementSibling).toHaveTextContent(
+      new Date(rental.endDate!).toLocaleString(),
+    )
+    expect(within(receipt).getByText('Agreed daily rate').nextElementSibling).toHaveTextContent(
+      '100,00',
+    )
     expect(receipt).toHaveTextContent('3 completed day(s)')
     expect(receipt).toHaveTextContent('2 completed day(s)')
     expect(receipt).toHaveTextContent('Total charge')
@@ -52,6 +60,7 @@ describe('MyRentalsPage', () => {
     expect(await screen.findByText('Final charge is calculated on return.')).toBeVisible()
     expect(screen.getByText('Open')).toBeVisible()
     expect(screen.queryByText(/Total charge/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Returned at')).not.toBeInTheDocument()
   })
 
   test('Given a legacy rental, when viewing its receipt, then the recorded total remains available without an invented breakdown', async () => {
@@ -80,8 +89,41 @@ describe('MyRentalsPage', () => {
       .mockRejectedValueOnce(new Error('Unavailable'))
       .mockResolvedValueOnce([rental])
     openCatalogRoute('/rentals', undefined, driver)
-    expect(await screen.findByRole('alert')).toHaveTextContent('Unavailable')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unavailable Try again')
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('article', { name: 'Argo rental' })).toBeVisible()
+  })
+})
+
+describe('MyRentalsPage incomplete receipts and cache', () => {
+  test.each(['dailyRateCents', 'fineAmountCents', 'billedDays', 'lateDays'] as const)(
+    'Given a returned rental missing %s, when opening its receipt, then hide the breakdown instead of inventing a value',
+    async (field) => {
+      vi.mocked(listRentals).mockResolvedValue([{ ...rental, [field]: null }])
+      openCatalogRoute('/rentals', undefined, driver)
+      expect(await screen.findByText('Historical charge breakdown is unavailable.')).toBeVisible()
+      expect(screen.queryByText('Daily charge')).not.toBeInTheDocument()
+      expect(screen.queryByText('Late fee')).not.toBeInTheDocument()
+      if (field === 'dailyRateCents')
+        expect(screen.queryByText('Agreed daily rate')).not.toBeInTheDocument()
+    },
+  )
+
+  test('Given a returned rental without a recorded total, when displaying its receipt, then do not invent a total charge', async () => {
+    vi.mocked(listRentals).mockResolvedValue([{ ...rental, totalCents: null }])
+    openCatalogRoute('/rentals', undefined, driver)
+    await screen.findByRole('region', { name: 'Receipt' })
+    expect(screen.queryByText(/Total charge/)).not.toBeInTheDocument()
+  })
+
+  test('Given fresh cached rentals, when opening My rentals, then render the existing receipt without another request', async () => {
+    vi.mocked(listRentals).mockClear()
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    client.setQueryData(['rentals'], [rental])
+    openCatalogRoute('/rentals', client, driver)
+    expect(await screen.findByRole('article', { name: 'Argo rental' })).toBeVisible()
+    expect(listRentals).not.toHaveBeenCalled()
   })
 })

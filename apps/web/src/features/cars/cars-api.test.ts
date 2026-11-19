@@ -232,3 +232,17 @@ describe('Car image HTTP client', () => {
     },
   )
 })
+
+scenario(
+  'Given whitespace-only catalog filters, when searching, then omit them from the request',
+  async () => {
+    const fetch = mockResponse(Response.json({ content: [] }))
+    await listCars(
+      { name: ' ', brand: '  ', category: '\t', page: 0, size: 12, sort: 'name,asc' },
+      false,
+    )
+    expect(fetch).toHaveBeenCalledExactlyOnceWith('/api/cars?page=0&size=12&sort=name%2Casc', {
+      signal: undefined,
+    })
+  },
+)

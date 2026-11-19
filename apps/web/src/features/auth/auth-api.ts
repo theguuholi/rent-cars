@@ -1,3 +1,5 @@
+import type { z } from 'zod'
+import type { registrationSchema } from './registration-schema'
 import { deviceKey, withCookieLock } from './renewal'
 import { csrfHeader, readProfile } from './session-http'
 import type { Session } from './session'
@@ -18,15 +20,7 @@ export function signIn(email: string, password: string): Promise<Session> {
   })
 }
 
-export type RegistrationInput = {
-  firstName: string
-  lastName: string
-  userName: string
-  driveLicense: string
-  email: string
-  password: string
-  passwordConfirmation: string
-}
+export type RegistrationInput = z.output<typeof registrationSchema>
 
 export async function registerAccount(input: RegistrationInput): Promise<void> {
   const response = await fetch('/api/users', {

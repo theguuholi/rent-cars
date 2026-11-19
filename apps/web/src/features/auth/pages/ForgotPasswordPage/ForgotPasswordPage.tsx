@@ -1,3 +1,5 @@
+import { SubmitButton } from '../../../../components/SubmitButton/SubmitButton'
+import { TextField } from '../../../../components/TextField/TextField'
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { Link } from '@tanstack/react-router'
@@ -36,30 +38,16 @@ export function ForgotPasswordPage() {
             void form.handleSubmit()
           }}
         >
-          <form.Field name="email">
-            {(field) => (
-              <label>
-                Email
-                <input
-                  className="control"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  maxLength={254}
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                />
-              </label>
-            )}
-          </form.Field>
+          <TextField
+            form={form}
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            maxLength={254}
+          />
           {error && <p role="alert">{error}</p>}
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(busy) => (
-              <button className="btn-primary" type="submit" disabled={busy}>
-                Send reset link
-              </button>
-            )}
-          </form.Subscribe>
+          <SubmitButton form={form}>Send reset link</SubmitButton>
         </form>
       )}
       <Link className="mt-4 inline-block underline" to="/login">

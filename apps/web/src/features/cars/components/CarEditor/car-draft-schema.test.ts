@@ -1,5 +1,5 @@
 import { describe, expect, test as scenario } from 'vitest'
-import { carDraftSchema, carFieldError } from './car-draft-schema'
+import { carDraftSchema } from './car-draft-schema'
 
 const valid = {
   name: ' Corolla ',
@@ -41,7 +41,9 @@ describe('carDraftSchema', () => {
     ['fineAmount', '-1', 'Enter a nonnegative BRL amount with up to two decimal places.'],
     ['categoryId', '', 'Select a category.'],
   ] as const)('Given invalid %s, when checked, then return %s', (field, value, message) => {
-    expect(carFieldError(field, value)).toBe(message)
+    expect(carDraftSchema.safeParse({ ...valid, [field]: value }).error?.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: [field], message })]),
+    )
     expect(carDraftSchema.safeParse({ ...valid, [field]: value }).success).toBe(false)
   })
 
@@ -55,7 +57,7 @@ describe('carDraftSchema', () => {
       ['fineAmount', '0'],
       ['categoryId', 'cat'],
     ] as const) {
-      expect(carFieldError(field, value)).toBeUndefined()
+      expect(carDraftSchema.safeParse({ ...valid, [field]: value }).success).toBe(true)
     }
   })
 })

@@ -1,9 +1,10 @@
 import { useForm } from '@tanstack/react-form'
+import { TextField } from '../../../../components/TextField/TextField'
 import type { Category } from '../../../categories/categories-api'
 import type { Specification } from '../../../specifications/specifications-api'
 import { formatBrlInput } from '../../brl'
 import type { Car, CarInput } from '../../cars-api'
-import { carDraftSchema, carFieldError, type CarDraft } from './car-draft-schema'
+import { carDraftSchema, carFieldSchemas, type CarDraft } from './car-draft-schema'
 
 type Props = {
   car?: Car
@@ -52,63 +53,34 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
     >
       <fieldset className="grid min-w-0 gap-5 sm:grid-cols-2" disabled={busy}>
         {textFields.map(([name, label]) => (
-          <form.Field
+          <TextField
             key={name}
+            form={form}
             name={name}
-            validators={{
-              onChange: ({ value }) => carFieldError(name, value),
-            }}
-          >
-            {(field) => (
-              <div>
-                <label htmlFor={name}>{label}</label>
-                <input
-                  className="control"
-                  id={name}
-                  autoFocus={name === 'name'}
-                  required
-                  readOnly={!!car && name === 'licensePlate'}
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  aria-invalid={!field.state.meta.isValid}
-                  aria-describedby={name + '-error'}
-                />
-                <span id={name + '-error'}>{field.state.meta.errors[0]}</span>
-              </div>
-            )}
-          </form.Field>
+            schema={carFieldSchemas[name]}
+            label={label}
+            id={name}
+            maxLength={null}
+            autoFocus={name === 'name'}
+            required
+            readOnly={!!car && name === 'licensePlate'}
+          />
         ))}
         {rates.map(([name, label]) => (
-          <form.Field
-            name={name}
+          <TextField
             key={name}
-            validators={{
-              onChange: ({ value }) => carFieldError(name, value),
-            }}
-          >
-            {(field) => (
-              <div>
-                <label htmlFor={name}>{label}</label>
-                <input
-                  className="control"
-                  id={name}
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  required
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  aria-invalid={!field.state.meta.isValid}
-                  aria-describedby={name + '-error'}
-                />
-                <span id={name + '-error'}>{field.state.meta.errors[0]}</span>
-              </div>
-            )}
-          </form.Field>
+            form={form}
+            name={name}
+            schema={carFieldSchemas[name]}
+            label={label}
+            id={name}
+            maxLength={null}
+            inputMode="decimal"
+            placeholder="0,00"
+            required
+          />
         ))}
-        <form.Field
-          name="categoryId"
-          validators={{ onChange: ({ value }) => carFieldError('categoryId', value) }}
-        >
+        <form.Field name="categoryId" validators={{ onChange: carFieldSchemas.categoryId }}>
           {(field) => (
             <div>
               <label htmlFor="car-category">Category</label>
@@ -128,7 +100,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
                   </option>
                 ))}
               </select>
-              <span id="category-error">{field.state.meta.errors[0]}</span>
+              <span id="category-error">{field.state.meta.errors[0]?.message}</span>
             </div>
           )}
         </form.Field>

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
+import { TextField } from '../../../../components/TextField/TextField'
 import type { Specification, SpecificationEdit } from '../../specifications-api'
-import { specificationDraftSchema, specificationFieldError } from './specification-draft-schema'
+import { specificationDraftSchema } from './specification-draft-schema'
 
 type Props = {
   item?: Specification
@@ -38,39 +39,18 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
         <legend className="mb-5 text-2xl font-bold tracking-tight">
           {item ? 'Edit specification' : 'New specification'}
         </legend>
-        <form.Field
+        <TextField
+          form={form}
           name="name"
-          validators={{
-            onChange: ({ value }) => specificationFieldError('name', value),
-          }}
-        >
-          {(field) => (
-            <div>
-              <label htmlFor="spec-name">Name</label>
-              <input
-                className="control"
-                autoFocus
-                id="spec-name"
-                name={field.name}
-                required
-                value={field.state.value}
-                onChange={(event) => field.handleChange(event.target.value)}
-                aria-invalid={!field.state.meta.isValid}
-                aria-describedby={!field.state.meta.isValid ? 'spec-name-error' : undefined}
-              />
-              {!field.state.meta.isValid && (
-                <p id="spec-name-error" role="alert">
-                  {field.state.meta.errors[0]}
-                </p>
-              )}
-            </div>
-          )}
-        </form.Field>
+          schema={specificationDraftSchema.shape.name}
+          id="spec-name"
+          maxLength={null}
+          autoFocus
+          required
+        />
         <form.Field
           name="description"
-          validators={{
-            onChange: ({ value }) => specificationFieldError('description', value),
-          }}
+          validators={{ onChange: specificationDraftSchema.shape.description }}
         >
           {(field) => (
             <div>
@@ -86,9 +66,9 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
                 aria-invalid={!field.state.meta.isValid}
                 aria-describedby={!field.state.meta.isValid ? 'spec-description-error' : undefined}
               />
-              {!field.state.meta.isValid && (
+              {field.state.meta.errors[0] && (
                 <p id="spec-description-error" role="alert">
-                  {field.state.meta.errors[0]}
+                  {field.state.meta.errors[0].message}
                 </p>
               )}
             </div>

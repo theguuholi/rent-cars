@@ -86,3 +86,43 @@ test('Given an admin, when a car form is corrected, then it saves and can be rem
     await expect(page).toHaveURL(`${webBaseUrl}/cars`)
   })
 })
+
+for (const width of [390, 1280]) {
+  for (const [path, button, error] of [
+    ['/cars/new', 'Save car', 'Enter a name.'],
+    ['/specifications/new', 'Save specification', 'Enter a name.'],
+  ]) {
+    test(`Given a ${width}px ${path} form, when navigating by label and keyboard, then errors remain associated and the draft stays visible`, async ({
+      page,
+    }) => {
+      await test.step('Given the administrator opens the form at the selected viewport', async () => {
+        await page.setViewportSize({ width, height: 900 })
+        await signInAsAdmin(page)
+        await page.goto(`${webBaseUrl}${path}`)
+        await expect(page.getByRole('button', { name: button })).toBeVisible()
+      })
+      await test.step('When using the label and Tab, then focus follows the field order', async () => {
+        await page
+          .locator('label')
+          .filter({ hasText: /^Name$/ })
+          .click()
+        await expect(page.getByLabel('Name', { exact: true })).toBeFocused()
+        await page.keyboard.press('Tab')
+        await expect(page.getByLabel('Description', { exact: true })).toBeFocused()
+      })
+      await test.step('When submitting and correcting the draft, then show accessible feedback without horizontal overflow', async () => {
+        await page.getByRole('button', { name: button }).click()
+        await expect(page.getByLabel('Name', { exact: true })).toHaveAccessibleDescription(error)
+        await page.getByLabel('Name', { exact: true }).fill('Retained draft')
+        await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Retained draft')
+        await expect(page.getByLabel('Name', { exact: true })).toHaveAttribute(
+          'aria-invalid',
+          'false',
+        )
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+          width,
+        )
+      })
+    })
+  }
+}
