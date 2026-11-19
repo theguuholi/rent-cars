@@ -56,13 +56,12 @@ function RegisterForm({ onCreated }: { onCreated: () => void }) {
         void form.handleSubmit()
       }}
     >
-      <TextField form={form} name="firstName" type="text" autoComplete="given-name" required />
-      <TextField form={form} name="lastName" type="text" autoComplete="family-name" required />
+      <TextField form={form} name="firstName" autoComplete="given-name" required />
+      <TextField form={form} name="lastName" autoComplete="family-name" required />
       <TextField
         form={form}
         name="userName"
         label="Username"
-        type="text"
         autoComplete="username"
         required
         minLength={3}
@@ -72,7 +71,6 @@ function RegisterForm({ onCreated }: { onCreated: () => void }) {
         form={form}
         name="driveLicense"
         label="CNH number"
-        type="text"
         inputMode="numeric"
         autoComplete="off"
         required
