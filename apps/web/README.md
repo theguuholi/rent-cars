@@ -37,3 +37,33 @@ The sandbox excludes the root `tsconfig.json` project-reference aggregator becau
 ## Study: rental transactions and recovery
 
 Follow the [ACID and rollback lab](../../docs/studies/rental-acid-rollback.md) to trace the Spring transaction, force a failure after both database writes, and test recovery from a failed or lost rental response without automatically repeating the request.
+
+## Shared text fields
+
+Use `src/components/TextField/TextField.tsx` for TanStack text inputs. It connects
+value, change, blur, field errors and accessible descriptions without repeating
+`form.Field` markup:
+
+```tsx
+<TextField form={form} name="lastName" autoComplete="family-name" required />
+<TextField form={form} name="driveLicense" label="CNH number" maxLength={11} required />
+<TextField form={form} name="password" type="password" maxLength={72} aria-describedby="password-hint" />
+```
+
+The `name` is checked against string-valued fields in the supplied form. Its
+camelCase spelling provides a fallback label (`lastName` becomes `Last name`);
+provide `label` for domain terminology, acronyms or translated copy. The default
+`maxLength` is 80; override it to match the schema (email 254, username 40, CNH 11,
+password 72). Browser limits do not replace schema or backend validation.
+
+Keep validation and API submission in the feature. TanStack schema errors are
+read automatically; when parsing at submission, publish the field error map with
+`form.setErrorMap({ onSubmit: { fields: errors } })`. The shared field displays
+string errors and standard schema issue messages. Request-level failures such as
+a duplicate account or network failure remain a form-level alert. Do not attach
+an API error to a guessed field when the API does not identify one.
+
+Existing help text can be linked using `aria-describedby`; the component adds
+its own error ID without losing that hint. Labels use an explicit `id` when
+provided or a unique React-generated ID. Checkboxes, selects, file uploads and
+currency controls keep their own behavior; this component is not a form builder.

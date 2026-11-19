@@ -1,5 +1,6 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { QueryClient } from '@tanstack/react-query'
 import { openCatalogRoute } from '../../../../test/open-catalog-route'
 import * as api from '../../users-api'
 
@@ -78,10 +79,14 @@ describe('UserFormPage', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save user' }))
     expect(await screen.findByRole('heading', { name: 'Updated Driver' })).toBeVisible()
-    expect(api.updateUser).toHaveBeenCalledWith(
-      'user-1',
-      expect.objectContaining({ firstName: 'Updated', role: 'ADMIN' }),
-    )
+    expect(api.updateUser).toHaveBeenCalledWith('user-1', {
+      firstName: 'Updated',
+      lastName: 'Driver',
+      userName: 'test.driver',
+      driveLicense: '01234567890',
+      email: user.email,
+      role: 'ADMIN',
+    })
   })
 
   test('Given a role conflict, when saving, then keep the edited role and show the error', async () => {
@@ -135,5 +140,133 @@ describe('UserFormPage', () => {
       userName: null,
       driveLicense: null,
     })
+  })
+})
+
+function fillNewUser() {
+  for (const [label, value] of Object.entries({
+    'First name': 'Test',
+    'Last name': 'Driver',
+    Username: 'test.driver',
+    'CNH number': '01234567890',
+    Email: user.email,
+    Password: 'test-password-123',
+    'Confirm password': 'test-password-123',
+  }))
+    fill(label, value)
+}
+
+function submitUser(label: string) {
+  const event = new Event('submit', { bubbles: true, cancelable: true })
+  fireEvent(screen.getByRole('button', { name: label }).closest('form')!, event)
+  expect(event.defaultPrevented).toBe(true)
+}
+
+describe('UserFormPage validation and retries', () => {
+  afterEach(() => {
+    vi.resetAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  test('Given a blank user form, when submitted, then every field starts empty and reports its own required error', async () => {
+    openCatalogRoute('/users/new')
+    await screen.findByLabelText('First name')
+    for (const label of [
+      'First name',
+      'Last name',
+      'Username',
+      'CNH number',
+      'Email',
+      'Password',
+      'Confirm password',
+    ]) {
+      expect(screen.getByLabelText(label, { exact: true })).toHaveValue('')
+    }
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue('USER')
+    submitUser('Create user')
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(7))
+    expect(screen.getByLabelText('First name')).toHaveAccessibleDescription(
+      'Enter a first name of up to 80 characters.',
+    )
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(
+      'Enter a valid email address.',
+    )
+    expect(screen.getByLabelText('Confirm password')).toHaveAccessibleDescription(
+      'Passwords do not match.',
+    )
+    expect(api.createUser).not.toHaveBeenCalled()
+  })
+
+  test.each(['create', 'edit'] as const)(
+    'Given a failed %s, when retrying, then clear the server error, preserve the draft and disable duplicate submission',
+    async (mode) => {
+      vi.mocked(api.getUser).mockResolvedValue(user)
+      const request = mode === 'create' ? vi.mocked(api.createUser) : vi.mocked(api.updateUser)
+      let finish!: (result: typeof user) => void
+      request.mockRejectedValueOnce('offline').mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve
+          }),
+      )
+      vi.mocked(api.listUsers).mockResolvedValue([user])
+      openCatalogRoute(mode === 'create' ? '/users/new' : '/users/user-1/edit')
+      await screen.findByLabelText('Email')
+      if (mode === 'create') fillNewUser()
+      const button = mode === 'create' ? 'Create user' : 'Save user'
+      submitUser(button)
+      expect(await screen.findByRole('alert')).toHaveTextContent('Could not save this user.')
+      expect(screen.getByLabelText('Email')).toHaveValue(user.email)
+      submitUser(button)
+      await waitFor(() => expect(screen.getByRole('button', { name: button })).toBeDisabled())
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(request).toHaveBeenCalledTimes(2)
+      await act(async () => finish(user))
+    },
+  )
+
+  test.each(['create', 'edit'] as const)(
+    'Given cached catalogs, when a %s succeeds, then invalidate only user lists and keep unrelated data fresh',
+    async (mode) => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      client.setQueryData(['managedUsers', 'inactive-filter'], [user])
+      client.setQueryData(['cars', 'unrelated'], [])
+      vi.mocked(api.getUser).mockResolvedValue(user)
+      vi.mocked(api.createUser).mockResolvedValue(user)
+      vi.mocked(api.updateUser).mockResolvedValue(user)
+      vi.mocked(api.listUsers).mockResolvedValue([user])
+      openCatalogRoute(mode === 'create' ? '/users/new' : '/users/user-1/edit', client)
+      await screen.findByLabelText('Email')
+      if (mode === 'create') fillNewUser()
+      submitUser(mode === 'create' ? 'Create user' : 'Save user')
+      await waitFor(() =>
+        expect(client.getQueryState(['managedUsers', 'inactive-filter'])?.isInvalidated).toBe(true),
+      )
+      expect(client.getQueryState(['cars', 'unrelated'])?.isInvalidated).toBe(false)
+      if (mode === 'edit')
+        await waitFor(() => expect(client.getQueryData(['managedUser', user.id])).toEqual(user))
+    },
+  )
+
+  test.each(['save', 'cancel'] as const)(
+    'Given the loaded user identity, when choosing %s, then navigate to that user detail',
+    async (action) => {
+      vi.mocked(api.getUser).mockResolvedValue(user)
+      vi.mocked(api.updateUser).mockResolvedValue(user)
+      const history = openCatalogRoute('/users/lookup-id/edit')
+      await screen.findByLabelText('Email')
+      if (action === 'save') submitUser('Save user')
+      else fireEvent.click(screen.getByRole('link', { name: 'Cancel' }))
+      await waitFor(() => expect(history.location.pathname).toBe('/users/user-1'))
+      expect(await screen.findByRole('heading', { name: 'Test Driver' })).toBeVisible()
+    },
+  )
+
+  test('Given an unsaved new user, when cancelling, then return to the user list without saving', async () => {
+    vi.mocked(api.listUsers).mockResolvedValue([])
+    const history = openCatalogRoute('/users/new')
+    fireEvent.click(await screen.findByRole('link', { name: 'Cancel' }))
+    await waitFor(() => expect(history.location.pathname).toBe('/users'))
+    expect(api.createUser).not.toHaveBeenCalled()
   })
 })

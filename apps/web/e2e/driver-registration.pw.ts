@@ -61,3 +61,40 @@ test('Given mismatched passwords, when registration is submitted, then the form 
   await expect(page.getByRole('alert')).toContainText('Passwords do not match.')
   expect(requests).toHaveLength(0)
 })
+
+for (const width of [390, 1280]) {
+  test(`Given a ${width}px registration form, when correcting a required field, then labels and errors remain accessible without losing the draft`, async ({
+    page,
+  }) => {
+    await test.step('Given the form fits the viewport and its label focuses the input', async () => {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`${webBaseUrl}/register`)
+      await page.getByText('Last name', { exact: true }).click()
+      await expect(page.getByLabel('Last name')).toBeFocused()
+      await expect(page.getByLabel('Last name')).toHaveAttribute('maxlength', '80')
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      )
+    })
+    await test.step('When submitting an incomplete draft, then each error describes its own field', async () => {
+      await page.getByLabel('First name').fill('Ada')
+      await page.getByRole('button', { name: 'Create account' }).click()
+      await expect(page.getByLabel('Last name')).toHaveAttribute('aria-invalid', 'true')
+      await expect(page.getByLabel('Last name')).toHaveAccessibleDescription(
+        'Enter a last name of up to 80 characters.',
+      )
+      await expect(page.getByLabel('First name')).toHaveValue('Ada')
+    })
+    await test.step('When correcting the last name and retrying, then its error clears and the remaining errors stay visible', async () => {
+      await page.getByLabel('Last name').fill('Lovelace')
+      await page.getByRole('button', { name: 'Create account' }).click()
+      await expect(page.getByLabel('Last name')).toHaveAttribute('aria-invalid', 'false')
+      await expect(page.getByLabel('Last name')).not.toHaveAttribute('aria-describedby')
+      await expect(page.getByLabel('Email')).toHaveAttribute('aria-invalid', 'true')
+      await expect(page.getByLabel('Password', { exact: true })).toHaveAccessibleDescription(
+        /12.*72/,
+      )
+      await expect(page.getByLabel('First name')).toHaveValue('Ada')
+    })
+  })
+}
