@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto'
 import { expect, test } from '@playwright/test'
+import { createRentalCar } from './support/rental-car'
 
 const webBaseUrl = process.env.RENT_CARS_WEB_URL ?? 'http://localhost:5173'
 const driverPassword = 'qa-driver-password-123'
 
 test('Given a new driver and an available car, when the car is rented and returned, then its availability is restored', async ({
   page,
+  request,
 }) => {
   const email = `qa-rental-${randomUUID()}@example.test`
-  let carName = ''
+  const carName = await test.step('Given a dedicated available car exists for this journey', () =>
+    createRentalCar(request))
 
   await test.step('Given a new driver registers', async () => {
     await page.goto(`${webBaseUrl}/register`)
@@ -37,14 +40,10 @@ test('Given a new driver and an available car, when the car is rented and return
   })
 
   await test.step('And selects one available car from the catalog', async () => {
+    await page.getByRole('textbox', { name: 'Name', exact: true }).fill(carName)
     const catalog = page.getByRole('region', { name: 'Cars' })
-    const availableCar = catalog
-      .getByRole('listitem')
-      .filter({ has: page.getByText('Available', { exact: true }) })
-      .first()
-    await expect(availableCar).toBeVisible()
-    const carLink = availableCar.getByRole('link')
-    carName = await carLink.innerText()
+    const carLink = catalog.getByRole('link', { name: carName, exact: true })
+    await expect(carLink).toBeVisible()
     await carLink.click()
     await expect(page.getByRole('heading', { name: carName, exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Rent car' })).toBeVisible()
@@ -73,6 +72,7 @@ test('Given a new driver and an available car, when the car is rented and return
     await expect(page.getByRole('button', { name: 'Rent car' })).toBeVisible()
     await expect(page.getByText('Available', { exact: true })).toBeVisible()
     await page.getByRole('link', { name: 'Back to cars' }).click()
+    await page.getByRole('textbox', { name: 'Name', exact: true }).fill(carName)
     const car = page
       .getByRole('listitem')
       .filter({ has: page.getByRole('link', { name: carName }) })

@@ -113,3 +113,11 @@ The colocated Given/When/Then tests cover invalid drafts, corrections, normaliza
 async submission and legacy profiles. Existing browser journeys live in
 `e2e/admin-form-validation.pw.ts`, `e2e/driver-registration.pw.ts`,
 `e2e/admin-users.pw.ts` and `e2e/password-recovery.pw.ts`.
+
+Rental browser journeys create a dedicated car through the API using
+`e2e/support/rental-car.ts`, then find it by its unique name in the catalog.
+Do not rent the first seeded car: another parallel journey can rent it between
+listing and opening its details. The setup uses `RENT_CARS_ADMIN_EMAIL` and
+`RENT_CARS_ADMIN_PASSWORD` (development defaults when unset). Run these journeys
+against a development or disposable database: their driver accounts, cars and
+rental history remain for inspection, since cars with rental history cannot be deleted.
