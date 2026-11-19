@@ -526,6 +526,8 @@ The [consumer README](../apps/recommendations/README.md) explains new-group repl
 
 ## Step 13: Alternative: Docker Desktop Kubernetes
 
+For an optional graphical view after startup, follow [Headlamp on macOS](../helm/README.md#inspect-the-cluster-with-headlamp-macos). It uses the same cluster as K9s and requires no extra deployment.
+
 1. Enable Kubernetes in Docker Desktop and wait until it is ready.
 2. Verify the additional tools and the explicit context:
 
@@ -547,7 +549,7 @@ kubectl --context docker-desktop -n rent-cars get pods,svc,pvc
 helm test fleet --kube-context docker-desktop -n rent-cars --logs
 ```
 
-The command first prepares Strimzi, Kafka and the rental topic in `rent-kafka`. Expect the API, web, recommendations, PostgreSQL, SeaweedFS, Mailpit and Grafana LGTM pods to become ready and their
+The command first prepares Strimzi, Kafka and the rental topic in `rent-cars`. Expect the API, web, recommendations, PostgreSQL, SeaweedFS, Mailpit and Grafana LGTM pods to become ready and their
 persistent claims to be bound. Open React at **http://localhost:5173** and choose
 **k8s** in HTTP Yac. Its API base URL is **http://localhost:8080**. Repeat the
 same numbered HTTP Yac walkthrough with fresh logins and IDs.

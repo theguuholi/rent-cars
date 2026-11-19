@@ -38,7 +38,6 @@ docker login -u guuhworship
 ./scripts/push-images.sh
 make k8s-up
 kubectl --context docker-desktop -n rent-cars get pods,svc,pvc
-kubectl --context docker-desktop -n rent-kafka get pods
 helm test fleet --kube-context docker-desktop -n rent-cars --logs
 ```
 
@@ -216,8 +215,8 @@ Run authentication first; do not reuse tokens or resource IDs from the other mod
   **This deletes database records.** Flyway recreates schema/seeds on API startup.
   Kafka events and photo objects remain separate and can refer to deleted records.
 - Kubernetes reset: `make k8s-down` deletes the application's namespace,
-  **including database and photo volumes**. It retains the separate Kafka
-  namespace; this is not a routine stop command.
+  **including database, photo and Kafka volumes/events/offsets**. This is not
+  a routine stop command.
 
 ## Troubleshooting
 

@@ -42,7 +42,7 @@ Open **http://localhost:8084** → `rent-cars-local` → Topics → `rentals.eve
 
 ### Read, publish and resend messages
 
-After updating the configuration, recreate the UI with `make kafka-ui`. For Kubernetes, apply `kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/ui-local.yaml` and wait for `kubectl --context docker-desktop -n rent-kafka rollout status deployment/kafka-ui`.
+After updating the configuration, recreate the UI with `make kafka-ui`. For Kubernetes, apply `kubectl --context docker-desktop -n rent-cars apply -f helm/kafka/ui-local.yaml` and wait for `kubectl --context docker-desktop -n rent-cars rollout status deployment/kafka-ui`.
 
 1. Open `rentals.events` → **Messages**, select the earliest offset to inspect retained messages, and start browsing. Expand a row to inspect its key and JSON value.
 2. To publish, use **Produce Message**, set the key to the rental UUID and paste a valid rental-event JSON value. Keep the key and `rentalId` consistent.
@@ -55,7 +55,7 @@ Manual Kafka publishing bypasses the rental API and Outbox: it does not create o
 | --- | --- |
 | Java/CLI on the host | `localhost:9092` |
 | API/UI inside Compose | `kafka:19092` |
-| API in Kubernetes | `rent-kafka-bootstrap.rent-kafka.svc.cluster.local:9092` |
+| API in Kubernetes | `rent-kafka-bootstrap.rent-cars.svc.cluster.local:9092` |
 
 Kafka advertises broker addresses after initial connection. Connecting only a bootstrap port is not enough if the advertised addresses are unreachable; use the matching listener above.
 
@@ -115,10 +115,10 @@ The Kafka installation is separate from the application Helm release. Pinned lab
 ```sh
 kubectl --context docker-desktop get nodes
 make k8s-kafka-up
-kubectl --context docker-desktop -n rent-kafka get kafka,kafkanodepool,kafkatopic,pods,pvc
+kubectl --context docker-desktop -n rent-cars get kafka,kafkanodepool,kafkatopic,pods,pvc
 ```
 
-This installs the operator and a **single broker/controller with persistent storage** in namespace `rent-kafka`. Three topic partitions do not mean three replicas. There is no broker high availability, TLS or authentication in this local lab.
+This installs the operator and a **single broker/controller with persistent storage** in namespace `rent-cars`. Three topic partitions do not mean three replicas. There is no broker high availability, TLS or authentication in this local lab.
 
 Publish API, web and recommendations with `./scripts/push-images.sh`, then run
 `make k8s-up`. It now prepares Kafka first and deploys the application with
@@ -135,7 +135,7 @@ for receipt logs and the distinction between pod readiness and consumer health.
 To see messages from inside the cluster:
 
 ```sh
-kubectl --context docker-desktop -n rent-kafka exec -it rent-combined-0 -- \
+kubectl --context docker-desktop -n rent-cars exec -it rent-combined-0 -- \
   /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server rent-kafka-bootstrap:9092 \
   --topic rentals.events --from-beginning --property print.key=true
@@ -144,9 +144,9 @@ kubectl --context docker-desktop -n rent-kafka exec -it rent-combined-0 -- \
 For the browser UI (stop the Compose UI first to free 8084):
 
 ```sh
-kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/ui-local.yaml
-kubectl --context docker-desktop -n rent-kafka rollout status deployment/kafka-ui --timeout=180s
-kubectl --context docker-desktop -n rent-kafka get service kafka-ui
+kubectl --context docker-desktop -n rent-cars apply -f helm/kafka/ui-local.yaml
+kubectl --context docker-desktop -n rent-cars rollout status deployment/kafka-ui --timeout=180s
+kubectl --context docker-desktop -n rent-cars get service kafka-ui
 ```
 
 Docker Desktop exposes its LoadBalancer at **http://localhost:8084**. The broker itself remains internal. Other Kubernetes providers may assign a different LoadBalancer address. The UI manifest is **local-only** and has no login; do not expose it on a shared/public cluster. Removing the application release does not remove Kafka or its PVC.
@@ -154,9 +154,9 @@ Docker Desktop exposes its LoadBalancer at **http://localhost:8084**. The broker
 To exercise a broker restart:
 
 ```sh
-kubectl --context docker-desktop -n rent-kafka delete pod rent-combined-0
-kubectl --context docker-desktop -n rent-kafka wait --for=create pod/rent-combined-0 --timeout=120s
-kubectl --context docker-desktop -n rent-kafka wait pod/rent-combined-0 --for=condition=Ready --timeout=300s
+kubectl --context docker-desktop -n rent-cars delete pod rent-combined-0
+kubectl --context docker-desktop -n rent-cars wait --for=create pod/rent-combined-0 --timeout=120s
+kubectl --context docker-desktop -n rent-cars wait pod/rent-combined-0 --for=condition=Ready --timeout=300s
 ```
 
 The operator recreates it using persistent storage. Generate a rental while it is recovering and inspect Outbox publication afterward. For longer failure tests use the Docker stop/start exercise above. Do not delete the PVC as an outage simulation.

@@ -172,7 +172,7 @@ needs list too.
 
 For local development, press Ctrl+C in the `make dev` terminal, then run `make infra-stop`. This stops the Docker infrastructure and preserves its volumes.
 
-`docker compose down -v` removes that Compose project's data. **`make k8s-down` deletes the application namespace, including its database, photos and credentials.** Kafka lives in a separate Kubernetes namespace and is retained; see the Helm guide before resetting/replaying across a fresh database.
+`docker compose down -v` removes that Compose project's data. **`make k8s-down` deletes the application namespace, including its database, photos, credentials and Kafka events/offsets.** Use `make k8s-stop` to preserve data.
 
 ## Learn one topic at a time
 
@@ -181,6 +181,7 @@ For local development, press Ctrl+C in the `make dev` terminal, then run `make i
 - [Database labs](docs/studies/README.md): integrity, ACID/rollback, concurrency and query plans.
 - [Kafka](docs/kafka.md) and [consumer](apps/recommendations/README.md): outbox, delivery, offsets and independent processing.
 - [Observability](docs/observability.md): logs, metrics and traces.
+- [Headlamp desktop](helm/README.md#inspect-the-cluster-with-headlamp-macos): inspect the local Kubernetes workloads and consumer logs visually.
 - [API storage](apps/api/README.md#s3-configuration): local S3 and external bucket configuration.
 
 Use only one environment at a time. See [switching environments](helm/README.md#switch-between-local-development-and-kubernetes) for the safe stop/start commands and shared ports.

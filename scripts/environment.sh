@@ -15,7 +15,7 @@ check_local() {
     echo 'Cannot inspect Docker Desktop Kubernetes. Restore access before starting local services.' >&2
     return 1
   }
-  if jq -e '.items[] | select(.metadata.namespace == "rent-cars" or .metadata.namespace == "rent-kafka") |
+  if jq -e '.items[] | select(.metadata.namespace == "rent-cars") |
     select((.kind == "Pod" and .status.phase != "Succeeded" and .status.phase != "Failed") or
       ((.kind == "Deployment" or .kind == "StatefulSet") and .spec.replicas > 0) or
       (.kind == "Service" and .spec.type == "LoadBalancer"))' <<< "$resources" >/dev/null; then
@@ -36,32 +36,30 @@ check_k8s() {
 
 stop_k8s() {
   local services workloads pods operator
+  if [[ -z "$(kube get namespace rent-cars --ignore-not-found -o name)" ]]; then return 0; fi
   # Stop Strimzi first so it cannot recreate Kafka pods during shutdown.
-  operator=$(kube -n rent-kafka get deployment strimzi-cluster-operator --ignore-not-found -o name)
+  operator=$(kube -n rent-cars get deployment strimzi-cluster-operator --ignore-not-found -o name)
   if [[ -n "$operator" ]]; then
-    kube -n rent-kafka scale deployment strimzi-cluster-operator --replicas=0
-    kube -n rent-kafka wait --for=delete pod -l name=strimzi-cluster-operator --timeout=120s
+    kube -n rent-cars scale deployment strimzi-cluster-operator --replicas=0
+    kube -n rent-cars wait --for=delete pod -l name=strimzi-cluster-operator --timeout=120s
   fi
-  for namespace in rent-cars rent-kafka; do
-    if [[ -z "$(kube get namespace "$namespace" --ignore-not-found -o name)" ]]; then continue; fi
-    workloads=$(kube -n "$namespace" get deployment,statefulset -o name)
-    if [[ -n "$workloads" ]]; then
-      kube -n "$namespace" scale deployment,statefulset --all --replicas=0
-    fi
-    # Release host ports as well as stopping processes; scale alone keeps LoadBalancers.
-    services=$(kube -n "$namespace" get services -o json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | .metadata.name')
-    while read -r service; do
-      [[ -n "$service" ]] || continue
-      kube -n "$namespace" patch service "$service" --type=merge -p '{"spec":{"type":"ClusterIP"}}'
-    done <<< "$services"
-    if [[ "$namespace" == rent-kafka ]]; then
-      kube -n "$namespace" delete pods -l strimzi.io/cluster=rent --wait=true --timeout=120s
-    fi
-    pods=$(kube -n "$namespace" get pods -o name)
-    if [[ -n "$pods" ]]; then
-      kube -n "$namespace" wait --for=delete pod --all --timeout=120s
-    fi
-  done
+  workloads=$(kube -n rent-cars get deployment,statefulset -o name)
+  if [[ -n "$workloads" ]]; then
+    kube -n rent-cars scale deployment,statefulset --all --replicas=0
+  fi
+  # Release host ports as well as stopping processes; scale alone keeps LoadBalancers.
+  services=$(kube -n rent-cars get services -o json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | .metadata.name')
+  while read -r service; do
+    [[ -n "$service" ]] || continue
+    kube -n rent-cars patch service "$service" --type=merge -p '{"spec":{"type":"ClusterIP"}}'
+  done <<< "$services"
+  kube -n rent-cars delete pods -l strimzi.io/cluster=rent --wait=true --timeout=120s
+  pods=$(kube -n rent-cars get pods --field-selector=status.phase!=Succeeded,status.phase!=Failed -o name)
+  if [[ -n "$pods" ]]; then
+    while read -r pod; do
+      kube -n rent-cars wait --for=delete "$pod" --timeout=120s
+    done <<< "$pods"
+  fi
   echo 'Kubernetes workloads stopped. Volumes, Kafka events and credentials retained. Resume with make k8s-up.'
 }
 

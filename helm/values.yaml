@@ -97,10 +97,10 @@ storage:
   pathStyle: true
   credentialsSecret: fleet-s3
 
-# make k8s-up prepares the separate Kafka namespace before deploying the app.
+# make k8s-up prepares the shared rent-cars namespace before deploying the app.
 messaging:
   enabled: true
-  bootstrapServers: rent-kafka-bootstrap.rent-kafka.svc.cluster.local:9092
+  bootstrapServers: rent-kafka-bootstrap.rent-cars.svc.cluster.local:9092
   topic: rentals.events
 
 # Supporting event consumer; no public HTTP service.

@@ -36,5 +36,6 @@ spec:
             if cars=$(wget -T 5 -qO- "$url/api/cars"); then break; fi
             sleep 1
           done
-          echo "$cars" | grep -q '^\['
+          echo "$cars" | grep -q '"content":[[:space:]]*\['
+          echo "$cars" | grep -q '"totalElements":[[:space:]]*[0-9]'
           echo "React deep link and fleet API passed."

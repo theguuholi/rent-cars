@@ -18,6 +18,80 @@ prepares Kafka, installs the `fleet` Helm release and restarts API/web/recommend
 `latest` images. Existing database records and uploaded photos are preserved.
 It uses the `docker-desktop` context and does not build or push images.
 
+`make k8s-up` also sets `rent-cars` as the default namespace of `docker-desktop`.
+It does not switch your active context. Select the local cluster once if needed:
+
+```sh
+kubectl config use-context docker-desktop
+kubectl get pods
+kubectl get services
+kubectl logs -f deployment/fleet-recommendations
+```
+
+No `-n rent-cars` is needed for these commands while `docker-desktop` is active.
+The scripts keep explicit context and namespace flags so they always target the local project.
+
+## Inspect the cluster with Headlamp (macOS)
+
+Headlamp is an optional desktop application. It connects to the existing cluster
+using your kubeconfig credentials; it does not start Rent Cars or require another
+Helm release, Service or port-forward.
+
+1. Install once, following the [official macOS guide](https://headlamp.dev/docs/latest/installation/desktop/mac-installation/):
+
+   ```sh
+   brew install --cask headlamp
+   ```
+
+2. Enable Docker Desktop Kubernetes. From the repository root, stop local app
+   terminals with Ctrl+C, then start the Kubernetes environment if not already running:
+
+   ```sh
+   make infra-stop
+   make k8s-up
+   ```
+
+3. Confirm the context and namespace, then open the desktop application:
+
+   ```sh
+   kubectl config use-context docker-desktop
+   kubectl config set-context docker-desktop --namespace=rent-cars
+   kubectl get pods
+   open -a Headlamp
+   ```
+
+4. In Headlamp, select the `docker-desktop` cluster and filter the namespace to
+   `rent-cars`. The UI may have its own namespace selection even when kubectl
+   already defaults to `rent-cars`.
+5. Browse workloads and pods. Expect `fleet-api`, `fleet-web`,
+   `fleet-recommendations`, `kafka-ui`, the Strimzi operator and `rent-combined-0`.
+   Inspect readiness, restarts and events. PostgreSQL and S3 run as StatefulSets.
+6. Open the recommendations pod and its logs. Keep them visible, open
+   [React](http://localhost:5173), sign in as a driver and rent/return a car.
+   Expect `Rental event received` with `eventId`, `rentalId`, partition and offset.
+   A Running pod alone does not prove that the consumer processed an event.
+7. Use [Kafbat](http://localhost:8084) to inspect message contents and consumer
+   offsets, and [Grafana](http://localhost:3000) for API metrics, logs and traces.
+   Headlamp does not replace either tool. See [the E2E checklist](../docs/local-stack-validation.md).
+
+If no cluster appears, confirm Docker Desktop is running and `kubectl get pods`
+works. Headlamp desktop normally reads `~/.kube/config`; for a custom kubeconfig,
+follow the [desktop configuration guide](https://headlamp.dev/docs/latest/installation/desktop/).
+CPU/memory graphs depend on the cluster's metrics integration; missing graphs
+alone do not mean the application failed. Closing Headlamp leaves the cluster running.
+
+### Headlamp versus K9s
+
+| Tool | Interface | Useful workflow |
+| --- | --- | --- |
+| [K9s](https://k9scli.io/) | Terminal, keyboard shortcuts | Fast resource navigation and debugging without leaving the terminal. |
+| [Headlamp](https://headlamp.dev/) | Graphical desktop or web UI | Explore resources visually and inspect workloads with mouse navigation. |
+
+Both manage the same Kubernetes resources through the permissions of the
+connected identity. Switching tools does not change the application, its Helm
+chart or its namespace. Keep K9s if you prefer the terminal; use Headlamp when
+a visual walkthrough helps. Headlamp desktop is the documented local option here.
+
 ## Switch between local development and Kubernetes
 
 Run one environment at a time. Both use the same browser and API addresses:
@@ -56,7 +130,7 @@ operator before stopping Kafka, and changes LoadBalancer services to ClusterIP
 to release host ports. It retains PVCs, Kafka events/offsets and credentials.
 `k8s-up` restores the operator, workloads and public services. In-memory data and
 Mailpit's temporary inbox are not retained. This targets only the local
-`rent-cars` and `rent-kafka` namespaces, which must not contain unrelated workloads.
+`rent-cars` namespace, which must not contain unrelated workloads.
 
 The databases and Kafka clusters remain separate: switching does not copy data.
 Sign in again after switching because localhost cookies can belong to the previous
@@ -70,7 +144,7 @@ make k8s-up
 ```
 
 **`k8s-down` deletes the application's namespace, including database data,
-uploaded photos, volumes and credentials.** It does not delete the cluster
+uploaded photos, Kafka events/offsets, volumes and credentials.** It does not delete the cluster
 or Docker Compose data. Demo records are recreated on the next `k8s-up`;
 uploaded photos must be uploaded again.
 
@@ -172,13 +246,13 @@ All Kubernetes configuration lives under this directory:
 
 The files in `kafka/` are standalone Kubernetes manifests, not chart templates.
 `make k8s-kafka-up` installs the Strimzi operator and applies `kafka/local.yaml`
-in the separate `rent-kafka` namespace. `make k8s-up` runs that preparation
+in the shared `rent-cars` namespace. `make k8s-up` runs that preparation
 before deploying the application chart. A direct `helm upgrade` does not apply
 these standalone manifests; run `make k8s-kafka-up` first.
 
-Keeping Kafka in its own namespace preserves its lifecycle and data when the
-application namespace is removed. This organization does not change local
-development: `make dev` still uses the root `compose.yaml`.
+All namespaced resources share `rent-cars`, including Strimzi, Kafka and Kafbat.
+Deleting this namespace also deletes Kafka PVCs, events and offsets. Strimzi CRDs
+and cluster-level RBAC remain cluster-scoped by Kubernetes design. Local development is unchanged: `make dev` still uses the root `compose.yaml`.
 
 
 Follow the [Kafka producer walkthrough](../docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.
@@ -187,7 +261,7 @@ Follow the [Kafka producer walkthrough](../docs/kafka.md) for Compose, the read/
 
 Recommendations is an independent Kafka consumer used to study event processing,
 not an HTTP dependency of the rental API. `make k8s-up` now prepares the existing
-Strimzi/Kafka resources in `rent-kafka`, waits for the broker and topic, and then
+Strimzi/Kafka resources in `rent-cars`, waits for the broker and topic, and then
 installs the application including `fleet-recommendations` in `rent-cars`.
 If invoking Helm directly, first run `make k8s-kafka-up` yourself.
 
@@ -235,11 +309,9 @@ make k8s-up KAFKA_ENABLED=false
 ```
 
 The chart omits recommendations when messaging is disabled, even if its own
-flag is true. Neither option deletes an existing Kafka namespace. `make k8s-down`
-deletes application data but retains Kafka and its offsets/events; after a fresh
-application database, retained events can refer to rentals that no longer exist
-in that database. Choose a new group intentionally when studying replay; do not
-reset offsets automatically on deploy.
+flag is true. Neither option deletes existing Kafka data. `make k8s-down`
+deletes the shared namespace, including application data and Kafka events/offsets.
+Use `make k8s-stop` to preserve data. Do not reset offsets automatically on deploy.
 
 ## Validate deployment changes without deploying
 
@@ -253,3 +325,16 @@ These manual checks validate the chart and Compose configuration without publish
 images or deploying to Kubernetes.
 
 Follow the [complete E2E checklist](../docs/local-stack-validation.md) to verify browser actions, rental events and consumer offsets after deployment.
+
+### Helm 4 Service ownership after stopping the environment
+
+`make k8s-stop` patches LoadBalancer Services to ClusterIP to release local ports.
+`make k8s-up` uses `--server-side=false` for the fleet and operator releases so Helm can restore
+these Services without an ownership conflict with `kubectl-patch`. This uses
+client-side updates, not resource replacement; namespaces, PVCs and credentials
+are preserved. This command requires Helm 4.
+
+Before `make k8s-down`, keep Kafka and its operator running (`make k8s-up` if
+the environment was stopped). The reset deletes topics first so their finalizers
+can finish before the shared namespace is removed. If topic deletion times out,
+namespace deletion does not proceed; restore the operator and retry.
