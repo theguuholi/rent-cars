@@ -38,6 +38,8 @@ spec:
               value: {{ .Values.messaging.bootstrapServers | quote }}
             - name: RENT_MESSAGING_TOPIC
               value: {{ .Values.messaging.topic | quote }}
+            - name: RENT_MESSAGING_DLT
+              value: {{ .Values.messaging.deadLetterTopic | quote }}
             - name: RECOMMENDATIONS_GROUP_ID
               value: {{ .Values.recommendations.groupId | quote }}
           volumeMounts:

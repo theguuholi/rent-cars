@@ -80,6 +80,10 @@ Then rent or return a car. Follow the flow:
 
 Stop/restart the consumer to study resuming from committed offsets. Use a different group to study replay. Follow the [consumer guide](apps/recommendations/README.md) for exact commands and invalid-event recovery; use the [Kafka guide](docs/kafka.md) for publisher retries and broker outages. `make kafka-events` is just a terminal viewer, not a required service.
 
+For the next exercise, follow the [retry and DLT walkthrough](docs/recommendations-dlt.md):
+quarantine a malformed event, verify the next rental is consumed, and understand
+how PostgreSQL Outbox guarantees differ from consumer recovery.
+
 ## 5. Choose a runtime
 
 Choose one path first. Each environment has its own database, photo storage and sessions; repeat login/setup when switching.

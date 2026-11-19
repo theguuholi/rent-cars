@@ -30,3 +30,11 @@ Payload fields are required, including explicit nulls. UUIDs are strings. Instan
 Account IDs are personal-data identifiers, not recipient addresses. A future notification service needs a separately agreed, authorized recipient lookup or minimized recipient contract; no cross-service direct database access. Category and vehicle labels are not included in v1; do not silently enrich historical analytics with current catalog values. Agree a snapshot contract before implementing category-based historical metrics.
 
 Evolution: consumers tolerate additive unknown fields; do not rename/remove fields, change units/types or reinterpret existing meanings within v1. Breaking changes need a separately documented version and consumer migration. Consumer groups, partition assignments and replay do not automatically provide exactly-once external effects. Replay for analytics must not resend notifications.
+
+## Recommendations dead letters
+
+The recommendations group owns `rentals.events.recommendations.DLT`. It preserves
+the original key/payload and source headers; recovery is at-least-once. It is not a
+new business-event type and does not change schema version 1. The API's PostgreSQL
+Outbox remains unchanged. See the [recovery design](../recommendations-dlt.md) for
+retries, offset guarantees, retention and replay implications for other groups.

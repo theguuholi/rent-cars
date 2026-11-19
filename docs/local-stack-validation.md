@@ -155,8 +155,8 @@ make kafka-events
 ```
 
 This command is a separate viewer, not the recommendations service. Do not
-publish arbitrary invalid JSON into the normal topic: the current error handler
-stops the recommendations listener on invalid records.
+publish arbitrary invalid JSON outside a deliberate local study: invalid records
+are quarantined in the recommendations DLT. Follow the [DLT exercise](recommendations-dlt.md).
 
 ## 5. Verify observability and its boundaries
 
