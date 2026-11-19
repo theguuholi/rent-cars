@@ -16,7 +16,7 @@ const amount = z
   .refine((value) => parseBrl(value) !== null, amountError)
   .transform((value) => parseBrl(value)!)
 
-const carFieldSchemas = {
+export const carFieldSchemas = {
   name: requiredText('name', 100),
   description: requiredText('description', 255),
   brand: requiredText('brand', 80),
@@ -44,9 +44,3 @@ export const carDraftSchema = z
   }))
 
 export type CarDraft = z.input<typeof carDraftSchema>
-export type CarField = keyof typeof carFieldSchemas
-
-export function carFieldError(field: CarField, value: string): string | undefined {
-  const result = carFieldSchemas[field].safeParse(value)
-  return result.success ? undefined : result.error.issues[0].message
-}

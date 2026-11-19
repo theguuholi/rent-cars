@@ -1,3 +1,4 @@
+import { QueryClient } from '@tanstack/react-query'
 import { fireEvent, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { openCatalogRoute } from '../../../../test/open-catalog-route'
@@ -25,6 +26,13 @@ describe('UsersPage', () => {
     vi.mocked(api.getUser).mockResolvedValue(user)
     openCatalogRoute('/users')
     expect(await screen.findByRole('row', { name: /driver@example.test/ })).toBeVisible()
+    expect(screen.getByRole('cell', { name: 'Test Driver' })).toBeVisible()
+    expect(screen.queryByText('No users found.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Loading users…')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'View driver@example.test' })).toHaveAttribute(
+      'href',
+      '/users/user-1',
+    )
     fireEvent.click(screen.getByRole('link', { name: 'View driver@example.test' }))
     expect(await screen.findByRole('heading', { name: 'Test Driver' })).toBeVisible()
   })
@@ -33,6 +41,7 @@ describe('UsersPage', () => {
     vi.mocked(api.listUsers).mockResolvedValue([])
     openCatalogRoute('/users')
     expect(await screen.findByText('No users found.')).toBeVisible()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'New user' })).toHaveAttribute('href', '/users/new')
   })
 
@@ -51,6 +60,34 @@ describe('UsersPage', () => {
     })
     expect(await screen.findByRole('heading', { name: 'Access denied' })).toBeVisible()
     expect(history.location.pathname).toBe('/forbidden')
+    expect(api.listUsers).not.toHaveBeenCalled()
+  })
+})
+
+describe('UsersPage legacy profiles', () => {
+  test('Given an account without a driver name, when listed, then show a dash instead of an empty name', async () => {
+    vi.mocked(api.listUsers).mockResolvedValue([{ ...user, firstName: null, lastName: null }])
+    openCatalogRoute('/users')
+    expect(await screen.findByRole('cell', { name: '—' })).toBeVisible()
+  })
+})
+
+describe('UsersPage loading and cache', () => {
+  test('Given an unresolved list, when opening users, then show loading without the empty state', async () => {
+    vi.mocked(api.listUsers).mockReturnValue(new Promise(() => {}))
+    openCatalogRoute('/users')
+    expect(await screen.findByRole('status')).toHaveTextContent('Loading users…')
+    expect(screen.queryByText('No users found.')).not.toBeInTheDocument()
+  })
+
+  test('Given fresh cached users, when opening the list, then render them without a duplicate request', async () => {
+    vi.mocked(api.listUsers).mockClear()
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    client.setQueryData(['managedUsers'], [user])
+    openCatalogRoute('/users', client)
+    expect(await screen.findByRole('cell', { name: 'Test Driver' })).toBeVisible()
     expect(api.listUsers).not.toHaveBeenCalled()
   })
 })

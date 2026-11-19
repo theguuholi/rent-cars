@@ -67,3 +67,49 @@ Existing help text can be linked using `aria-describedby`; the component adds
 its own error ID without losing that hint. Labels use an explicit `id` when
 provided or a unique React-generated ID. Checkboxes, selects, file uploads and
 currency controls keep their own behavior; this component is not a form builder.
+
+## Forms: validation and reusable fields
+
+Use TanStack Form for drafts and the existing Zod schemas for domain validation.
+See [TanStack Form validation](https://tanstack.com/form/latest/docs/framework/react/guides/validation) for Standard Schema integration.
+Keep the request, pending mutation, cancellation and server error in the feature
+that owns the operation. A new validation library is not needed.
+
+```tsx
+const form = useForm({
+  defaultValues: { name: '', description: '' },
+  validators: { onSubmit: specificationDraftSchema },
+  onSubmit: ({ value }) => onSave(specificationDraftSchema.parse(value)),
+})
+
+<TextField form={form} name="name" required maxLength={null} />
+```
+
+- Supply Zod directly through `validators`. TanStack associates schema issues with
+  the corresponding fields; do not add a second manual error-map adapter.
+- Validation does not replace the draft with Zod's transformed output. Parse the
+  submitted draft to apply trimming, uppercase conversion and BRL-to-cents conversion.
+- `TextField` owns the label, value, blur, accessible error association and deduplicated
+  messages. It defaults to text and 80 characters. Override the limit explicitly;
+  `maxLength={null}` preserves an unlimited HTML input while the schema validates
+  normalized lengths. This matters when whitespace is trimmed before validation.
+- `SubmitButton` observes an async form submission. Car and specification editors
+  instead keep their parent mutation's `busy` fieldset because `mutate()` returns
+  before the network request finishes.
+- Registration and password reset validate on submit. Catalog editors pass each
+  field schema directly (`schema={carFieldSchemas[name]}` for `TextField`, or
+  `validators={{ onChange: schema }}` for a native TanStack field) to preserve
+  validation on change and submission without showing errors on untouched fields. Password confirmation issues stay next to that field.
+- The shared registration schema lives in `features/auth/registration-schema.ts`.
+  Admin creation extends it; admin editing reuses its identity rules and preserves
+  legacy null profiles through `userEditDraftSchema`. Login does not enforce the
+  password-creation policy.
+- Keep file uploads, time-dependent rental checks, checkbox collections and
+  URL-backed catalog filters specialized. Extract another control when it removes
+  established duplication, not merely to make every tag a component.
+
+Run `make check-web` at the repository root, then `npm --prefix apps/web run mutation`.
+The colocated Given/When/Then tests cover invalid drafts, corrections, normalization,
+async submission and legacy profiles. Existing browser journeys live in
+`e2e/admin-form-validation.pw.ts`, `e2e/driver-registration.pw.ts`,
+`e2e/admin-users.pw.ts` and `e2e/password-recovery.pw.ts`.

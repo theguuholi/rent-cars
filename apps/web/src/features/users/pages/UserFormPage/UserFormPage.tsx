@@ -1,22 +1,21 @@
 import { useState } from 'react'
-import { useForm } from '@tanstack/react-form'
+import { useForm, type StandardSchemaV1 } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { SubmitButton } from '../../../../components/SubmitButton/SubmitButton'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { TextField } from '../../../../components/TextField/TextField'
 import { passwordHint } from '../../../auth/password-schema'
 import { createUser, updateUser, type ManagedUser } from '../../users-api'
-import { editedUserSchema, newUserSchema, type UserDraft } from './user-form-schema'
+import { userEditDraftSchema, newUserSchema, type UserDraft } from './user-form-schema'
 
 export function UserFormPage({ user }: { user?: ManagedUser }) {
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const client = useQueryClient()
-  const showValidationErrors = (issues: { path: PropertyKey[]; message: string }[]) => {
-    const errors: Partial<Record<keyof UserDraft, string>> = {}
-    for (const issue of issues) errors[issue.path[0] as keyof UserDraft] = issue.message
-    form.setErrorMap({ onSubmit: { fields: errors } })
-  }
+  const validationSchema: StandardSchemaV1<UserDraft, unknown> = user
+    ? userEditDraftSchema(user)
+    : newUserSchema
   const form = useForm({
     defaultValues: {
       firstName: user?.firstName ?? '',
@@ -28,20 +27,13 @@ export function UserFormPage({ user }: { user?: ManagedUser }) {
       password: '',
       passwordConfirmation: '',
     } satisfies UserDraft,
+    validators: { onSubmit: validationSchema },
     onSubmit: async ({ value }) => {
       if (user) {
-        const parsed = editedUserSchema.safeParse({
-          email: value.email,
-          role: value.role,
-          firstName: user.firstName === null ? null : value.firstName,
-          lastName: user.lastName === null ? null : value.lastName,
-          userName: user.userName === null ? null : value.userName,
-          driveLicense: user.driveLicense === null ? null : value.driveLicense,
-        })
-        if (!parsed.success) return showValidationErrors(parsed.error.issues)
+        const input = userEditDraftSchema(user).parse(value)
         setError('')
         try {
-          const saved = await updateUser(user.id, parsed.data)
+          const saved = await updateUser(user.id, input)
           await client.invalidateQueries({ queryKey: ['managedUsers'] })
           client.setQueryData(['managedUser', user.id], saved)
           await navigate({ to: '/users/$id', params: { id: user.id } })
@@ -50,11 +42,10 @@ export function UserFormPage({ user }: { user?: ManagedUser }) {
         }
         return
       }
-      const parsed = newUserSchema.safeParse(value)
-      if (!parsed.success) return showValidationErrors(parsed.error.issues)
+      const input = newUserSchema.parse(value)
       setError('')
       try {
-        await createUser(parsed.data, parsed.data.role)
+        await createUser(input, input.role)
         await client.invalidateQueries({ queryKey: ['managedUsers'] })
         await navigate({ to: '/users' })
       } catch (failure) {
@@ -134,13 +125,7 @@ export function UserFormPage({ user }: { user?: ManagedUser }) {
           </>
         )}
         {error && <p role="alert">{error}</p>}
-        <form.Subscribe selector={(state) => state.isSubmitting}>
-          {(busy) => (
-            <button className="btn-primary" type="submit" disabled={busy}>
-              {user ? 'Save user' : 'Create user'}
-            </button>
-          )}
-        </form.Subscribe>
+        <SubmitButton form={form}>{user ? 'Save user' : 'Create user'}</SubmitButton>
         <Link to={user ? '/users/$id' : '/users'} params={user ? { id: user.id } : undefined}>
           Cancel
         </Link>

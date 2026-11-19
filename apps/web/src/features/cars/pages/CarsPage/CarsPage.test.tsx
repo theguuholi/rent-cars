@@ -127,3 +127,43 @@ describe('CarsPage', () => {
     },
   )
 })
+
+scenario(
+  'Given no catalog pages, when the search completes, then pagination is hidden',
+  async () => {
+    vi.mocked(api.listCars).mockResolvedValue({
+      content: [],
+      number: 0,
+      size: 12,
+      totalElements: 0,
+      totalPages: 0,
+    })
+    openCatalogRoute('/cars')
+    await screen.findByText('No matching cars.')
+    expect(screen.queryByRole('navigation', { name: 'Car pages' })).not.toBeInTheDocument()
+  },
+)
+
+scenario(
+  'Given the last of three pages, when going back, then keep filters, show the previous page number and enable forward navigation',
+  async () => {
+    vi.mocked(api.listCars).mockImplementation(async (search) => ({
+      content: [{ ...car, name: `Car ${search.page}` }],
+      number: search.page,
+      size: 1,
+      totalElements: 3,
+      totalPages: 3,
+    }))
+    const history = openCatalogRoute('/cars?page=2&size=1&brand=Fiat')
+    await screen.findByRole('link', { name: 'Car 2' })
+    expect(screen.getByText('Page 3 of 3 (3 cars)')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Previous page' }))
+    await screen.findByRole('link', { name: 'Car 1' })
+    expect(screen.getByText('Page 2 of 3 (3 cars)')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled()
+    const params = new URLSearchParams(history.location.search)
+    expect(params.get('page')).toBe('1')
+    expect(params.get('brand')).toBe('Fiat')
+  },
+)

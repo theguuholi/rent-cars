@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { useForm } from '@tanstack/react-form'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, expectTypeOf, test as scenario, vi } from 'vitest'
@@ -118,7 +119,11 @@ function SchemaExample() {
           form.setErrorMap({
             onSubmit: {
               fields: {
-                email: [{ message: 'Email is invalid' }, { message: 'Use a company address' }],
+                email: [
+                  { message: 'Email is invalid' },
+                  { message: 'Use a company address' },
+                  { message: 'Email is invalid' },
+                ],
               },
             },
           })
@@ -132,7 +137,7 @@ function SchemaExample() {
 
 describe('TextField accessibility', () => {
   scenario(
-    'Given schema issues and a custom ID, when errors arrive, then all messages describe the correct input without a hint',
+    'Given schema issues and a custom ID, when errors arrive, then distinct messages describe the correct input once without a hint',
     () => {
       render(<SchemaExample />)
       const input = screen.getByRole('textbox', { name: 'Email' })
@@ -168,6 +173,60 @@ describe('TextField accessibility', () => {
       expect(first.id).not.toBe(second.id)
       expect(first.id).not.toBe('')
       expect(second.id).not.toBe('')
+    },
+  )
+})
+
+function UnlimitedExample() {
+  const form = useForm({ defaultValues: { description: '' } })
+  return <TextField form={form} name="description" maxLength={null} />
+}
+
+describe('TextField length policy', () => {
+  scenario(
+    'Given a field without an HTML length limit, when rendered, then leave validation to its schema without silently truncating input',
+    () => {
+      render(<UnlimitedExample />)
+      const input = screen.getByRole('textbox', { name: 'Description' })
+      expect(input).not.toHaveAttribute('maxlength')
+      fireEvent.change(input, { target: { value: 'x'.repeat(256) } })
+      expect(input).toHaveValue('x'.repeat(256))
+    },
+  )
+})
+
+function ValidatedExample({ onSave }: { onSave: (value: { name: string }) => void }) {
+  const form = useForm({ defaultValues: { name: '' }, onSubmit: ({ value }) => onSave(value) })
+  return (
+    <form
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault()
+        void form.handleSubmit()
+      }}
+    >
+      <TextField form={form} name="name" schema={z.string().min(1, 'Enter a name.')} />
+      <button type="submit">Save</button>
+    </form>
+  )
+}
+
+describe('TextField schema validation', () => {
+  scenario(
+    'Given a field schema, when an invalid submission is corrected, then clear its error and submit the current value',
+    async () => {
+      const onSave = vi.fn()
+      render(<ValidatedExample onSave={onSave} />)
+      const input = screen.getByLabelText('Name')
+      expect(input).not.toHaveAccessibleDescription()
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent('Enter a name.')
+      expect(input).toHaveAccessibleDescription('Enter a name.')
+      expect(onSave).not.toHaveBeenCalled()
+      fireEvent.change(input, { target: { value: 'Sedan' } })
+      await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      await waitFor(() => expect(onSave).toHaveBeenCalledExactlyOnceWith({ name: 'Sedan' }))
     },
   )
 })

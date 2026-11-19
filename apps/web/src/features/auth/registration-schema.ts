@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import type { RegistrationInput } from '../../auth-api'
-import { passwordSchema, passwordHint } from '../../password-schema'
+import { passwordSchema, passwordHint } from './password-schema'
 
 const firstNameError = 'Enter a first name of up to 80 characters.'
 const lastNameError = 'Enter a last name of up to 80 characters.'
@@ -34,17 +33,3 @@ export const registrationSchema = z
       Boolean(passwordConfirmation) && passwordConfirmation === password,
     { path: ['passwordConfirmation'], error: 'Passwords do not match.' },
   )
-
-export type RegistrationErrors = Partial<Record<keyof RegistrationInput, string>>
-
-export function parseRegistration(input: RegistrationInput) {
-  const result = registrationSchema.safeParse(input)
-  if (result.success) return { data: result.data, errors: {} as RegistrationErrors }
-
-  const errors: RegistrationErrors = {}
-  for (const issue of result.error.issues) {
-    const field = issue.path[0] as keyof RegistrationInput
-    errors[field] = issue.message
-  }
-  return { data: null, errors }
-}

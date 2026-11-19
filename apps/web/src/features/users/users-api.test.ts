@@ -69,6 +69,11 @@ describe('users-api', () => {
     expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ user: input, role: 'USER' })
     expect(fetcher.mock.calls[0][1].method).toBe('POST')
     expect(fetcher.mock.calls[1][1].method).toBe('PUT')
+    for (const index of [0, 1])
+      expect(fetcher.mock.calls[index][1].headers).toMatchObject({
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer admin-token',
+      })
     expect(fetcher.mock.calls[2][1].method).toBe('DELETE')
   })
 

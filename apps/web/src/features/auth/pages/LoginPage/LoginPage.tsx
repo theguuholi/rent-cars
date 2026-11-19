@@ -1,3 +1,5 @@
+import { SubmitButton } from '../../../../components/SubmitButton/SubmitButton'
+import { TextField } from '../../../../components/TextField/TextField'
 import { useCurrentAction } from '../../../../routes/use-current-action'
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
@@ -36,44 +38,24 @@ export function LoginPage() {
           void form.handleSubmit()
         }}
       >
-        <form.Field name="email">
-          {(field) => (
-            <label>
-              Email
-              <input
-                className="control"
-                type="email"
-                autoComplete="username"
-                required
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-              />
-            </label>
-          )}
-        </form.Field>
-        <form.Field name="password">
-          {(field) => (
-            <label>
-              Password
-              <input
-                className="control"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-              />
-            </label>
-          )}
-        </form.Field>
+        <TextField
+          form={form}
+          name="email"
+          type="email"
+          autoComplete="username"
+          required
+          maxLength={null}
+        />
+        <TextField
+          form={form}
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          maxLength={null}
+        />
         {error && <p role="alert">{error}</p>}
-        <form.Subscribe selector={(state) => state.isSubmitting}>
-          {(busy) => (
-            <button type="submit" className="btn-primary" disabled={busy}>
-              Sign in
-            </button>
-          )}
-        </form.Subscribe>
+        <SubmitButton form={form}>Sign in</SubmitButton>
       </form>
       <p className="mt-4">
         <Link className="underline" to="/register">

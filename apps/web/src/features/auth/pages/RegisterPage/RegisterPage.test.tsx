@@ -85,6 +85,7 @@ describe('RegisterPage', () => {
         'Your account is ready. Sign in to continue.',
       )
       expect(screen.queryByLabelText('Password', { exact: true })).toBeNull()
+      expect(document.title).toBe('Create account | Rent Cars')
       expect(session.read()).toBeNull()
       fireEvent.click(screen.getByRole('link', { name: 'Back to sign in' }))
       expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeVisible()

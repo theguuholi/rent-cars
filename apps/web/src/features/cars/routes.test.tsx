@@ -1,3 +1,5 @@
+import { createMemoryHistory } from '@tanstack/react-router'
+import { createAppRouter } from '../../router'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { describe, expect, test as scenario, vi, beforeEach, afterEach } from 'vitest'
 import { openCatalogRoute } from '../../test/open-catalog-route'
@@ -77,3 +79,12 @@ describe('Car routes', () => {
     },
   )
 })
+
+scenario.each(['name,asc', 'name,desc', 'brand,asc', 'brand,desc'])(
+  'Given sort %s in a direct URL, when the route validates its search, then preserve the supported sorting choice',
+  async (sort) => {
+    const router = createAppRouter(createMemoryHistory({ initialEntries: [`/cars?sort=${sort}`] }))
+    await router.load()
+    expect(router.state.matches.at(-1)?.search).toMatchObject({ sort })
+  },
+)

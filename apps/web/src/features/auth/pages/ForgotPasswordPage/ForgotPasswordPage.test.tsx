@@ -21,7 +21,9 @@ describe('ForgotPasswordPage', () => {
       const email = await screen.findByLabelText('Email')
       expect(email).toHaveAttribute('type', 'email')
       expect(email).toBeRequired()
-      fireEvent.change(email, { target: { value: ' Driver@Example.Test ' } })
+      expect(email).toHaveValue('')
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      fireEvent.change(email, { target: { value: '\u00a0Driver@Example.Test\u00a0' } })
       let finish!: () => void
       vi.mocked(requestPasswordReset).mockImplementationOnce(
         () =>
@@ -29,7 +31,9 @@ describe('ForgotPasswordPage', () => {
             finish = resolve
           }),
       )
-      fireEvent.submit(screen.getByRole('button', { name: 'Send reset link' }).closest('form')!)
+      expect(
+        fireEvent.submit(screen.getByRole('button', { name: 'Send reset link' }).closest('form')!),
+      ).toBe(false)
       await waitFor(() =>
         expect(screen.getByRole('button', { name: 'Send reset link' })).toBeDisabled(),
       )
@@ -51,7 +55,9 @@ describe('ForgotPasswordPage', () => {
       openCatalogRoute('/forgot-password', undefined, null)
       const email = await screen.findByLabelText('Email')
       fireEvent.change(email, { target: { value: 'driver@example.test' } })
-      fireEvent.submit(screen.getByRole('button', { name: 'Send reset link' }).closest('form')!)
+      expect(
+        fireEvent.submit(screen.getByRole('button', { name: 'Send reset link' }).closest('form')!),
+      ).toBe(false)
       expect(await screen.findByRole('alert')).toHaveTextContent(
         failure instanceof Error ? failure.message : 'Could not request a reset link.',
       )
@@ -59,3 +65,37 @@ describe('ForgotPasswordPage', () => {
     },
   )
 })
+
+scenario(
+  'Given a failed reset request, when retrying, then clear the old error while preserving the email',
+  async () => {
+    vi.mocked(requestPasswordReset)
+      .mockRejectedValueOnce(new Error('Offline'))
+      .mockReturnValueOnce(new Promise(() => {}))
+    openCatalogRoute('/forgot-password', undefined, null)
+    fireEvent.change(await screen.findByLabelText('Email'), {
+      target: { value: 'driver@example.test' },
+    })
+    const form = screen.getByRole('button', { name: 'Send reset link' }).closest('form')!
+    fireEvent.submit(form)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Offline')
+    fireEvent.submit(form)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Send reset link' })).toBeDisabled(),
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Email')).toHaveValue('driver@example.test')
+  },
+)
+
+scenario(
+  'Given an untouched recovery form, when submitted programmatically, then use the empty string draft instead of failing on an undefined email',
+  async () => {
+    vi.mocked(requestPasswordReset).mockReset().mockRejectedValueOnce(new Error('Enter an email'))
+    openCatalogRoute('/forgot-password', undefined, null)
+    const button = await screen.findByRole('button', { name: 'Send reset link' })
+    fireEvent.submit(button.closest('form')!)
+    await waitFor(() => expect(requestPasswordReset).toHaveBeenCalledExactlyOnceWith(''))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter an email')
+  },
+)

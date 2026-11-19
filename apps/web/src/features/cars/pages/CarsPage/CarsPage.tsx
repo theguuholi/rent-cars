@@ -1,14 +1,16 @@
 import { useSession } from '../../../auth/session'
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, getRouteApi } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { listCars } from '../../cars-api'
 import { formatBrl } from '../../brl'
 import type { CarSearch } from '../../cars-api'
 
+const carsRoute = getRouteApi('/cars')
+
 export function CarsPage() {
   const isAdmin = useSession()?.user.role === 'ADMIN'
-  const routeSearch = useSearch({ from: '/cars' })
+  const routeSearch = carsRoute.useSearch()
   const search: CarSearch = {
     name: routeSearch.name ?? '',
     brand: routeSearch.brand ?? '',
@@ -17,13 +19,13 @@ export function CarsPage() {
     size: routeSearch.size ?? 12,
     sort: routeSearch.sort ?? 'name,asc',
   }
-  const navigate = useNavigate({ from: '/cars' })
+  const navigate = carsRoute.useNavigate()
   const cars = useQuery({
     queryKey: ['cars', isAdmin, search],
     queryFn: ({ signal }) => listCars(search, isAdmin, signal),
   })
   const update = (changes: Partial<typeof search>) =>
-    void navigate({ to: '/cars', search: { ...search, ...changes, page: changes.page ?? 0 } })
+    void navigate({ search: { ...search, ...changes, page: changes.page ?? 0 } })
   return (
     <PageSection
       eyebrow="Fleet"

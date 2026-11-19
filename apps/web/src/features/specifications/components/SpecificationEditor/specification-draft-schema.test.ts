@@ -1,5 +1,5 @@
 import { describe, expect, test as scenario } from 'vitest'
-import { specificationDraftSchema, specificationFieldError } from './specification-draft-schema'
+import { specificationDraftSchema } from './specification-draft-schema'
 
 describe('specificationDraftSchema', () => {
   scenario('Given padded fields, when parsed, then produce a trimmed input', () => {
@@ -14,7 +14,12 @@ describe('specificationDraftSchema', () => {
     ['name', 'ß'.repeat(128), 'Use at most 255 characters after uppercase conversion.'],
     ['description', ' ', 'Enter a description.'],
   ] as const)('Given invalid %s, when checked, then return its error', (field, value, message) => {
-    expect(specificationFieldError(field, value)).toBe(message)
+    expect(
+      specificationDraftSchema.safeParse({
+        ...{ name: 'GPS', description: 'Maps' },
+        [field]: value,
+      }).error?.issues,
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ path: [field], message })]))
     expect(
       specificationDraftSchema.safeParse({ name: 'GPS', description: 'Maps', [field]: value })
         .success,
@@ -22,7 +27,8 @@ describe('specificationDraftSchema', () => {
   })
 
   scenario('Given 255 uppercase characters, when checked, then accept the name', () => {
-    expect(specificationFieldError('name', ` ${'ß'.repeat(127)}a `)).toBeUndefined()
-    expect(specificationFieldError('description', ' Maps ')).toBeUndefined()
+    expect(
+      specificationDraftSchema.parse({ name: ` ${'ß'.repeat(127)}a `, description: ' Maps ' }),
+    ).toEqual({ name: `${'ß'.repeat(127)}a`, description: 'Maps' })
   })
 })

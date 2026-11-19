@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { Link, useLocation } from '@tanstack/react-router'
+import { SubmitButton } from '../../../../components/SubmitButton/SubmitButton'
 import { TextField } from '../../../../components/TextField/TextField'
 import { PageSection } from '../../../../components/PageSection/PageSection'
 import { resetPassword } from '../../auth-api'
 import { passwordHint } from '../../password-schema'
-import { parseResetPassword } from './reset-password-schema'
+import { resetPasswordSchema } from './reset-password-schema'
 
 export function ResetPasswordPage() {
   const token = useLocation({
@@ -16,10 +17,9 @@ export function ResetPasswordPage() {
   const [error, setError] = useState('')
   const form = useForm({
     defaultValues: { password: '', passwordConfirmation: '' },
+    validators: { onSubmit: resetPasswordSchema },
     onSubmit: async ({ value }) => {
-      const { data, errors } = parseResetPassword(value)
-      form.setErrorMap({ onSubmit: { fields: errors } })
-      if (!data) return
+      const data = resetPasswordSchema.parse(value)
       setError('')
       try {
         await resetPassword({ token, ...data })
@@ -71,13 +71,7 @@ export function ResetPasswordPage() {
             maxLength={72}
           />
           {error && <p role="alert">{error}</p>}
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(busy) => (
-              <button className="btn-primary" type="submit" disabled={busy}>
-                Reset password
-              </button>
-            )}
-          </form.Subscribe>
+          <SubmitButton form={form}>Reset password</SubmitButton>
         </form>
       )}
       <Link className="mt-4 inline-block underline" to={updated ? '/login' : '/forgot-password'}>
