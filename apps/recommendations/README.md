@@ -119,3 +119,7 @@ workflow can access the analysis credential.
 ## Optional HDFS archive
 
 Run `make dev HDFS_ENABLED=true` from the repository root to include the archive lab. Read the [system design and local/Kubernetes walkthrough](../../docs/recommendations-hdfs.md) before switching consumer groups or replaying records. It explains atomic publication, retries/DLT, storage inspection, platform requirements and production limitations.
+
+## New to Hadoop?
+
+Follow [Hadoop from zero: local first, then Kubernetes](../../docs/hadoop-first-steps.md) for a guided code tour, hands-on exercises, expected results and troubleshooting.

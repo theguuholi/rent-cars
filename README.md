@@ -196,3 +196,7 @@ Make commands are organized by responsibility under [`make/`](make/README.md). C
 ### Optional Hadoop study
 
 The recommendations consumer can archive rental events in HDFS. Start with `make dev HDFS_ENABLED=true`; follow the [system design and step-by-step local/Kubernetes guide](docs/recommendations-hdfs.md). This optional lab prepares raw events for later analytics; it does not run Spark or calculate recommendations.
+
+## New to Hadoop?
+
+Follow [Hadoop from zero: local first, then Kubernetes](docs/hadoop-first-steps.md) for a guided code tour, hands-on exercises, expected results and troubleshooting.

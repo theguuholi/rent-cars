@@ -248,3 +248,7 @@ Why is HDFS replication separate from Kafka replication?
 Further reading: [HDFS architecture](https://hadoop.apache.org/docs/r3.4.3/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html),
 [WebHDFS operations](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/WebHDFS.html),
 and the [Kafka retries/DLT study guide](recommendations-dlt.md).
+
+## New to Hadoop?
+
+Follow [Hadoop from zero: local first, then Kubernetes](hadoop-first-steps.md) for a guided code tour, hands-on exercises, expected results and troubleshooting.
