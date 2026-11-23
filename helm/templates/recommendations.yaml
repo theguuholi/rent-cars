@@ -56,7 +56,29 @@ spec:
             capabilities:
               drop: [ALL]
           resources: {{ toYaml .Values.recommendations.resources | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8085
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: http}
+            initialDelaySeconds: 10
           env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+            - name: RECOMMENDATIONS_DATABASE_URL
+              value: jdbc:postgresql://{{ .Release.Name }}-recommendations-db:5432/recommendations
+            - name: RECOMMENDATIONS_DATABASE_USER
+              value: recommendations
+            - name: RECOMMENDATIONS_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.recommendations.existingSecret }}
+                  key: postgres-password
+            - name: RECOMMENDATIONS_API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.recommendations.existingSecret }}
+                  key: api-password
             - name: HDFS_ARCHIVE_ENABLED
               value: {{ .Values.hdfs.enabled | quote }}
             - name: HDFS_HTTPFS_URL
@@ -75,4 +97,21 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+{{- end }}
+
+{{- if and .Values.messaging.enabled .Values.recommendations.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-recommendations
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: recommendations
+  ports:
+    - name: http
+      port: 8085
+      targetPort: http
 {{- end }}

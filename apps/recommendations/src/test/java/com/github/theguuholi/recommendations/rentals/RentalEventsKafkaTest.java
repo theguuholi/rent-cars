@@ -47,6 +47,10 @@ class RentalEventsKafkaTest {
   static final KafkaContainer KAFKA =
       new KafkaContainer("apache/kafka:4.1.1").withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "false");
 
+  @Container
+  static final org.testcontainers.postgresql.PostgreSQLContainer POSTGRES =
+      new org.testcontainers.postgresql.PostgreSQLContainer("postgres:17");
+
   @Container static final HdfsTestContainer HDFS = new HdfsTestContainer();
 
   final String topic = "rentals-" + UUID.randomUUID();
@@ -98,6 +102,10 @@ class RentalEventsKafkaTest {
                       }
                     }))
         .run(
+            "--server.port=0",
+            "--spring.datasource.url=" + POSTGRES.getJdbcUrl(),
+            "--spring.datasource.username=" + POSTGRES.getUsername(),
+            "--spring.datasource.password=" + POSTGRES.getPassword(),
             "--rent.archive.enabled=true",
             "--rent.archive.url=" + HDFS.endpoint(),
             "--spring.kafka.bootstrap-servers=" + KAFKA.getBootstrapServers(),

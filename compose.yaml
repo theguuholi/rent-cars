@@ -1,4 +1,36 @@
 services:
+  recommendations-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: recommendations
+      POSTGRES_USER: recommendations
+      POSTGRES_PASSWORD: ${RECOMMENDATIONS_DATABASE_PASSWORD:-recommendations-dev}
+    ports: ['127.0.0.1:5433:5432']
+    volumes: [recommendations_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD, pg_isready, -U, recommendations, -d, recommendations]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  recommendations-job:
+    profiles: [spark]
+    build: ./apps/recommendations-job
+    image: rent-cars-recommendations-job:latest
+    environment:
+      RECOMMENDATIONS_DATABASE_URL: jdbc:postgresql://recommendations-db:5432/recommendations
+      RECOMMENDATIONS_DATABASE_USER: recommendations
+      RECOMMENDATIONS_DATABASE_PASSWORD: ${RECOMMENDATIONS_DATABASE_PASSWORD:-recommendations-dev}
+      HADOOP_USER_NAME: hadoop
+      SPARK_LOCAL_IP: 127.0.0.1
+    command:
+      - hdfs://hdfs-namenode:9000/rent-cars/raw/rentals
+      - hdfs://hdfs-namenode:9000/rent-cars/curated/popular-cars
+      - ${RECOMMENDATIONS_AS_OF:-}
+    depends_on:
+      recommendations-db:
+        condition: service_healthy
+      hdfs-datanode:
+        condition: service_healthy
   hdfs-namenode:
     image: apache/hadoop:3.5.0
     platform: linux/amd64
@@ -162,6 +194,7 @@ services:
       retries: 30
 
 volumes:
+  recommendations_data:
   hdfs_name:
   hdfs_blocks:
   kafka_data:

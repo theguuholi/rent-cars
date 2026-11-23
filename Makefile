@@ -30,4 +30,4 @@ help:
 # Root commands coordinate the independent application checks.
 check: check-java check-web
 
-check-java: check-api check-recommendations
+check-java: check-api check-recommendations check-recommendations-job

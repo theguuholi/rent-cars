@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    password: ${RECOMMENDATIONS_DATABASE_PASSWORD:recommendations-dev}
+  security:
+    user:
+      password: ${RECOMMENDATIONS_API_PASSWORD:recommendations-dev}

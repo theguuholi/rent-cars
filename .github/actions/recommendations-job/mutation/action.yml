@@ -1,0 +1,19 @@
+name: Spark job mutation
+description: Verify the independent Java 21 Spark application.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+      with:
+        distribution: temurin
+        java-version: '21'
+        cache: maven
+        cache-dependency-path: apps/recommendations-job/pom.xml
+    - shell: bash
+      working-directory: apps/recommendations-job
+      run: ./mvnw -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: recommendations-job-mutation
+        path: apps/recommendations-job/target/pit-reports/
+        if-no-files-found: error

@@ -1,0 +1,72 @@
+{{- if and .Values.messaging.enabled .Values.recommendations.enabled .Values.recommendations.job.enabled }}
+{{- if not .Values.hdfs.enabled }}{{ fail "recommendations.job.enabled requires hdfs.enabled" }}{{- end }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-recommendations-job
+spec:
+  schedule: {{ .Values.recommendations.job.schedule | quote }}
+  timeZone: Etc/UTC
+  suspend: {{ .Values.recommendations.job.suspend }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/component: recommendations-job
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 12 }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: spark
+              image: "{{ .Values.recommendations.job.image.repository }}:{{ .Values.recommendations.job.image.tag }}"
+              imagePullPolicy: {{ .Values.recommendations.job.image.pullPolicy }}
+              command: [sh, -ec]
+              args:
+                - >-
+                  exec java --add-exports=java.base/sun.nio.ch=ALL-UNNAMED -Xmx1g
+                  -Dspark.master='local[2]' -Dspark.ui.enabled=false -Dspark.sql.shuffle.partitions=4 -Dspark.hadoop.dfs.replication=1
+                  -cp '/app/job.jar:/app/lib/*'
+                  com.github.theguuholi.recommendationsjob.RecommendationJob
+                  hdfs://{{ .Release.Name }}-hdfs-namenode:9000/rent-cars/raw/rentals
+                  hdfs://{{ .Release.Name }}-hdfs-namenode:9000/rent-cars/curated/popular-cars
+                  "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: {drop: [ALL]}
+              resources:
+                requests: {cpu: 250m, memory: 512Mi}
+                limits: {cpu: '2', memory: 2Gi}
+              env:
+                - name: HADOOP_USER_NAME
+                  value: hadoop
+                - name: SPARK_LOCAL_IP
+                  value: 127.0.0.1
+                - name: RECOMMENDATIONS_DATABASE_URL
+                  value: jdbc:postgresql://{{ .Release.Name }}-recommendations-db:5432/recommendations
+                - name: RECOMMENDATIONS_DATABASE_USER
+                  value: recommendations
+                - name: RECOMMENDATIONS_DATABASE_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.recommendations.existingSecret }}
+                      key: postgres-password
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}
+{{- end }}

@@ -16,7 +16,13 @@ k8s-up: check-k8s-environment
 	  openssl rand -hex 32 | tr -d '\n' > "$$keys/postgres-password"; \
 	  kubectl --context docker-desktop -n rent-cars create secret generic rent-cars-credentials --from-file="$$keys"; \
 	)
-	helm upgrade --install fleet ./helm --kube-context docker-desktop -n rent-cars --reset-values --set messaging.enabled=$(KAFKA_ENABLED) --set hdfs.enabled=$(HDFS_ENABLED) --wait --timeout 6m
+	@kubectl --context docker-desktop -n rent-cars get secret recommendations-credentials >/dev/null 2>&1 || ( \
+	  set -eu; umask 077; keys=$$(mktemp -d); trap 'rm -rf "$$keys"' EXIT; \
+	  openssl rand -hex 32 | tr -d '\n' > "$$keys/postgres-password"; \
+	  openssl rand -hex 32 | tr -d '\n' > "$$keys/api-password"; \
+	  kubectl --context docker-desktop -n rent-cars create secret generic recommendations-credentials --from-file="$$keys"; \
+	)
+	helm upgrade --install fleet ./helm --kube-context docker-desktop -n rent-cars --reset-values --set messaging.enabled=$(KAFKA_ENABLED) --set hdfs.enabled=$(HDFS_ENABLED) --set recommendations.job.enabled=$(HDFS_ENABLED) --wait --timeout 6m
 	kubectl --context docker-desktop -n rent-cars rollout restart deployment/fleet-api deployment/fleet-web
 	kubectl --context docker-desktop -n rent-cars rollout status deployment/fleet-api deployment/fleet-web --timeout=180s
 	@if kubectl --context docker-desktop -n rent-cars get deployment/fleet-recommendations >/dev/null 2>&1; then \
@@ -43,3 +49,7 @@ k8s-kafka-up: check-k8s-environment
 
 check-k8s-environment:
 	bash scripts/environment.sh check-k8s
+
+.PHONY: k8s-recommendations-build
+k8s-recommendations-build:
+	kubectl --context docker-desktop -n rent-cars create job --from=cronjob/fleet-recommendations-job fleet-recommendations-job-$$(date +%s)

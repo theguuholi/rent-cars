@@ -104,9 +104,19 @@ messaging:
   topic: rentals.events
   deadLetterTopic: rentals.events.recommendations.DLT
 
-# Supporting event consumer; no public HTTP service.
+# Event ingestion and internal snapshot read API.
 recommendations:
   enabled: true
+  existingSecret: recommendations-credentials
+  job:
+    enabled: false
+    # Suspended by default: run a deliberate manual batch before scheduling.
+    suspend: true
+    schedule: '0 * * * *'
+    image:
+      repository: docker.io/guuhworship/rent-cars-recommendations-job
+      tag: latest
+      pullPolicy: Always
   groupId: rent-cars-recommendations-v1
   image:
     repository: docker.io/guuhworship/rent-cars-recommendations
@@ -115,9 +125,9 @@ recommendations:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
-    limits:
       memory: 256Mi
+    limits:
+      memory: 512Mi
 
 # Optional local learning lab. No Kerberos, TLS or NameNode HA.
 hdfs:
