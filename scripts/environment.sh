@@ -37,11 +37,14 @@ check_k8s() {
 stop_k8s() {
   local services workloads pods operator
   # Stop Strimzi first so it cannot recreate Kafka pods during shutdown.
-  operator=$(kube -n rent-kafka get deployment strimzi-cluster-operator --ignore-not-found -o name)
-  if [[ -n "$operator" ]]; then
-    kube -n rent-kafka scale deployment strimzi-cluster-operator --replicas=0
-    kube -n rent-kafka wait --for=delete pod -l name=strimzi-cluster-operator --timeout=120s
-  fi
+  # Include the legacy namespace when stopping an older installation.
+  for namespace in rent-cars rent-kafka; do
+    operator=$(kube -n "$namespace" get deployment strimzi-cluster-operator --ignore-not-found -o name)
+    if [[ -n "$operator" ]]; then
+      kube -n "$namespace" scale deployment strimzi-cluster-operator --replicas=0
+      kube -n "$namespace" wait --for=delete pod -l name=strimzi-cluster-operator --timeout=120s
+    fi
+  done
   for namespace in rent-cars rent-kafka; do
     if [[ -z "$(kube get namespace "$namespace" --ignore-not-found -o name)" ]]; then continue; fi
     workloads=$(kube -n "$namespace" get deployment,statefulset -o name)
@@ -54,9 +57,7 @@ stop_k8s() {
       [[ -n "$service" ]] || continue
       kube -n "$namespace" patch service "$service" --type=merge -p '{"spec":{"type":"ClusterIP"}}'
     done <<< "$services"
-    if [[ "$namespace" == rent-kafka ]]; then
-      kube -n "$namespace" delete pods -l strimzi.io/cluster=rent --wait=true --timeout=120s
-    fi
+    kube -n "$namespace" delete pods -l strimzi.io/cluster=rent --wait=true --timeout=120s
     pods=$(kube -n "$namespace" get pods -o name)
     if [[ -n "$pods" ]]; then
       kube -n "$namespace" wait --for=delete pod --all --timeout=120s

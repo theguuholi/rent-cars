@@ -32,14 +32,14 @@ k8s-down:
 	kubectl --context docker-desktop delete namespace rent-cars --ignore-not-found --wait=true
 
 k8s-kafka-up: check-k8s-environment
-	helm upgrade --install rent-kafka-operator strimzi-kafka-operator --repo https://strimzi.io/charts/ --version 0.49.1 --kube-context docker-desktop --namespace rent-kafka --create-namespace --wait --timeout 5m
-	kubectl --context docker-desktop -n rent-kafka scale deployment/strimzi-cluster-operator --replicas=1
-	kubectl --context docker-desktop -n rent-kafka rollout status deployment/strimzi-cluster-operator --timeout=120s
-	kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/local.yaml
-	kubectl --context docker-desktop -n rent-kafka wait kafka/rent --for=condition=Ready --timeout=300s
-	kubectl --context docker-desktop -n rent-kafka wait kafkatopic/rentals-events kafkatopic/rentals-events-recommendations-dlt --for=condition=Ready --timeout=120s
-	kubectl --context docker-desktop -n rent-kafka apply -f helm/kafka/ui-local.yaml
-	kubectl --context docker-desktop -n rent-kafka scale deployment/kafka-ui --replicas=1
+	helm upgrade --install rent-kafka-operator strimzi-kafka-operator --repo https://strimzi.io/charts/ --version 0.49.1 --kube-context docker-desktop --namespace rent-cars --create-namespace --wait --timeout 5m
+	kubectl --context docker-desktop -n rent-cars scale deployment/strimzi-cluster-operator --replicas=1
+	kubectl --context docker-desktop -n rent-cars rollout status deployment/strimzi-cluster-operator --timeout=120s
+	kubectl --context docker-desktop -n rent-cars apply -f helm/kafka/local.yaml
+	kubectl --context docker-desktop -n rent-cars wait kafka/rent --for=condition=Ready --timeout=300s
+	kubectl --context docker-desktop -n rent-cars wait kafkatopic/rentals-events kafkatopic/rentals-events-recommendations-dlt --for=condition=Ready --timeout=120s
+	kubectl --context docker-desktop -n rent-cars apply -f helm/kafka/ui-local.yaml
+	kubectl --context docker-desktop -n rent-cars scale deployment/kafka-ui --replicas=1
 
 check-k8s-environment:
 	bash scripts/environment.sh check-k8s

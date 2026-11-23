@@ -172,7 +172,7 @@ All Kubernetes configuration lives under this directory:
 
 The files in `kafka/` are standalone Kubernetes manifests, not chart templates.
 `make k8s-kafka-up` installs the Strimzi operator and applies `kafka/local.yaml`
-in the separate `rent-kafka` namespace. `make k8s-up` runs that preparation
+in the same `rent-cars` namespace as the applications. `make k8s-up` runs that preparation
 before deploying the application chart. A direct `helm upgrade` does not apply
 these standalone manifests; run `make k8s-kafka-up` first.
 
@@ -187,7 +187,7 @@ Follow the [Kafka producer walkthrough](../docs/kafka.md) for Compose, the read/
 
 Recommendations is an independent Kafka consumer used to study event processing,
 not an HTTP dependency of the rental API. `make k8s-up` now prepares the existing
-Strimzi/Kafka resources in `rent-kafka`, waits for the broker and topic, and then
+Strimzi/Kafka resources in `rent-cars`, waits for the broker and topic, and then
 installs the application including `fleet-recommendations` in `rent-cars`.
 If invoking Helm directly, first run `make k8s-kafka-up` yourself.
 

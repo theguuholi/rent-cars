@@ -46,6 +46,8 @@ spec:
       app.kubernetes.io/component: hdfs-{{ $role }}
   template:
     metadata:
+      annotations:
+        checksum/startup: {{ $.Files.Get "hdfs/start.sh" | sha256sum }}
       labels:
         app.kubernetes.io/instance: {{ $.Release.Name }}
         app.kubernetes.io/component: hdfs-{{ $role }}
