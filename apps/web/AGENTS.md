@@ -16,14 +16,14 @@
 
 Follow the root [readability review](../../AGENTS.md#single-responsibility-and-human-readable-code). Keep ownership clear:
 
-| Responsibility | Usual owner |
-| --- | --- |
-| Compose the screen and coordinate its route/query/form states | Feature page |
-| Render a meaningful UI section and its local interactions | Named component |
-| Encapsulate reused behavior or complex React coordination | Focused hook, when extraction helps |
-| Send HTTP requests and interpret transport responses | Feature API client |
-| Transform data without side effects | Plain function |
-| Validate and normalize related form fields | Colocated schema, following the form conventions above |
+| Responsibility                                                | Usual owner                                            |
+| ------------------------------------------------------------- | ------------------------------------------------------ |
+| Compose the screen and coordinate its route/query/form states | Feature page                                           |
+| Render a meaningful UI section and its local interactions     | Named component                                        |
+| Encapsulate reused behavior or complex React coordination     | Focused hook, when extraction helps                    |
+| Send HTTP requests and interpret transport responses          | Feature API client                                     |
+| Transform data without side effects                           | Plain function                                         |
+| Validate and normalize related form fields                    | Colocated schema, following the form conventions above |
 
 For example, a car editor coordinates loading, its editable draft, save and conflict feedback. Its API client sends the PATCH request; a pure transformation can derive changed fields; a field component handles repeated labelled markup. Keep draft ownership and the submission sequence easy to locate. Do not extract a hook for every `useState`, move every JSX fragment into another file or create a generic editor for unrelated domain rules.
 

@@ -66,8 +66,8 @@ class RentalEventsConsumerTest {
           .store(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString());
       var archivingConsumer =
           new RentalEventsConsumer(json, validation.getValidator(), java.util.Optional.of(archive));
-      var record = message(RENTAL.toString(), JSON);
-      assertThatThrownBy(() -> archivingConsumer.consume(record)).isSameAs(failure);
+      var rentalMessage = message(RENTAL.toString(), JSON);
+      assertThatThrownBy(() -> archivingConsumer.consume(rentalMessage)).isSameAs(failure);
       org.mockito.Mockito.verify(archive)
           .store(UUID.fromString("b2a088d3-f66d-4f47-af43-746de9fc0375"), JSON);
       assertThat(logs.list).isEmpty();

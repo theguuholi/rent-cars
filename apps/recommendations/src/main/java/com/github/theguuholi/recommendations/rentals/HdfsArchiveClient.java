@@ -9,6 +9,9 @@ import org.springframework.web.client.RestClient;
 
 /** HttpFS exposes HDFS over one HTTP endpoint without Hadoop client dependencies in Java 25. */
 class HdfsArchiveClient {
+  private static final String WEBHDFS_PATH = "/webhdfs/v1";
+  private static final String USER_NAME_PARAMETER = "user.name";
+
   private final RestClient http;
   private final String user;
 
@@ -23,9 +26,9 @@ class HdfsArchiveClient {
               http.get()
                   .uri(builder ->
                       builder
-                          .path("/webhdfs/v1" + path)
+                          .path(WEBHDFS_PATH + path)
                           .queryParam("op", "OPEN")
-                          .queryParam("user.name", user)
+                          .queryParam(USER_NAME_PARAMETER, user)
                           .build())
                   .retrieve()
                   .body(byte[].class))
@@ -40,9 +43,9 @@ class HdfsArchiveClient {
     http.put()
         .uri(builder ->
             builder
-                .path("/webhdfs/v1" + path)
+                .path(WEBHDFS_PATH + path)
                 .queryParam("op", "CREATE")
-                .queryParam("user.name", user)
+                .queryParam(USER_NAME_PARAMETER, user)
                 .queryParam("data", true)
                 .queryParam("overwrite", false)
                 .build())
@@ -56,9 +59,9 @@ class HdfsArchiveClient {
     return http.put()
         .uri(builder ->
             builder
-                .path("/webhdfs/v1" + source)
+                .path(WEBHDFS_PATH + source)
                 .queryParam("op", "RENAME")
-                .queryParam("user.name", user)
+                .queryParam(USER_NAME_PARAMETER, user)
                 .queryParam("destination", destination)
                 .build())
         .retrieve()
@@ -70,9 +73,9 @@ class HdfsArchiveClient {
     http.delete()
         .uri(builder ->
             builder
-                .path("/webhdfs/v1" + path)
+                .path(WEBHDFS_PATH + path)
                 .queryParam("op", "DELETE")
-                .queryParam("user.name", user)
+                .queryParam(USER_NAME_PARAMETER, user)
                 .build())
         .retrieve()
         .toBodilessEntity();
