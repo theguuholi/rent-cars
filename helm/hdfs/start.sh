@@ -21,6 +21,8 @@ cat > "$HADOOP_CONF_DIR/core-site.xml" <<XML
 XML
 cat > "$HADOOP_CONF_DIR/hdfs-site.xml" <<'XML'
 <configuration>
+  <!-- Bind locally before the headless Service publishes a ready DNS endpoint. -->
+  <property><name>dfs.namenode.rpc-bind-host</name><value>0.0.0.0</value></property>
   <property><name>dfs.namenode.name.dir</name><value>file:///data/name</value></property>
   <property><name>dfs.datanode.data.dir</name><value>file:///data/blocks</value></property>
   <property><name>dfs.replication</name><value>1</value></property>
