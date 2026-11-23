@@ -253,3 +253,7 @@ These manual checks validate the chart and Compose configuration without publish
 images or deploying to Kubernetes.
 
 Follow the [complete E2E checklist](../docs/local-stack-validation.md) to verify browser actions, rental events and consumer offsets after deployment.
+
+## Optional HDFS archival
+
+See the [HDFS system design and step-by-step lab](../docs/recommendations-hdfs.md) for `make dev HDFS_ENABLED=true`, Kubernetes, replay safety, retries/DLT and storage inspection. Use a new consumer group when backfilling retained events; enabling storage does not replay already committed offsets.

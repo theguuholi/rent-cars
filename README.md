@@ -192,3 +192,11 @@ Use only one environment at a time. See [switching environments](helm/README.md#
 For the complete local/Kubernetes acceptance checklist, follow [the end-to-end walkthrough](docs/local-stack-validation.md).
 
 Make commands are organized by responsibility under [`make/`](make/README.md). Continue running them from the repository root; the root Makefile includes the category files.
+
+### Optional Hadoop study
+
+The recommendations consumer can archive rental events in HDFS. Start with `make dev HDFS_ENABLED=true`; follow the [system design and step-by-step local/Kubernetes guide](docs/recommendations-hdfs.md). This optional lab prepares raw events for later analytics; it does not run Spark or calculate recommendations.
+
+## New to Hadoop?
+
+Follow [Hadoop from zero: local first, then Kubernetes](docs/hadoop-first-steps.md) for a guided code tour, hands-on exercises, expected results and troubleshooting.

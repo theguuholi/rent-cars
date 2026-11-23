@@ -37,7 +37,7 @@ atomic transaction across source offsets and DLT publication. A crash after the 
 write but before the offset commit can create duplicate DLT records. Producer
 idempotence only protects producer-internal retries. Preserve `eventId` during
 replay; future business writes need durable deduplication in the same transaction
-as those writes. This consumer currently only validates and logs receipts.
+as those writes. By default this consumer validates and logs receipts. The optional [HDFS archive](recommendations-hdfs.md) writes immutable files before successful listener return and deduplicates final files by eventId; it does not provide a cross-system transaction.
 
 `enable-auto-commit=false` and `ack-mode=record` remain enabled. The
 `DeadLetterPublishingRecoverer` in the pinned Spring Kafka 4.1 version already has

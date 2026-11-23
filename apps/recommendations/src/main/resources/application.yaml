@@ -32,3 +32,8 @@ rent:
     retry:
       max-retries: ${RECOMMENDATIONS_MAX_RETRIES:3}
       initial-interval-ms: ${RECOMMENDATIONS_RETRY_INTERVAL_MS:1000}
+  archive:
+    enabled: ${HDFS_ARCHIVE_ENABLED:false}
+    url: ${HDFS_HTTPFS_URL:http://localhost:14000}
+    user: ${HDFS_USER:hadoop}
+    root: ${HDFS_ARCHIVE_ROOT:/rent-cars/raw/rentals}

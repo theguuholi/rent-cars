@@ -1,0 +1,109 @@
+{{- if .Values.hdfs.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-hdfs-startup
+data:
+  start.sh: |
+{{ .Files.Get "hdfs/start.sh" | indent 4 }}
+{{- range $role := list "namenode" "datanode" "httpfs" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-hdfs-{{ $role }}
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/component: hdfs-{{ $role }}
+  ports:
+    {{- if eq $role "namenode" }}
+    - name: rpc
+      port: 9000
+    - name: http
+      port: 9870
+    {{- else if eq $role "datanode" }}
+    - name: transfer
+      port: 9866
+    - name: http
+      port: 9864
+    {{- else }}
+    - name: http
+      port: 14000
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $.Release.Name }}-hdfs-{{ $role }}
+spec:
+  serviceName: {{ $.Release.Name }}-hdfs-{{ $role }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      app.kubernetes.io/component: hdfs-{{ $role }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ $.Release.Name }}
+        app.kubernetes.io/component: hdfs-{{ $role }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 100
+        runAsNonRoot: true
+        fsGroup: 100
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: {{ $role }}
+          image: {{ $.Values.hdfs.image | quote }}
+          command: [bash, /study/start.sh, {{ $role | quote }}]
+          env:
+            - name: HDFS_NAMENODE_HOST
+              value: {{ printf "%s-hdfs-namenode" $.Release.Name | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources: {{ toYaml $.Values.hdfs.resources | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ if eq $role "namenode" }}9870{{ else if eq $role "datanode" }}9864{{ else }}14000{{ end }}
+          startupProbe:
+            tcpSocket:
+              port: http
+            failureThreshold: 60
+            periodSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: http
+          volumeMounts:
+            - name: startup
+              mountPath: /study
+              readOnly: true
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: startup
+          configMap:
+            name: {{ $.Release.Name }}-hdfs-startup
+        {{- if eq $role "httpfs" }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+  {{- if ne $role "httpfs" }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: {{ $.Values.hdfs.storage }}
+  {{- end }}
+{{- end }}
+{{- end }}

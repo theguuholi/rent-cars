@@ -688,3 +688,11 @@ rent and return it with availability changing correctly.
 ## Full acceptance checklist
 
 Use [the E2E walkthrough](local-stack-validation.md) for explicit local and Kubernetes steps, expected results, consumer evidence and safe stop/reset commands. Learn the delivery model in [Kafka concepts](kafka-concepts.md).
+
+## Optional HDFS archival
+
+See the [HDFS system design and step-by-step lab](recommendations-hdfs.md) for `make dev HDFS_ENABLED=true`, Kubernetes, replay safety, retries/DLT and storage inspection. Use a new consumer group when backfilling retained events; enabling storage does not replay already committed offsets.
+
+## New to Hadoop?
+
+Follow [Hadoop from zero: local first, then Kubernetes](hadoop-first-steps.md) for a guided code tour, hands-on exercises, expected results and troubleshooting.
