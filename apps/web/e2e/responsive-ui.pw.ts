@@ -18,7 +18,7 @@ for (const width of [390, 1440]) {
       await expect(page.getByRole('main')).toBeFocused()
     })
     await test.step('Then filters have visible boundaries and the page fits the viewport', async () => {
-      const name = page.getByRole('textbox', { name: 'Name', exact: true })
+      const name = page.getByRole('textbox', { name: 'Search cars', exact: true })
       await expect(name).toBeVisible()
       await expect(name).toHaveCSS('border-top-width', '1px')
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(

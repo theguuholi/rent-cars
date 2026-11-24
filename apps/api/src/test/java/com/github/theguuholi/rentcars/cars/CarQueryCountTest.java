@@ -100,6 +100,7 @@ class CarQueryCountTest {
             cars.search(
                 false,
                 "%",
+                "%",
                 "%querylab%",
                 "%",
                 org.springframework.data.domain.PageRequest.of(

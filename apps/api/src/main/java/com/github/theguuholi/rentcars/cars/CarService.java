@@ -48,7 +48,12 @@ class CarService {
   }
 
   CarPage list(
-      boolean availableOnly, String name, String brand, String category, Pageable pageable) {
+      boolean availableOnly,
+      String q,
+      String name,
+      String brand,
+      String category,
+      Pageable pageable) {
     if (pageable.getPageSize() < 1 || pageable.getPageSize() > 100)
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "Page size must be between 1 and 100");
@@ -62,6 +67,7 @@ class CarService {
     Page<Car> page =
         cars.search(
             availableOnly,
+            pattern(q),
             pattern(name),
             pattern(brand),
             pattern(category),

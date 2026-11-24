@@ -129,14 +129,15 @@ The fleet displays current available cars from the latest popularity snapshot. R
 ## Visual system
 
 The interface uses the RentX-inspired palette through Tailwind v4 `@theme` tokens
-in `src/styles.css`: `brand`, `canvas`, `surface`, `ink`, `muted`, `line` and
-`header`. Archivo headings and Inter body fonts are bundled locally through
+in `src/styles.css`: `brand`, `canvas`, `surface`, `ink`, `muted` and `line`, with white navigation. Archivo headings and Inter body fonts are bundled locally through
 Fontsource; the browser does not contact a font CDN. Their OFL licenses ship
 with the production assets under `public/licenses/`.
 
 Reuse `Button`, `TextField`, `FormSection`, `CatalogTable`, `AccountPanel` and
 `PageSection` for shared presentation. `CarCard` belongs to the cars feature and
-is reused by the fleet and popularity ranking. Keep query/form state in the
+is reused by the fleet and popularity ranking. The entire card is one router link;
+`group-hover` and `group-focus-visible` synchronize its title, illustration and arrow.
+Do not put buttons or other links inside it. Keep query/form state in the
 feature. A new visual variation should solve an existing screen requirement,
 not introduce a generic component framework.
 
@@ -159,3 +160,20 @@ To review the UI, run `make dev`, then visit `/cars`, a car detail, `/login` and
 Review at 390px and 1440px, navigate with Tab, submit an empty form, and verify
 that errors and retry actions remain visible. Run `make check-web`,
 `npm --prefix apps/web run mutation`, and `npm --prefix apps/web run test:e2e`.
+
+### Catalog search and navigation
+
+Use **Search cars** for a model, brand or category fragment. The API applies `q`
+to all three fields with OR before pagination. Brand and Category are optional
+AND refinements; Sort by stays above the results and Cars per page sits below.
+Filters and pagination are URL state, so refresh and browser Back restore them.
+Changing a filter or page size resets to page one. Legacy `name` links continue
+to filter by name and display a removable Model name chip; editing the unified
+search replaces that legacy constraint. Numeric model links such as `?q=208`
+are supported.
+Brand/category refinements remain text inputs rather than incomplete dropdowns
+assembled from one page or protected administrator catalogs.
+
+The softer design uses 24px surfaces, 12px controls, pill filters and light
+shadows. Form sections rely on spacing instead of nested borders. The main fleet
+comes before the independent recommendation section. The home remains navigation-only.

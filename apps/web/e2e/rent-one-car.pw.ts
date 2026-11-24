@@ -40,7 +40,7 @@ test('Given a new driver and an available car, when the car is rented and return
   })
 
   await test.step('And selects one available car from the catalog', async () => {
-    await page.getByRole('textbox', { name: 'Name', exact: true }).fill(carName)
+    await page.getByRole('textbox', { name: 'Search cars', exact: true }).fill(carName)
     const catalog = page.getByRole('region', { name: 'Cars', exact: true })
     const carLink = catalog.getByRole('link', { name: carName, exact: true })
     await expect(carLink).toBeVisible()
@@ -72,7 +72,7 @@ test('Given a new driver and an available car, when the car is rented and return
     await expect(page.getByRole('button', { name: 'Rent car' })).toBeVisible()
     await expect(page.getByText('Available', { exact: true })).toBeVisible()
     await page.getByRole('link', { name: 'Back to cars' }).click()
-    await page.getByRole('textbox', { name: 'Name', exact: true }).fill(carName)
+    await page.getByRole('textbox', { name: 'Search cars', exact: true }).fill(carName)
     const car = page
       .getByRole('listitem')
       .filter({ has: page.getByRole('link', { name: carName }) })

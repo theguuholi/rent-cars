@@ -16,7 +16,11 @@ function cachedFleet() {
     defaultOptions: { queries: { staleTime: Infinity, retry: false } },
   })
   client.setQueryData(
-    ['cars', true, { name: '', brand: '', category: '', page: 0, size: 12, sort: 'name,asc' }],
+    [
+      'cars',
+      true,
+      { q: '', name: '', brand: '', category: '', page: 0, size: 12, sort: 'name,asc' },
+    ],
     {
       content: [car],
       number: 0,
@@ -96,7 +100,7 @@ describe('Fleet navigation with fresh cached records', () => {
       await waitFor(() => expect(client.getQueryState(['car', car.id])).toBeUndefined())
       expect(client.getQueryData(childKey)).toEqual(['prior rental'])
       fireEvent.click(remaining)
-      expect(await screen.findByRole('heading', { name: other.name })).toBeVisible()
+      expect(await screen.findByRole('heading', { name: other.name, level: 2 })).toBeVisible()
       expect(await screen.findByText('GPS')).toBeVisible()
       expect(api.getCar).not.toHaveBeenCalled()
       expect(listCategories).not.toHaveBeenCalled()

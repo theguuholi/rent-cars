@@ -22,7 +22,7 @@ describe('MostRentedCars', () => {
       openCatalogRoute('/cars', undefined, null)
       await screen.findByRole('region', { name: 'Most rented cars' })
       expect(recommendations().getByRole('status')).toHaveTextContent('Loading recommendations…')
-      expect(screen.getByRole('textbox', { name: 'Name' })).toBeEnabled()
+      expect(screen.getByRole('textbox', { name: 'Search cars' })).toBeEnabled()
       expect(listRecommendedCars).toHaveBeenCalledWith(expect.any(AbortSignal))
     },
   )

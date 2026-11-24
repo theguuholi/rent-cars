@@ -28,6 +28,11 @@ describe('CarCard', () => {
         'href',
         `/cars/${car.id}`,
       )
+      const link = screen.getByRole('link', { name: car.name })
+      expect(link).toContainElement(screen.getByText(car.brand))
+      expect(link).toContainElement(screen.getByText('R$ 150,50'))
+      expect(link.querySelector('img')).not.toBeNull()
+      expect(link.querySelector('button, a')).toBeNull()
       expect(screen.getByText(car.brand)).toBeVisible()
       expect(screen.getByText(car.licensePlate)).toBeVisible()
       expect(screen.getByText('R$ 150,50')).toBeVisible()

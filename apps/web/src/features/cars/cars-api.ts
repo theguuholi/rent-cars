@@ -16,6 +16,7 @@ export type CarPatch = Partial<Omit<CarInput, 'licensePlate'>>
 export type Car = CarInput & { id: string; version: number }
 
 export type CarSearch = {
+  q: string
   name: string
   brand: string
   category: string
@@ -113,7 +114,7 @@ export async function listCars(
     size: String(search.size),
     sort: search.sort,
   })
-  for (const field of ['name', 'brand', 'category'] as const) {
+  for (const field of ['q', 'name', 'brand', 'category'] as const) {
     if (search[field].trim()) params.set(field, search[field].trim())
   }
   const url = `${collection}${isAdmin ? '/manage' : ''}?${params}`

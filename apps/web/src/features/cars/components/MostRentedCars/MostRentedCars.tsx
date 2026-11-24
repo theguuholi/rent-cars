@@ -29,7 +29,7 @@ export function MostRentedCars() {
       ) : ranking.data.length === 0 ? (
         <p>No recommendations yet. Browse the fleet below.</p>
       ) : (
-        <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ol className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {ranking.data.map((car) => (
             <li key={car.id}>
               <CarCard car={car} />

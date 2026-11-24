@@ -46,7 +46,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
   })
   return (
     <form
-      className="max-w-4xl rounded border border-line bg-white p-5 sm:p-8"
+      className="max-w-4xl rounded-3xl bg-white shadow-sm p-5 sm:p-8"
       noValidate
       onSubmit={(event) => {
         event.preventDefault()
@@ -150,7 +150,7 @@ export function CarEditor({ car, categories, specifications, busy, onSave, onCan
             )}
           </form.Field>
         </FormSection>
-        <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-6">
+        <div className="flex flex-wrap justify-end gap-3 pt-4">
           <Button type="submit" variant="primary">
             {busy ? 'Saving…' : 'Save car'}
           </Button>

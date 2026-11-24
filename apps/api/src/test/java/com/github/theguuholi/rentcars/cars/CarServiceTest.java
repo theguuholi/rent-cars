@@ -54,17 +54,50 @@ class CarServiceTest {
   @Nested
   @DisplayName("list")
   class ListCars {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 100})
+    @DisplayName(
+        "Given a supported boundary page size, when listing, then both minimum and maximum are accepted")
+    void acceptsPageSizeBoundaries(int size) {
+      var query = PageRequest.of(0, size, Sort.by("name", "id"));
+      when(repository.search(true, "%", "%", "%", "%", query))
+          .thenReturn(new PageImpl<>(List.of(), query, 0));
+      assertThat(service.list(true, null, null, null, null, PageRequest.of(0, size)).size())
+          .isEqualTo(size);
+    }
+
+    @Test
+    @DisplayName(
+        "Given a unified query with spaces and wildcards, when listing, then normalize and escape it independently of the refinements")
+    void normalizesUnifiedQuery() {
+      var query = PageRequest.of(0, 12, Sort.by("name", "id"));
+      var car = new Car();
+      when(repository.search(true, "%fiat!%!_!!%", "%argo%", "%fiat%", "%sedan%", query))
+          .thenReturn(new PageImpl<>(List.of(car), query, 1));
+      assertThat(
+              service
+                  .list(true, " Fiat%_! ", "Argo", "Fiat", "SEDAN", PageRequest.of(0, 12))
+                  .content())
+          .containsExactly(car);
+    }
+
     @DisplayName(
         "Given filters, when listing the public fleet, then ID breaks ties and only available cars are queried")
     @Test
     void givenMatchingNamesWhenListingThenUsesIdAsTieBreaker() {
       var rows = List.of(new Car(), new Car());
       var query = PageRequest.of(0, 12, Sort.by("name", "id"));
-      when(repository.search(true, "%argo%", "%fiat%", "%hatchback%", query))
+      when(repository.search(true, "%", "%argo%", "%fiat%", "%hatchback%", query))
           .thenReturn(new PageImpl<>(rows, query, 2));
       assertThat(
               service
-                  .list(true, " Argo ", "Fiat", "HATCHBACK", PageRequest.of(0, 12, Sort.by("name")))
+                  .list(
+                      true,
+                      null,
+                      " Argo ",
+                      "Fiat",
+                      "HATCHBACK",
+                      PageRequest.of(0, 12, Sort.by("name")))
                   .content())
           .containsExactlyElementsOf(rows);
     }
@@ -73,10 +106,12 @@ class CarServiceTest {
     @Test
     void givenEmptyCatalogWhenListingThenReturnsNoCars() {
       var query = PageRequest.of(1, 5, Sort.by("brand", "id"));
-      when(repository.search(false, "%", "%", "%", query))
+      when(repository.search(false, "%", "%", "%", "%", query))
           .thenReturn(new PageImpl<>(List.of(), query, 0));
       assertThat(
-              service.list(false, " ", null, "", PageRequest.of(1, 5, Sort.by("brand"))).content())
+              service
+                  .list(false, null, " ", null, "", PageRequest.of(1, 5, Sort.by("brand")))
+                  .content())
           .isEmpty();
     }
 
@@ -85,12 +120,12 @@ class CarServiceTest {
     void invalidSize() {
       Pageable tooLarge = PageRequest.of(0, 101);
       assertThatExceptionOfType(ResponseStatusException.class)
-          .isThrownBy(() -> service.list(true, null, null, null, tooLarge))
+          .isThrownBy(() -> service.list(true, null, null, null, null, tooLarge))
           .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
       Pageable invalid = mock(Pageable.class);
       when(invalid.getPageSize()).thenReturn(0);
       assertThatExceptionOfType(ResponseStatusException.class)
-          .isThrownBy(() -> service.list(true, null, null, null, invalid))
+          .isThrownBy(() -> service.list(true, null, null, null, null, invalid))
           .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
@@ -99,7 +134,7 @@ class CarServiceTest {
     void invalidSort() {
       Pageable unsupportedSort = PageRequest.of(0, 12, Sort.by("licensePlate"));
       assertThatExceptionOfType(ResponseStatusException.class)
-          .isThrownBy(() -> service.list(true, null, null, null, unsupportedSort))
+          .isThrownBy(() -> service.list(true, null, null, null, null, unsupportedSort))
           .satisfies(ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
@@ -108,19 +143,20 @@ class CarServiceTest {
         "Given wildcard characters in a name, when searching, then they are treated as text")
     void escapesWildcards() {
       var query = PageRequest.of(0, 12, Sort.by("name", "id"));
-      when(repository.search(true, "%a!%!_!!%", "%", "%", query))
+      when(repository.search(true, "%", "%a!%!_!!%", "%", "%", query))
           .thenReturn(new PageImpl<>(List.of(), query, 0));
-      assertThat(service.list(true, "A%_!", null, null, PageRequest.of(0, 12)).content()).isEmpty();
+      assertThat(service.list(true, null, "A%_!", null, null, PageRequest.of(0, 12)).content())
+          .isEmpty();
     }
 
     @Test
     @DisplayName("Given ID as the requested sort, when listing, then it is not duplicated")
     void preservesIdSort() {
       var query = PageRequest.of(0, 12, Sort.by(Sort.Order.desc("id")));
-      when(repository.search(true, "%", "%", "%", query))
+      when(repository.search(true, "%", "%", "%", "%", query))
           .thenReturn(new PageImpl<>(List.of(), query, 0));
-      assertThat(service.list(true, null, null, null, query).content()).isEmpty();
-      verify(repository).search(true, "%", "%", "%", query);
+      assertThat(service.list(true, null, null, null, null, query).content()).isEmpty();
+      verify(repository).search(true, "%", "%", "%", "%", query);
     }
   }
 

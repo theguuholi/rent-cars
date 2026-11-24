@@ -277,6 +277,32 @@ class CarHttpTest {
   @Nested
   @DisplayName("GET /cars")
   class ListCars {
+
+    @ParameterizedTest
+    @ValueSource(strings = {" civIC ", " HONda ", " sedAN "})
+    @DisplayName(
+        "Given a unified search, when querying name, brand or category, then both endpoints return the matching car")
+    void globalSearch(String query) throws Exception {
+      givenCar();
+      for (var endpoint : List.of("/cars", "/cars/manage")) {
+        mvc.perform(get(endpoint).param("q", query))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.content[0].name").value("Civic"));
+      }
+    }
+
+    @Test
+    @DisplayName(
+        "Given a global search, when combining refinements or literal wildcards, then no unrelated cars match")
+    void globalRefinements() throws Exception {
+      givenCar();
+      mvc.perform(get("/cars").param("q", "Honda").param("brand", "Fiat"))
+          .andExpect(jsonPath("$.totalElements").value(0));
+      mvc.perform(get("/cars").param("q", "%_!")).andExpect(jsonPath("$.totalElements").value(0));
+      mvc.perform(get("/cars").param("q", "  ")).andExpect(jsonPath("$.totalElements").value(1));
+    }
+
     @DisplayName("Given an empty fleet, when listing cars, then the collection is empty")
     @Test
     void emptyFleet() throws Exception {
@@ -734,6 +760,22 @@ class CarHttpTest {
   @Nested
   @DisplayName("GET /v3/api-docs")
   class ApiDocumentation {
+    @Test
+    @DisplayName(
+        "Given the unified catalog search, when reading OpenAPI, then both endpoints document the optional query")
+    void documentsUnifiedSearch() throws Exception {
+      var response = mvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
+      for (var endpoint : List.of("/cars", "/cars/manage")) {
+        response
+            .andExpect(
+                jsonPath("$.paths['" + endpoint + "'].get.parameters[?(@.name == 'q')].schema.type")
+                    .value(org.hamcrest.Matchers.hasItem("string")))
+            .andExpect(
+                jsonPath("$.paths['" + endpoint + "'].get.parameters[?(@.name == 'q')].required")
+                    .value(org.hamcrest.Matchers.hasItem(false)));
+      }
+    }
+
     @Test
     @DisplayName(
         "Given a persisted car, when comparing its JSON and schema, then every public field has documentation and audit timestamps stay internal")

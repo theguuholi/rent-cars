@@ -19,7 +19,7 @@ export function Layout() {
       >
         Skip to content
       </a>
-      <header className="bg-header text-white">
+      <header className="border-b border-line/60 bg-white text-ink">
         <div className="mx-auto flex max-w-7xl flex-col items-start gap-x-10 px-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-8">
           <h1 className="py-4 font-heading text-2xl font-bold tracking-tight">
             <Link to="/" aria-label="Rent Cars home">
@@ -27,7 +27,7 @@ export function Layout() {
             </Link>
           </h1>
           <nav
-            className="flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-1 text-sm [&>a]:border-b-2 [&>a]:border-transparent [&>a]:py-3 sm:[&>a]:py-5 [&>a]:font-medium [&>a:hover]:text-white [&>a[aria-current=page]]:border-brand [&>a[aria-current=page]]:text-white"
+            className="flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-1 text-sm [&>a]:border-b-2 [&>a]:border-transparent [&>a]:py-3 sm:[&>a]:py-5 [&>a]:font-medium [&>a:hover]:text-brand [&>a[aria-current=page]]:border-brand [&>a[aria-current=page]]:text-brand"
             aria-label="Vehicle catalogs"
           >
             <Link to="/cars">Cars</Link>
@@ -41,7 +41,7 @@ export function Layout() {
             )}
             {identity ? (
               <Button
-                className="my-2 max-w-full rounded border border-white/25 px-3 py-2 text-left text-sm text-white wrap-anywhere hover:bg-white/10 lg:ml-auto"
+                className="my-2 max-w-full rounded-full bg-surface px-4 py-2.5 text-left text-sm text-ink wrap-anywhere hover:bg-brand-soft lg:ml-auto"
                 type="button"
                 onClick={() => {
                   setLogoutError(false)

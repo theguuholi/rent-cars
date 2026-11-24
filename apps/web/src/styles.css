@@ -8,8 +8,8 @@
   --color-brand: #dc1637;
   --color-brand-hover: #b5122d;
   --color-brand-soft: #fff1f3;
-  --color-canvas: #f4f5f6;
-  --color-surface: #f8f9fa;
+  --color-canvas: #fafafa;
+  --color-surface: #f3f4f6;
   --color-ink: #29292e;
   --color-muted: #62626b;
   --color-line: #e1e1e8;
@@ -52,9 +52,9 @@
 
 /* Native controls and router links share these utilities with React components. */
 @utility control {
-  @apply block min-h-11 w-full rounded border border-line bg-white px-3 py-2.5 text-base font-normal text-ink placeholder:text-muted focus:border-brand aria-invalid:border-red-700 disabled:bg-surface disabled:text-muted read-only:bg-surface;
+  @apply block min-h-11 w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-base font-normal text-ink placeholder:text-muted focus:border-brand aria-invalid:border-red-700 disabled:bg-surface disabled:text-muted read-only:bg-surface;
 }
 
 @utility action {
-  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded border border-transparent bg-brand px-5 py-2.5 text-sm font-semibold text-white motion-safe:transition-colors hover:bg-brand-hover disabled:pointer-events-none aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[variant=secondary]:border-line data-[variant=secondary]:bg-white data-[variant=secondary]:text-ink data-[variant=secondary]:hover:bg-surface data-[variant=danger]:bg-red-700 data-[variant=danger]:hover:bg-red-800;
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-brand px-5 py-2.5 text-sm font-semibold text-white motion-safe:transition-colors hover:bg-brand-hover disabled:pointer-events-none aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[variant=secondary]:border-line data-[variant=secondary]:bg-white data-[variant=secondary]:text-ink data-[variant=secondary]:hover:bg-surface data-[variant=danger]:bg-red-700 data-[variant=danger]:hover:bg-red-800;
 }

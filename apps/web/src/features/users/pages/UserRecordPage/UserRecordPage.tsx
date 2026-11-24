@@ -56,7 +56,7 @@ export function UserRecordPage({ id, mode }: { id: string; mode: 'detail' | 'edi
       eyebrow="Administration"
       title={user.firstName ? `${user.firstName} ${user.lastName}` : user.email}
     >
-      <dl className="max-w-xl space-y-2 rounded border border-line bg-white p-6">
+      <dl className="max-w-xl space-y-2 rounded-3xl bg-white shadow-sm p-6">
         <dt>Email</dt>
         <dd>{user.email}</dd>
         <dt>Role</dt>

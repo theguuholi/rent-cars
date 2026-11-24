@@ -14,6 +14,7 @@ export function CarsPage() {
   const isAdmin = useSession()?.user.role === 'ADMIN'
   const routeSearch = carsRoute.useSearch()
   const search: CarSearch = {
+    q: routeSearch.q ?? '',
     name: routeSearch.name ?? '',
     brand: routeSearch.brand ?? '',
     category: routeSearch.category ?? '',
@@ -30,7 +31,6 @@ export function CarsPage() {
     void navigate({ search: { ...search, ...changes, page: changes.page ?? 0 } })
   return (
     <>
-      <MostRentedCars />
       <PageSection
         eyebrow="Fleet"
         title="Cars"
@@ -43,57 +43,59 @@ export function CarsPage() {
           )
         }
       >
-        <div className="mb-6 grid gap-4 rounded border border-line bg-white p-5 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mb-8 space-y-5">
           <label>
-            Name
+            Search cars
             <input
-              className="control"
-              value={search.name}
-              onChange={(event) => update({ name: event.target.value })}
+              className="control mt-2 rounded-full bg-white px-5"
+              placeholder="Search by model, brand or category"
+              value={search.q || search.name}
+              onChange={(event) => update({ q: event.target.value, name: '' })}
             />
           </label>
-          <label>
-            Brand
-            <input
-              className="control"
-              value={search.brand}
-              onChange={(event) => update({ brand: event.target.value })}
-            />
-          </label>
-          <label>
-            Category
-            <input
-              className="control"
-              value={search.category}
-              onChange={(event) => update({ category: event.target.value })}
-            />
-          </label>
-          <label>
-            Sort by
-            <select
-              className="control"
-              value={search.sort}
-              onChange={(event) => update({ sort: event.target.value })}
+          {search.name && (
+            <Button
+              variant="secondary"
+              className="action rounded-full"
+              aria-label={`Clear name filter: ${search.name}`}
+              onClick={() => update({ name: '' })}
             >
-              <option value="name,asc">Name A–Z</option>
-              <option value="name,desc">Name Z–A</option>
-              <option value="brand,asc">Brand A–Z</option>
-              <option value="brand,desc">Brand Z–A</option>
-            </select>
-          </label>
-          <label>
-            Cars per page
-            <select
-              className="control"
-              value={search.size}
-              onChange={(event) => update({ size: Number(event.target.value) })}
-            >
-              <option value={1}>1</option>
-              <option value={6}>6</option>
-              <option value={12}>12</option>
-              <option value={24}>24</option>
-            </select>
-          </label>
+              Model name: {search.name} <span aria-hidden="true">×</span>
+            </Button>
+          )}
+          <div className="flex flex-wrap items-end gap-4">
+            <label className="min-w-0 flex-1 basis-36">
+              Brand
+              <input
+                className="control mt-2 rounded-full bg-white"
+                placeholder="Any brand"
+                value={search.brand}
+                onChange={(event) => update({ brand: event.target.value })}
+              />
+            </label>
+            <label className="min-w-0 flex-1 basis-36">
+              Category
+              <input
+                className="control mt-2 rounded-full bg-white"
+                placeholder="Any category"
+                value={search.category}
+                onChange={(event) => update({ category: event.target.value })}
+              />
+            </label>
+            <label className="min-w-0 flex-1 basis-36 sm:ml-auto sm:max-w-56">
+              Sort by
+              <select
+                className="control mt-2 rounded-full bg-white"
+                value={search.sort}
+                onChange={(event) => update({ sort: event.target.value })}
+              >
+                <option value="name,asc">Name A–Z</option>
+                <option value="name,desc">Name Z–A</option>
+                <option value="brand,asc">Brand A–Z</option>
+                <option value="brand,desc">Brand Z–A</option>
+              </select>
+            </label>
+          </div>
         </div>
         {cars.isPending ? (
           <p role="status">Loading cars…</p>
@@ -107,7 +109,7 @@ export function CarsPage() {
         ) : cars.data.content.length === 0 ? (
           <p>No matching cars.</p>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {cars.data.content.map((car) => (
               <li key={car.id}>
                 <CarCard car={car} />
@@ -115,31 +117,45 @@ export function CarsPage() {
             ))}
           </ul>
         )}
-        {cars.data && cars.data.totalPages > 0 && (
-          <nav
-            className="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm"
-            aria-label="Car pages"
-          >
-            <Button
-              variant="secondary"
-              disabled={search.page === 0}
-              onClick={() => update({ page: search.page - 1 })}
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-5">
+          <label className="flex items-center gap-3 text-muted">
+            Cars per page
+            <select
+              className="control w-auto rounded-full bg-white"
+              value={search.size}
+              onChange={(event) => update({ size: Number(event.target.value) })}
             >
-              Previous page
-            </Button>
-            <span>
-              Page {cars.data.number + 1} of {cars.data.totalPages} ({cars.data.totalElements} cars)
-            </span>
-            <Button
-              variant="secondary"
-              disabled={search.page + 1 >= cars.data.totalPages}
-              onClick={() => update({ page: search.page + 1 })}
-            >
-              Next page
-            </Button>
-          </nav>
-        )}
+              <option value={1}>1</option>
+              <option value={6}>6</option>
+              <option value={12}>12</option>
+              <option value={24}>24</option>
+            </select>
+          </label>
+          {cars.data && cars.data.totalPages > 0 && (
+            <nav className="flex flex-wrap items-center gap-3 text-sm" aria-label="Car pages">
+              <Button
+                variant="secondary"
+                disabled={search.page === 0}
+                onClick={() => update({ page: search.page - 1 })}
+              >
+                Previous page
+              </Button>
+              <span>
+                Page {cars.data.number + 1} of {cars.data.totalPages} ({cars.data.totalElements}{' '}
+                cars)
+              </span>
+              <Button
+                variant="secondary"
+                disabled={search.page + 1 >= cars.data.totalPages}
+                onClick={() => update({ page: search.page + 1 })}
+              >
+                Next page
+              </Button>
+            </nav>
+          )}
+        </div>
       </PageSection>
+      <MostRentedCars />
     </>
   )
 }

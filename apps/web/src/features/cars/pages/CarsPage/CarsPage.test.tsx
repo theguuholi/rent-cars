@@ -25,7 +25,7 @@ describe('CarsPage', () => {
       openCatalogRoute('/cars?page=-1&size=101&sort=price,asc')
       await screen.findByText('No matching cars.')
       expect(api.listCars).toHaveBeenCalledWith(
-        { name: '', brand: '', category: '', page: 0, size: 12, sort: 'name,asc' },
+        { q: '', name: '', brand: '', category: '', page: 0, size: 12, sort: 'name,asc' },
         true,
         expect.any(AbortSignal),
       )
@@ -106,14 +106,17 @@ describe('CarsPage', () => {
       await waitFor(() =>
         expect(new URLSearchParams(history.location.search).get('size')).toBe('6'),
       )
-      fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Argo' } })
+      fireEvent.change(screen.getByRole('textbox', { name: 'Search cars' }), {
+        target: { value: 'Argo' },
+      })
       await waitFor(() =>
         expect(new URLSearchParams(history.location.search).get('page')).toBe('0'),
       )
       await screen.findByRole('link', { name: 'Argo' })
       expect(api.listCars).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          name: 'Argo',
+          q: 'Argo',
+          name: '',
           brand: 'Honda',
           category: 'SEDAN',
           sort: 'brand,desc',
@@ -165,5 +168,96 @@ scenario(
     const params = new URLSearchParams(history.location.search)
     expect(params.get('page')).toBe('1')
     expect(params.get('brand')).toBe('Fiat')
+  },
+)
+
+scenario(
+  'Given a legacy name URL, when editing the unified search, then remove the hidden name filter and reset the page',
+  async () => {
+    vi.mocked(api.listCars).mockResolvedValue({
+      content: [],
+      number: 0,
+      size: 12,
+      totalElements: 0,
+      totalPages: 0,
+    })
+    const history = openCatalogRoute('/cars?name=Argo&page=2')
+    const search = await screen.findByRole('textbox', { name: 'Search cars' })
+    expect(search).toHaveValue('Argo')
+    fireEvent.change(search, { target: { value: 'Fiat' } })
+    await waitFor(() => expect(new URLSearchParams(history.location.search).get('q')).toBe('Fiat'))
+    expect(new URLSearchParams(history.location.search).get('page')).toBe('0')
+    expect(new URLSearchParams(history.location.search).get('name')).toBeNull()
+    expect(search).toHaveValue('Fiat')
+    fireEvent.change(search, { target: { value: '' } })
+    await waitFor(() => expect(search).toHaveValue(''))
+    expect(api.listCars).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: '', name: '', page: 0 }),
+      true,
+      expect.any(AbortSignal),
+    )
+  },
+)
+
+scenario(
+  'Given both query and legacy name in a URL, when opening the catalog, then show the query and preserve server refinements until editing',
+  async () => {
+    vi.mocked(api.listCars).mockResolvedValue({
+      content: [],
+      number: 0,
+      size: 12,
+      totalElements: 0,
+      totalPages: 0,
+    })
+    openCatalogRoute('/cars?q=Fiat&name=Argo')
+    expect(await screen.findByRole('textbox', { name: 'Search cars' })).toHaveValue('Fiat')
+    expect(api.listCars).toHaveBeenCalledWith(
+      expect.objectContaining({ q: 'Fiat', name: 'Argo' }),
+      true,
+      expect.any(AbortSignal),
+    )
+  },
+)
+
+scenario(
+  'Given a numeric model in a shared URL, when opening the catalog, then the search stays numeric text instead of showing the whole fleet',
+  async () => {
+    vi.mocked(api.listCars).mockResolvedValue({
+      content: [],
+      number: 0,
+      size: 12,
+      totalElements: 0,
+      totalPages: 0,
+    })
+    openCatalogRoute('/cars?q=208')
+    expect(await screen.findByRole('textbox', { name: 'Search cars' })).toHaveValue('208')
+    expect(api.listCars).toHaveBeenCalledWith(
+      expect.objectContaining({ q: '208' }),
+      true,
+      expect.any(AbortSignal),
+    )
+  },
+)
+
+scenario(
+  'Given a legacy name refinement alongside a global query, when removing that visible refinement, then preserve the query and other filters and reset pagination',
+  async () => {
+    vi.mocked(api.listCars).mockResolvedValue({
+      content: [],
+      number: 0,
+      size: 12,
+      totalElements: 0,
+      totalPages: 0,
+    })
+    const history = openCatalogRoute('/cars?q=Fiat&name=Argo&brand=Fiat&category=HATCH&page=2')
+    fireEvent.click(await screen.findByRole('button', { name: 'Clear name filter: Argo' }))
+    await waitFor(() => expect(new URLSearchParams(history.location.search).get('name')).toBeNull())
+    expect(screen.queryByRole('button', { name: /Clear name filter/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Search cars' })).toHaveValue('Fiat')
+    expect(api.listCars).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: 'Fiat', name: '', brand: 'Fiat', category: 'HATCH', page: 0 }),
+      true,
+      expect.any(AbortSignal),
+    )
   },
 )

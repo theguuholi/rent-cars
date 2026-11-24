@@ -45,7 +45,7 @@ export function CarImages({ car, canUpload }: { car: CarWithCatalog; canUpload: 
           ))}
         </div>
       ) : (
-        <div className="flex aspect-[4/3] flex-col items-center justify-center gap-4 rounded border border-line bg-white">
+        <div className="flex aspect-[4/3] flex-col items-center justify-center gap-4 rounded-3xl bg-white shadow-sm">
           <img src="/car-placeholder.svg" alt="" className="w-3/5" />
           <p className="text-muted">No photos yet.</p>
         </div>

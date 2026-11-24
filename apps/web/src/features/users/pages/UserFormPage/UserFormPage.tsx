@@ -57,7 +57,7 @@ export function UserFormPage({ user }: { user?: ManagedUser }) {
   return (
     <PageSection eyebrow="Administration" title={user ? 'Edit user' : 'New user'}>
       <form
-        className="grid max-w-xl gap-5 rounded border border-line bg-white p-6 sm:p-8"
+        className="grid max-w-xl gap-5 rounded-3xl bg-white shadow-sm p-6 sm:p-8"
         noValidate
         onSubmit={(event) => {
           event.preventDefault()

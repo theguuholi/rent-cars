@@ -29,7 +29,7 @@ export function MyRentalsPage() {
             <article
               key={rental.id}
               aria-label={`${rental.car.name} rental`}
-              className="rounded border border-line bg-white p-6 sm:p-8"
+              className="rounded-3xl bg-white shadow-sm p-6 sm:p-8"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-xl font-semibold">
@@ -37,7 +37,7 @@ export function MyRentalsPage() {
                     {rental.car.name}
                   </Link>
                 </h3>
-                <span className="rounded bg-surface px-3 py-1 text-sm font-medium">
+                <span className="rounded-full bg-surface px-3 py-1 text-sm font-medium">
                   {rental.endDate ? 'Returned' : 'Open'}
                 </span>
               </div>

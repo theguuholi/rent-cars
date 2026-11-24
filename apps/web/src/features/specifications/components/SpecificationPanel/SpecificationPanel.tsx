@@ -27,7 +27,7 @@ export function SpecificationPanel({
   return (
     <aside
       aria-label="Specification details"
-      className="rounded border border-line bg-white p-5 lg:col-start-2 lg:row-start-1"
+      className="rounded-3xl bg-white shadow-sm p-5 lg:col-start-2 lg:row-start-1"
     >
       {id !== undefined && !item ? (
         <div>

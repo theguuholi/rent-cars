@@ -38,9 +38,9 @@ test('Given the public catalog, when a guest filters and changes pages, then the
     await expect(
       page.getByRole('region', { name: 'Cars', exact: true }).getByRole('link', { name: 'Argo' }),
     ).toHaveCount(0)
-    await page.getByRole('textbox', { name: 'Name' }).fill('No such model')
+    await page.getByRole('textbox', { name: 'Search cars' }).fill('No such model')
     await expect(page.getByText('No matching cars.')).toBeVisible()
-    await page.getByRole('textbox', { name: 'Name' }).fill('Cronos')
+    await page.getByRole('textbox', { name: 'Search cars' }).fill('Cronos')
     await expect(
       page.getByRole('region', { name: 'Cars', exact: true }).getByRole('link', { name: 'Cronos' }),
     ).toBeVisible()

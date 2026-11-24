@@ -43,7 +43,7 @@ describe('Cars HTTP client', () => {
       const signal = new AbortController().signal
       await expect(
         listCars(
-          { name: '', brand: '', category: '', page: 0, size: 12, sort: 'name,asc' },
+          { q: '', name: '', brand: '', category: '', page: 0, size: 12, sort: 'name,asc' },
           false,
           signal,
         ),
@@ -64,6 +64,7 @@ describe('Cars HTTP client', () => {
       )
       await listCars(
         {
+          q: ' Honda ',
           name: ' Argo ',
           brand: 'Fiat',
           category: 'HATCHBACK',
@@ -74,7 +75,7 @@ describe('Cars HTTP client', () => {
         true,
       )
       expect(fetch).toHaveBeenCalledWith(
-        '/api/cars/manage?page=1&size=6&sort=brand%2Cdesc&name=Argo&brand=Fiat&category=HATCHBACK',
+        '/api/cars/manage?page=1&size=6&sort=brand%2Cdesc&q=Honda&name=Argo&brand=Fiat&category=HATCHBACK',
         expect.objectContaining({
           headers: expect.objectContaining({ Authorization: 'Bearer test-admin' }),
         }),
@@ -238,7 +239,7 @@ scenario(
   async () => {
     const fetch = mockResponse(Response.json({ content: [] }))
     await listCars(
-      { name: ' ', brand: '  ', category: '\t', page: 0, size: 12, sort: 'name,asc' },
+      { q: '', name: ' ', brand: '  ', category: '\t', page: 0, size: 12, sort: 'name,asc' },
       false,
     )
     expect(fetch).toHaveBeenCalledExactlyOnceWith('/api/cars?page=0&size=12&sort=name%2Casc', {

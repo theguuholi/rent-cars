@@ -22,7 +22,7 @@ export function CarDetails({ car }: { car: CarWithCatalog }) {
     >
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <CarImages key={car.id} car={car} canUpload={isAdmin} />
-        <div className="rounded border border-line bg-white p-6 sm:p-8">
+        <div className="rounded-3xl bg-white shadow-sm p-6 sm:p-8">
           <CarFacts car={car} />
           <CarCatalogDetails car={car} />
           <RentalActions carId={car.id} available={car.available} />
