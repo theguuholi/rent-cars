@@ -75,7 +75,7 @@ describe('MostRentedCars', () => {
       )
       await screen.findByRole('alert')
       expect(recommendations().getByRole('alert')).toHaveTextContent(
-        'Could not load recommendations.',
+        'Could not load recommendations. Try again',
       )
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 20))
