@@ -1,3 +1,4 @@
+import { AccountPanel } from '../../../../components/AccountPanel/AccountPanel'
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { Link } from '@tanstack/react-router'
@@ -10,16 +11,18 @@ import { passwordHint, registrationSchema } from '../../registration-schema'
 export function RegisterPage() {
   const [created, setCreated] = useState(false)
   return (
-    <PageSection eyebrow="Account" title="Create account" description="Register as a driver.">
-      {created ? (
-        <p role="status">Your account is ready. Sign in to continue.</p>
-      ) : (
-        <RegisterForm onCreated={() => setCreated(true)} />
-      )}
-      <Link className="mt-4 inline-block underline" to="/login">
-        Back to sign in
-      </Link>
-    </PageSection>
+    <AccountPanel>
+      <PageSection eyebrow="Account" title="Create account" description="Register as a driver.">
+        {created ? (
+          <p role="status">Your account is ready. Sign in to continue.</p>
+        ) : (
+          <RegisterForm onCreated={() => setCreated(true)} />
+        )}
+        <Link className="mt-4 inline-block underline" to="/login">
+          Back to sign in
+        </Link>
+      </PageSection>
+    </AccountPanel>
   )
 }
 
@@ -49,7 +52,7 @@ function RegisterForm({ onCreated }: { onCreated: () => void }) {
   })
   return (
     <form
-      className="grid max-w-md gap-4"
+      className="grid gap-5"
       noValidate
       onSubmit={(event) => {
         event.preventDefault()

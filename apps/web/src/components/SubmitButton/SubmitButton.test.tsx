@@ -29,7 +29,7 @@ describe('SubmitButton', () => {
       render(<Example save={save} />)
       const button = screen.getByRole('button', { name: 'Save changes' })
       expect(button).toHaveAttribute('type', 'submit')
-      expect(button).toHaveClass('btn-primary')
+      expect(button).toHaveAttribute('data-variant', 'primary')
       expect(button).toBeEnabled()
       fireEvent.click(button)
       await waitFor(() => expect(button).toBeDisabled())

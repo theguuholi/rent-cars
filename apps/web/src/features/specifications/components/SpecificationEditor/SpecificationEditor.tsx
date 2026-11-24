@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/Button/Button'
 import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { TextField } from '../../../../components/TextField/TextField'
@@ -75,12 +76,12 @@ export function SpecificationEditor({ item, busy, onCancel, onSave }: Props) {
           )}
         </form.Field>
         <div className="grid gap-2">
-          <button className="btn-primary" type="submit">
+          <Button variant="primary" type="submit">
             {busy ? 'Saving…' : 'Save specification'}
-          </button>
-          <button className="btn-secondary" type="button" onClick={onCancel}>
+          </Button>
+          <Button variant="secondary" type="button" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         </div>
       </fieldset>
     </form>

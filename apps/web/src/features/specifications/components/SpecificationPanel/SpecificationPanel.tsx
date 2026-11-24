@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/Button/Button'
 import { Link } from '@tanstack/react-router'
 import type { Specification, SpecificationEdit } from '../../specifications-api'
 import { SpecificationEditor } from '../SpecificationEditor/SpecificationEditor'
@@ -26,7 +27,7 @@ export function SpecificationPanel({
   return (
     <aside
       aria-label="Specification details"
-      className="rounded-lg border border-slate-200 p-5 lg:col-start-2 lg:row-start-1"
+      className="rounded border border-line bg-white p-5 lg:col-start-2 lg:row-start-1"
     >
       {id !== undefined && !item ? (
         <div>
@@ -38,12 +39,12 @@ export function SpecificationPanel({
           <h3 className="wrap-anywhere text-xl font-bold">Delete {item.name}?</h3>
           <p>This removes the specification from the catalog.</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button className="btn-danger" disabled={busy} onClick={() => onDelete(item.id)}>
+            <Button variant="danger" disabled={busy} onClick={() => onDelete(item.id)}>
               Confirm deletion
-            </button>
-            <button className="btn-secondary" autoFocus disabled={busy} onClick={onCancel}>
+            </Button>
+            <Button variant="secondary" autoFocus disabled={busy} onClick={onCancel}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : (

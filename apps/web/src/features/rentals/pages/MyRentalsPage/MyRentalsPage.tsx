@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/Button/Button'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { PageSection } from '../../../../components/PageSection/PageSection'
@@ -16,9 +17,9 @@ export function MyRentalsPage() {
       {rentals.isError && (
         <div role="alert">
           {rentals.error.message}{' '}
-          <button className="btn-secondary" onClick={() => void rentals.refetch()}>
+          <Button variant="secondary" onClick={() => void rentals.refetch()}>
             Try again
-          </button>
+          </Button>
         </div>
       )}
       {rentals.isSuccess && rentals.data.length === 0 && <p>No rentals yet.</p>}
@@ -28,7 +29,7 @@ export function MyRentalsPage() {
             <article
               key={rental.id}
               aria-label={`${rental.car.name} rental`}
-              className="rounded-lg border border-slate-200 p-5"
+              className="rounded border border-line bg-white p-6 sm:p-8"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-xl font-semibold">
@@ -36,7 +37,9 @@ export function MyRentalsPage() {
                     {rental.car.name}
                   </Link>
                 </h3>
-                <span>{rental.endDate ? 'Returned' : 'Open'}</span>
+                <span className="rounded bg-surface px-3 py-1 text-sm font-medium">
+                  {rental.endDate ? 'Returned' : 'Open'}
+                </span>
               </div>
               <dl className="mt-4 grid gap-2 sm:grid-cols-2">
                 <div>
@@ -56,12 +59,14 @@ export function MyRentalsPage() {
                 {rental.dailyRateCents !== null && (
                   <div>
                     <dt>Agreed daily rate</dt>
-                    <dd>{formatBrl(rental.dailyRateCents)}</dd>
+                    <dd className="font-heading text-xl text-brand">
+                      {formatBrl(rental.dailyRateCents)}
+                    </dd>
                   </div>
                 )}
               </dl>
               {rental.endDate ? (
-                <section aria-label="Receipt" className="mt-4 border-t border-slate-200 pt-4">
+                <section aria-label="Receipt" className="mt-4 border-t border-line pt-4">
                   {rental.dailyRateCents !== null &&
                   rental.fineAmountCents !== null &&
                   rental.billedDays !== null &&

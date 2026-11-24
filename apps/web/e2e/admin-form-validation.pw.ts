@@ -108,7 +108,9 @@ for (const width of [390, 1280]) {
           .click()
         await expect(page.getByLabel('Name', { exact: true })).toBeFocused()
         await page.keyboard.press('Tab')
-        await expect(page.getByLabel('Description', { exact: true })).toBeFocused()
+        await expect(
+          page.getByLabel(path === '/cars/new' ? 'Brand' : 'Description', { exact: true }),
+        ).toBeFocused()
       })
       await test.step('When submitting and correcting the draft, then show accessible feedback without horizontal overflow', async () => {
         await page.getByRole('button', { name: button }).click()

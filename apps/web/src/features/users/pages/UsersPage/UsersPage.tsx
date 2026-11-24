@@ -1,3 +1,5 @@
+import { CatalogTable } from '../../../../components/CatalogTable/CatalogTable'
+import { Button } from '../../../../components/Button/Button'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
@@ -11,19 +13,19 @@ export function UsersPage() {
       title="Users"
       description="Manage driver and administrator accounts."
     >
-      <Link className="btn-primary inline-block" to="/users/new">
+      <Link className="action inline-block" data-variant="primary" to="/users/new">
         New user
       </Link>
       {users.isPending && <p role="status">Loading users…</p>}
       {users.isError && (
         <p role="alert">
-          {users.error.message} <button onClick={() => void users.refetch()}>Try again</button>
+          {users.error.message} <Button onClick={() => void users.refetch()}>Try again</Button>
         </p>
       )}
       {users.isSuccess && users.data.length === 0 && <p>No users found.</p>}
       {users.isSuccess && users.data.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="mt-6 w-full text-left">
+          <CatalogTable>
             <thead>
               <tr>
                 <th>Name</th>
@@ -50,7 +52,7 @@ export function UsersPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </CatalogTable>
         </div>
       )}
     </PageSection>

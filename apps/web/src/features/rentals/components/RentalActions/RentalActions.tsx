@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/Button/Button'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSession } from '../../../auth/session'
@@ -52,9 +53,9 @@ export function RentalActions({ carId, available }: { carId: string; available: 
       {rentals.isError && (
         <div role="alert">
           {rentals.error.message}{' '}
-          <button className="btn-secondary" onClick={() => void rentals.refetch()}>
+          <Button variant="secondary" onClick={() => void rentals.refetch()}>
             Try again
-          </button>
+          </Button>
         </div>
       )}
       {open && (
@@ -63,8 +64,8 @@ export function RentalActions({ carId, available }: { carId: string; available: 
             Your rental is open. Expected return:{' '}
             {new Date(open.expectedReturnDate).toLocaleString()}.
           </p>
-          <button
-            className="btn-primary"
+          <Button
+            variant="primary"
             disabled={giveBack.isPending}
             onClick={() => {
               rent.reset()
@@ -72,7 +73,7 @@ export function RentalActions({ carId, available }: { carId: string; available: 
             }}
           >
             {giveBack.isPending ? 'Returning…' : 'Return car'}
-          </button>
+          </Button>
         </div>
       )}
       {rentals.isSuccess && !open && !available && <p>This car is unavailable to rent.</p>}
@@ -124,9 +125,9 @@ export function RentalActions({ carId, available }: { carId: string; available: 
                 </div>
               )}
             </form.Field>
-            <button className="btn-primary" type="submit">
+            <Button variant="primary" type="submit">
               {rent.isPending ? 'Renting…' : 'Rent car'}
-            </button>
+            </Button>
           </fieldset>
         </form>
       )}
@@ -134,13 +135,13 @@ export function RentalActions({ carId, available }: { carId: string; available: 
         <div className="space-y-3">
           <p role="alert">{rent.error.message}</p>
           <p>Your return date is kept. Check rental status before trying again.</p>
-          <button
-            className="btn-secondary"
+          <Button
+            variant="secondary"
             disabled={checkStatus.isPending}
             onClick={() => checkStatus.mutate()}
           >
             {checkStatus.isPending ? 'Checking…' : 'Check rental status'}
-          </button>
+          </Button>
           {checkStatus.isError && (
             <p role="alert">Could not check rental status. Try checking again.</p>
           )}

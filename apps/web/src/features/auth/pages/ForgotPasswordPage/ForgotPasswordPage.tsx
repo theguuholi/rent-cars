@@ -1,3 +1,4 @@
+import { AccountPanel } from '../../../../components/AccountPanel/AccountPanel'
 import { SubmitButton } from '../../../../components/SubmitButton/SubmitButton'
 import { TextField } from '../../../../components/TextField/TextField'
 import { useState } from 'react'
@@ -23,36 +24,38 @@ export function ForgotPasswordPage() {
   })
 
   return (
-    <PageSection
-      eyebrow="Account"
-      title="Forgot password"
-      description="We will email a link if the account exists."
-    >
-      {sent ? (
-        <p role="status">If the account exists, a reset link is on its way.</p>
-      ) : (
-        <form
-          className="grid max-w-md gap-4"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void form.handleSubmit()
-          }}
-        >
-          <TextField
-            form={form}
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            maxLength={254}
-          />
-          {error && <p role="alert">{error}</p>}
-          <SubmitButton form={form}>Send reset link</SubmitButton>
-        </form>
-      )}
-      <Link className="mt-4 inline-block underline" to="/login">
-        Back to sign in
-      </Link>
-    </PageSection>
+    <AccountPanel>
+      <PageSection
+        eyebrow="Account"
+        title="Forgot password"
+        description="We will email a link if the account exists."
+      >
+        {sent ? (
+          <p role="status">If the account exists, a reset link is on its way.</p>
+        ) : (
+          <form
+            className="grid gap-5"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void form.handleSubmit()
+            }}
+          >
+            <TextField
+              form={form}
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              maxLength={254}
+            />
+            {error && <p role="alert">{error}</p>}
+            <SubmitButton form={form}>Send reset link</SubmitButton>
+          </form>
+        )}
+        <Link className="mt-4 inline-block underline" to="/login">
+          Back to sign in
+        </Link>
+      </PageSection>
+    </AccountPanel>
   )
 }

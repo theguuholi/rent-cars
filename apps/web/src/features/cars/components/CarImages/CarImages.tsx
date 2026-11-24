@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/Button/Button'
 import { useRef } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -33,7 +34,7 @@ export function CarImages({ car, canUpload }: { car: CarWithCatalog; canUpload: 
         Photos
       </h2>
       {car.images.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 [&>div:first-child]:sm:col-span-2">
           {car.images.map((image, index) => (
             <CarPhoto
               key={image.id}
@@ -44,7 +45,10 @@ export function CarImages({ car, canUpload }: { car: CarWithCatalog; canUpload: 
           ))}
         </div>
       ) : (
-        <p>No photos yet.</p>
+        <div className="flex aspect-[4/3] flex-col items-center justify-center gap-4 rounded border border-line bg-white">
+          <img src="/car-placeholder.svg" alt="" className="w-3/5" />
+          <p className="text-muted">No photos yet.</p>
+        </div>
       )}
       {canUpload && (
         <form
@@ -102,9 +106,9 @@ export function CarImages({ car, canUpload }: { car: CarWithCatalog; canUpload: 
                 </div>
               )}
             </form.Field>
-            <button className="btn-primary" type="submit">
+            <Button variant="primary" type="submit">
               {upload.isPending ? 'Uploading…' : 'Upload photos'}
-            </button>
+            </Button>
           </fieldset>
           {upload.isError && <p role="alert">{upload.error.message}</p>}
           {upload.isSuccess && <p role="status">Photos uploaded.</p>}

@@ -1,3 +1,4 @@
+import { Button } from '../Button/Button'
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useMatches } from '@tanstack/react-router'
 
@@ -12,15 +13,21 @@ export function Layout() {
   }, [title])
   return (
     <>
-      <header className="border-b border-slate-200">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 px-4 sm:px-8">
-          <h1 className="py-3 text-2xl font-black tracking-tight">
+      <a
+        href="#main-content"
+        className="sr-only z-50 rounded bg-white px-4 py-3 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      >
+        Skip to content
+      </a>
+      <header className="bg-header text-white">
+        <div className="mx-auto flex max-w-7xl flex-col items-start gap-x-10 px-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-8">
+          <h1 className="py-4 font-heading text-2xl font-bold tracking-tight">
             <Link to="/" aria-label="Rent Cars home">
-              Rent<span className="text-orange-600">Cars</span>
+              Rent<span className="text-brand">Cars</span>
             </Link>
           </h1>
           <nav
-            className="catalog-nav flex flex-wrap items-center gap-x-5"
+            className="flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-1 text-sm [&>a]:border-b-2 [&>a]:border-transparent [&>a]:py-3 sm:[&>a]:py-5 [&>a]:font-medium [&>a:hover]:text-white [&>a[aria-current=page]]:border-brand [&>a[aria-current=page]]:text-white"
             aria-label="Vehicle catalogs"
           >
             <Link to="/cars">Cars</Link>
@@ -33,15 +40,16 @@ export function Layout() {
               </>
             )}
             {identity ? (
-              <button
+              <Button
+                className="my-2 max-w-full rounded border border-white/25 px-3 py-2 text-left text-sm text-white wrap-anywhere hover:bg-white/10 lg:ml-auto"
                 type="button"
                 onClick={() => {
                   setLogoutError(false)
                   void signOut().catch(() => setLogoutError(true))
                 }}
               >
-                Sign out {identity.user.email}
-              </button>
+                Sign out <span className="sr-only sm:not-sr-only">{identity.user.email}</span>
+              </Button>
             ) : (
               <Link to="/login">Sign in</Link>
             )}
@@ -49,7 +57,11 @@ export function Layout() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 sm:px-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto max-w-7xl px-4 pb-12 focus:outline-none sm:px-8"
+      >
         <Outlet />
       </main>
     </>

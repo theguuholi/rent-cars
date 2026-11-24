@@ -125,3 +125,36 @@ rental history remain for inspection, since cars with rental history cannot be d
 ### Most rented cars
 
 The fleet displays current available cars from the latest popularity snapshot. React calls the main API at `/api/cars/recommendations`; it never contacts Spark or the recommendations service directly. Loading, empty and error states are independent of catalog filtering. See [the end-to-end walkthrough](../../docs/popular-cars.md) to generate a ranking locally or on Kubernetes.
+
+## Visual system
+
+The interface uses the RentX-inspired palette through Tailwind v4 `@theme` tokens
+in `src/styles.css`: `brand`, `canvas`, `surface`, `ink`, `muted`, `line` and
+`header`. Archivo headings and Inter body fonts are bundled locally through
+Fontsource; the browser does not contact a font CDN.
+
+Reuse `Button`, `TextField`, `FormSection`, `CatalogTable`, `AccountPanel` and
+`PageSection` for shared presentation. `CarCard` belongs to the cars feature and
+is reused by the fleet and popularity ranking. Keep query/form state in the
+feature. A new visual variation should solve an existing screen requirement,
+not introduce a generic component framework.
+
+Use Tailwind utilities beside JSX for layout, responsive breakpoints and states.
+The small `action` utility also styles TanStack links as actions without changing
+anchor semantics. Set `data-variant="secondary"` or `"danger"` when appropriate.
+Native inputs, selects and textareas share `control`; buttons default to
+`type="button"`, so form submissions must explicitly use `type="submit"`.
+Keep labels, field errors, keyboard focus, disabled states and role permissions.
+Transitions use `motion-safe`; selected rows and availability use data variants.
+
+The catalog API intentionally does not include image metadata. Cards therefore
+show a neutral, decorative vehicle illustration instead of fetching every car's
+details or pretending that a stock photo represents the vehicle. Uploaded photos
+remain available on the detail screen. The home remains navigation-only.
+
+To review the UI, run `make dev`, then visit `/cars`, a car detail, `/login` and
+`/register`. Sign in as the development administrator for `/cars/new`,
+`/categories`, `/specifications` and `/users`. Use a driver account for `/rentals`.
+Review at 390px and 1440px, navigate with Tab, submit an empty form, and verify
+that errors and retry actions remain visible. Run `make check-web`,
+`npm --prefix apps/web run mutation`, and `npm --prefix apps/web run test:e2e`.

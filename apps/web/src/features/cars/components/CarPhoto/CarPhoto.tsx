@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/Button/Button'
 import { useState } from 'react'
 import { carImageUrl } from '../../cars-api'
 
@@ -13,13 +14,13 @@ export function CarPhoto({
   const [failed, setFailed] = useState(false)
   const url = carImageUrl(carId, imageId)
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+    <div className="overflow-hidden rounded-xl border border-line bg-slate-50">
       {failed ? (
         <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 p-4">
           <p role="status">Could not load {label}.</p>
-          <button className="btn-secondary" onClick={() => setFailed(false)}>
+          <Button variant="secondary" onClick={() => setFailed(false)}>
             Retry {label}
-          </button>
+          </Button>
         </div>
       ) : (
         <a href={url} target="_blank" rel="noreferrer" aria-label={`Open ${label}`}>
