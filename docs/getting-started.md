@@ -700,3 +700,7 @@ Follow [Hadoop from zero: local first, then Kubernetes](hadoop-first-steps.md) f
 ## Optional Spark recommendations lab
 
 Follow [the Spark walkthrough](recommendations-spark.md) after HDFS archival works. It covers the separate recommendations database, public API, batch Docker image, manual Kubernetes Job, suspended CronJob and failure verification. No main API or React integration is required yet.
+
+## Explore the most rented cars
+
+After completing the rental flow, follow [the popularity walkthrough](popular-cars.md) to calculate a Spark snapshot and see available recommendations in the React catalog. It includes no-data, outage and Kubernetes checks.

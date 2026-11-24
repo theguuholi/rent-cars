@@ -38,6 +38,8 @@ spec:
             - name: http
               containerPort: 8080
           env:
+            - name: RENT_RECOMMENDATIONS_URL
+              value: http://{{ .Release.Name }}-recommendations:8085
             - name: RENT_MESSAGING_ENABLED
               value: {{ .Values.messaging.enabled | quote }}
             - name: KAFKA_BOOTSTRAP_SERVERS

@@ -16,10 +16,12 @@ flowchart LR
   Raw --> Spark[Java Spark batch]
   Spark --> Parquet[HDFS curated Parquet]
   Spark --> DB[Recommendations PostgreSQL snapshots]
-  DB --> ReadAPI[Authenticated recommendations read API]
+  DB --> ReadAPI[Public recommendations read API]
+  ReadAPI --> FleetAPI[Main API: available cars]
+  FleetAPI --> Web[React catalog]
 ```
 
-Main API and React do not call this new API yet. That integration is the next PR. The result is historical popularity, not a guarantee that a car exists or is available now.
+The snapshot is historical popularity. The main API filters its ranked IDs against current existing, available cars before React displays them. See [the catalog walkthrough](popular-cars.md); appearing in the ranking still does not reserve a car.
 
 ## 2. Start locally
 
@@ -69,7 +71,7 @@ docker compose exec postgres psql -U postgres -d recommendations \
 - [ ] Inspect the curated files:
 
 ```sh
-docker compose exec hdfs-namenode hdfs dfs -ls -R /rent-cars/curated/popular-cars
+docker compose exec hdfs-namenode hdfs dfs -ls -R hdfs://hdfs-namenode:9000/rent-cars/curated/popular-cars
 ```
 
 Parquet is a typed columnar format, so downloading it and reading it as JSON will not work. Spark can read it using `spark.read().parquet(path)`; inspect the schema and rows in a Spark shell or the job tests.
@@ -159,3 +161,14 @@ The endpoint has no authentication, including in Kubernetes; its Service remains
 ## Upgrading an earlier version of this PR
 
 The old separate `recommendations-db` volume is not automatically copied or deleted. If its study snapshots matter, export them before upgrading and restore into the new database after its creation, or deliberately recompute from HDFS. Do not use `down -v` or delete PVCs to migrate. The main API database remains unchanged; recommendations has its own database and Flyway history, sharing only the PostgreSQL server process.
+
+## Show recommendations in the rental catalog
+
+The main API now exposes `GET /cars/recommendations`; React calls it through `/api/cars/recommendations`. See the [catalog walkthrough](popular-cars.md) for local and Kubernetes checks, failure behavior and current availability filtering.
+
+HDFS CLI commands must use an explicit filesystem URI. A new `docker compose exec` process does not inherit the daemon's `HADOOP_CONF_DIR`; an unqualified `/rent-cars/...` can accidentally inspect the container filesystem instead of HDFS.
+
+```bash
+docker compose exec hdfs-namenode hdfs dfs -ls -R hdfs://hdfs-namenode:9000/rent-cars/raw/rentals
+kubectl --context docker-desktop -n rent-cars exec statefulset/fleet-hdfs-namenode -- hdfs dfs -ls -R hdfs://fleet-hdfs-namenode:9000/rent-cars/curated/popular-cars
+```

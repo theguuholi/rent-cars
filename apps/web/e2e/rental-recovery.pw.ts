@@ -45,7 +45,7 @@ for (const committed of [false, true]) {
 
     await test.step('And selects one available car from the catalog', async () => {
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill(carName)
-      const catalog = page.getByRole('region', { name: 'Cars' })
+      const catalog = page.getByRole('region', { name: 'Cars', exact: true })
       const carLink = catalog.getByRole('link', { name: carName, exact: true })
       await expect(carLink).toBeVisible()
       await carLink.click()

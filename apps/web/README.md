@@ -121,3 +121,7 @@ listing and opening its details. The setup uses `RENT_CARS_ADMIN_EMAIL` and
 `RENT_CARS_ADMIN_PASSWORD` (development defaults when unset). Run these journeys
 against a development or disposable database: their driver accounts, cars and
 rental history remain for inspection, since cars with rental history cannot be deleted.
+
+### Most rented cars
+
+The fleet displays current available cars from the latest popularity snapshot. React calls the main API at `/api/cars/recommendations`; it never contacts Spark or the recommendations service directly. Loading, empty and error states are independent of catalog filtering. See [the end-to-end walkthrough](../../docs/popular-cars.md) to generate a ranking locally or on Kubernetes.

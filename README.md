@@ -203,8 +203,10 @@ Follow [Hadoop from zero: local first, then Kubernetes](docs/hadoop-first-steps.
 
 ## Study batch recommendations
 
-After completing the HDFS lab, follow [Spark: from rental events to a ranking](docs/recommendations-spark.md). The optional Java 21 batch reads archived events, writes Parquet and publishes an immutable result in the recommendations database. The Java 25 recommendations service exposes an public read API on port 8085. Main API/React integration is intentionally the next feature.
+After completing the HDFS lab, follow [Spark: from rental events to a ranking](docs/recommendations-spark.md). The optional Java 21 batch reads archived events, writes Parquet and publishes an immutable result in the recommendations database. The Java 25 recommendations service exposes a public read API on port 8085. The main API resolves its ranked IDs against current available cars, and React displays them in the fleet.
 
 `make dev` starts the recommendations database and service; `make recommendations-build` runs one deliberate Spark batch after ingestion. Spark is not required to rent a car.
 
 For all Java checks, use JDK 25 and run `JAVA21_HOME=/path/to/jdk-21 make check-java`. The optional Spark job has its own build and Java version.
+
+The [popular cars walkthrough](docs/popular-cars.md) connects that snapshot to the main API and React catalog, with local and Kubernetes validation steps.

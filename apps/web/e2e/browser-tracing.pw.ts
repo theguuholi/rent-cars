@@ -19,7 +19,7 @@ test('Given local tracing is enabled, when a visitor opens the catalog, then the
   await test.step('Then the API request carries the browser trace ID', async () => {
     const request = await apiRequest
     expect(request.headers()['traceparent']).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-0[01]$/)
-    await expect(page.getByRole('region', { name: 'Cars' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Cars', exact: true })).toBeVisible()
     expect((await exportResponse).status()).toBe(200)
   })
 })

@@ -9,7 +9,7 @@ test('Given a populated catalog, when a guest opens a car and goes back, then th
 
   await test.step('Given a guest sees a car in the catalog', async () => {
     await page.goto(`${webBaseUrl}/cars`)
-    const catalog = page.getByRole('region', { name: 'Cars' })
+    const catalog = page.getByRole('region', { name: 'Cars', exact: true })
     await expect(catalog.getByRole('heading', { name: 'Cars' })).toBeVisible()
     const carLink = catalog.getByRole('link').first()
     await expect(carLink).toBeVisible()
@@ -18,7 +18,10 @@ test('Given a populated catalog, when a guest opens a car and goes back, then th
   })
 
   await test.step('When the guest opens that car', async () => {
-    await page.getByRole('region', { name: 'Cars' }).getByRole('link', { name: carName }).click()
+    await page
+      .getByRole('region', { name: 'Cars', exact: true })
+      .getByRole('link', { name: carName })
+      .click()
   })
 
   await test.step('Then the car details and a way back are visible', async () => {
@@ -34,7 +37,7 @@ test('Given a populated catalog, when a guest opens a car and goes back, then th
   await test.step('Then the catalog shows the same car', async () => {
     await expect(page).toHaveURL(`${webBaseUrl}/cars`)
     await expect(
-      page.getByRole('region', { name: 'Cars' }).getByRole('link', { name: carName }),
+      page.getByRole('region', { name: 'Cars', exact: true }).getByRole('link', { name: carName }),
     ).toBeVisible()
   })
 })
