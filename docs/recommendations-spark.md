@@ -32,10 +32,10 @@ make setup
 make dev HDFS_ENABLED=true
 ```
 
-The existing services start, plus a separate recommendations PostgreSQL database at localhost:5433. The recommendations service runs on localhost:8085 and applies its own migration. The main API continues using its existing database.
+The existing services start. A one-shot initializer creates a separate `recommendations` database inside the existing PostgreSQL instance at localhost:5432, without changing the main API database. It runs on existing volumes too, not only first initialization. The recommendations service runs on localhost:8085 and applies its own migration. The main API continues using its existing database. `make dev` starts recommendations automatically; no second service terminal is needed. Spark remains a manual calculation after you create rental data.
 
-- [ ] Open http://localhost:8085/swagger-ui/index.html. Authenticate with `rent-cars` / `recommendations-dev` (development only).
-- [ ] Open [recommendations.http](../requests/http/recommendations.http), send request 1. Before any batch, expect `items: []`, `asOf: null`, `generatedAt: null`. Missing credentials must return 401; limit 101 must return 400.
+- [ ] Open http://localhost:8085/swagger-ui/index.html. No authentication is required for this study API.
+- [ ] Open [recommendations.http](../requests/http/recommendations.http), send request 1. Before any batch, expect `items: []`, `asOf: null`, `generatedAt: null`. Anonymous reads must return 200; limit 101 must return 400.
 - [ ] Use [the rental walkthrough](getting-started.md) to open and return rentals for several cars. Complete [HDFS lab checkpoints](recommendations-hdfs.md) to confirm their JSON files exist. A DLT record is not an archived event and cannot contribute until replay succeeds.
 
 ## 3. Compute the first ranking
@@ -60,7 +60,7 @@ RECOMMENDATIONS_AS_OF=2026-11-24T00:00:00Z make recommendations-build
 - [ ] Inspect the independent database:
 
 ```sh
-docker compose exec recommendations-db psql -U recommendations -d recommendations \
+docker compose exec postgres psql -U postgres -d recommendations \
   -c 'SELECT as_of, generated_at, algorithm, jsonb_array_length(items), parquet_path FROM recommendation_snapshots ORDER BY as_of DESC;'
 ```
 
@@ -97,7 +97,7 @@ The batch must fail, and the API must keep the previous snapshot. Restore with `
 - [ ] Service, JDK 25: `make check-recommendations`.
 - [ ] Job, JDK 21: `JAVA21_HOME=/path/to/jdk-21 make check-recommendations-job`.
 - [ ] Run the PIT commands in [service README](../apps/recommendations/README.md) and [job README](../apps/recommendations-job/README.md). Both enforce 100% coverage and mutation thresholds.
-- [ ] Inspect tests for window boundaries, distinct rentals, duplicate/conflicting events, empty history, authentication, bounds and publication failures. Check observable outcomes rather than only line coverage.
+- [ ] Inspect tests for window boundaries, distinct rentals, duplicate/conflicting events, empty history, anonymous access, bounds and publication failures. Check observable outcomes rather than only line coverage.
 
 ## 6. Deploy to local Kubernetes
 
@@ -109,7 +109,7 @@ IMAGE_NAMESPACE=docker.io/guuhworship sh scripts/push-images.sh
 make k8s-up HDFS_ENABLED=true
 ```
 
-All resources remain in `rent-cars`, context `docker-desktop`. Make creates a separate recommendations credentials Secret if missing. It never prints generated passwords. The application applies Flyway before becoming ready. The job does not manage migrations.
+All resources remain in `rent-cars`, context `docker-desktop`. The recommendations init container creates its database in `fleet-postgres`, reusing the existing database Secret. No second PostgreSQL pod or API password is needed. The application applies Flyway before becoming ready. The job does not manage migrations.
 
 - [ ] Confirm service and database readiness:
 
@@ -137,15 +137,13 @@ The CronJob is suspended by default. Manual jobs can still run. `concurrencyPoli
 kubectl --context docker-desktop -n rent-cars port-forward service/fleet-recommendations 8085:8085
 ```
 
-In another terminal, retrieve the local Secret into a shell variable and call the API (do not commit or paste credentials):
+In another terminal, call the public study endpoint:
 
 ```sh
-recommendations_password=$(kubectl --context docker-desktop -n rent-cars get secret recommendations-credentials -o jsonpath='{.data.api-password}' | base64 --decode)
-curl --fail --user "rent-cars:$recommendations_password" 'http://localhost:8085/recommendations/cars?limit=10'
-unset recommendations_password
+curl --fail 'http://localhost:8085/recommendations/cars?limit=10'
 ```
 
-Use those credentials in the REST Client locally if desired. Kubernetes does not use the development password. Production Basic authentication must run over TLS or a TLS service mesh; ClusterIP alone is not authentication or encryption.
+The endpoint has no authentication, including in Kubernetes; its Service remains ClusterIP. Main API authentication is unchanged.
 
 - [ ] Only after a successful manual run, enable scheduling through Helm values (`recommendations.job.suspend=false`). Keep the same values file when upgrading; `make k8s-up` intentionally resets to local defaults.
 - [ ] Explain that this initial Kubernetes Job uses Spark `local[2]` within one pod. It does not yet create distributed executor pods or require a Spark operator.
@@ -157,3 +155,7 @@ Use those credentials in the REST Client locally if desired. Kubernetes does not
 - [Spark on Kubernetes](https://spark.apache.org/docs/4.1.0/running-on-kubernetes.html) — next scaling step, not what local mode currently does.
 - [PostgreSQL transactions](https://www.postgresql.org/docs/17/tutorial-transactions.html)
 - [Kubernetes CronJobs](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/)
+
+## Upgrading an earlier version of this PR
+
+The old separate `recommendations-db` volume is not automatically copied or deleted. If its study snapshots matter, export them before upgrading and restore into the new database after its creation, or deliberately recompute from HDFS. Do not use `down -v` or delete PVCs to migrate. The main API database remains unchanged; recommendations has its own database and Flyway history, sharing only the PostgreSQL server process.

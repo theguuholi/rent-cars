@@ -1,6 +1,5 @@
 package com.github.theguuholi.recommendations.catalog;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -22,8 +21,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @SpringBootTest(
     properties = {
       "spring.kafka.listener.auto-startup=false",
-      "spring.kafka.listener.missing-topics-fatal=false",
-      "spring.security.user.password=test-password"
+      "spring.kafka.listener.missing-topics-fatal=false"
     })
 @AutoConfigureMockMvc
 class RecommendationHttpTest {
@@ -52,39 +50,27 @@ class RecommendationHttpTest {
   }
 
   @Test
-  void givenAuthenticatedClientWhenReadingOpenApiThenDocumentsRankingSchemaAndAuthentication()
+  void givenAnonymousClientWhenReadingOpenApiThenDocumentsRankingWithoutAuthentication()
       throws Exception {
-    http.perform(get("/v3/api-docs").with(httpBasic("rent-cars", "test-password")))
+    http.perform(get("/v3/api-docs"))
         .andExpect(status().isOk())
         .andExpect(
             jsonPath("$.components.schemas.RecommendedCar.properties.score.description")
                 .value("Distinct rentals opened in the thirty-day window"))
-        .andExpect(
-            jsonPath("$.components.securitySchemes.serviceCredentials.scheme").value("basic"));
+        .andExpect(jsonPath("$.components.securitySchemes").doesNotExist());
   }
 
   @Test
-  void givenAuthenticatedClientWhenReadingUnexposedResourceThenReturnsForbidden() throws Exception {
-    http.perform(get("/actuator/env").with(httpBasic("rent-cars", "test-password")))
-        .andExpect(status().isForbidden());
+  void givenAnonymousClientWhenReadingUnexposedResourceThenReturnsNotFound() throws Exception {
+    http.perform(get("/actuator/env")).andExpect(status().isNotFound());
   }
 
   @Nested
   class ListCars {
     @Test
-    void givenNoCredentialsWhenReadingThenReturnsUnauthorized() throws Exception {
-      http.perform(get("/recommendations/cars")).andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void givenWrongCredentialsWhenReadingThenReturnsUnauthorized() throws Exception {
-      http.perform(get("/recommendations/cars").with(httpBasic("rent-cars", "wrong")))
-          .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void givenNoCompletedBatchWhenReadingThenReturnsEmptyItems() throws Exception {
-      http.perform(get("/recommendations/cars").with(httpBasic("rent-cars", "test-password")))
+    void givenNoCompletedBatchWhenReadingWithoutCredentialsThenReturnsEmptyItems()
+        throws Exception {
+      http.perform(get("/recommendations/cars"))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.algorithm").value("popular-cars-v1"))
           .andExpect(jsonPath("$.generatedAt").isEmpty())
@@ -95,10 +81,7 @@ class RecommendationHttpTest {
     @ParameterizedTest
     @ValueSource(strings = {"0", "101", "-1", "wrong"})
     void givenInvalidLimitWhenReadingThenReturnsBadRequest(String limit) throws Exception {
-      http.perform(
-              get("/recommendations/cars")
-                  .param("limit", limit)
-                  .with(httpBasic("rent-cars", "test-password")))
+      http.perform(get("/recommendations/cars").param("limit", limit))
           .andExpect(status().isBadRequest());
     }
 
@@ -112,10 +95,7 @@ class RecommendationHttpTest {
           [{"carId":"00000000-0000-0000-0000-000000000001","rank":1,"score":12},
            {"carId":"00000000-0000-0000-0000-000000000002","rank":2,"score":4}]
           """);
-      http.perform(
-              get("/recommendations/cars")
-                  .param("limit", "1")
-                  .with(httpBasic("rent-cars", "test-password")))
+      http.perform(get("/recommendations/cars").param("limit", "1"))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.asOf").value("2026-11-23T00:00:00Z"))
           .andExpect(jsonPath("$.generatedAt").value("2026-11-23T00:00:00Z"))
@@ -123,7 +103,7 @@ class RecommendationHttpTest {
           .andExpect(jsonPath("$.items[0].score").value(12))
           .andExpect(jsonPath("$.items[0].rank").value(1))
           .andExpect(jsonPath("$.items[0].carId").value("00000000-0000-0000-0000-000000000001"));
-      http.perform(get("/recommendations/cars").with(httpBasic("rent-cars", "test-password")))
+      http.perform(get("/recommendations/cars"))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.items.length()").value(2));
     }

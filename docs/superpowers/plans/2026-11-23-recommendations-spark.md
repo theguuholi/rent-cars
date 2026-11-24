@@ -4,7 +4,7 @@
 
 **Goal:** Compute a reproducible popularity ranking from archived rental events and expose the last successful result through the recommendations service.
 
-**Architecture:** Kafka ingestion remains independent. A Java 21 Spark batch reads HDFS, writes immutable Parquet and publishes a PostgreSQL snapshot atomically. The Java 25 Spring service owns migrations and an authenticated read API. Main API and React integration belong to the next PR.
+**Architecture:** Kafka ingestion remains independent. A Java 21 Spark batch reads HDFS, writes immutable Parquet and publishes a PostgreSQL snapshot atomically. The Java 25 Spring service owns migrations and an public read API. Main API and React integration belong to the next PR.
 
 **Tech stack:** Spark 4.1.0, Java 21/25, PostgreSQL 17, Spring Boot, Flyway, JUnit, Testcontainers, JaCoCo, PIT.
 
@@ -17,16 +17,16 @@
 - A failed or older batch must not replace a newer successful snapshot.
 - Empty history is valid; malformed history fails visibly.
 - Persist window cutoff and algorithm with results; never query Spark during HTTP requests.
-- Protect the internal endpoint; no frontend or main API changes.
+- Keep the study read endpoint public; no frontend or main API changes.
 
 ## Tasks
 
-- [x] Add migration and authenticated GET /recommendations/cars with HTTP/PostgreSQL tests, including empty and populated snapshots, limit validation and unauthorized access.
+- [x] Add migration and public GET /recommendations/cars with HTTP/PostgreSQL tests, including empty and populated snapshots, limit validation and anonymous access.
 - [x] Add independent Spark job and tests for the half-open UTC window, duplicates, ties, invalid schema and empty input.
 - [x] Add transactional snapshot publication tests: rollback, idempotent rerun, older result rejection, and result visibility.
 - [x] Add Docker, optional Compose job, Helm CronJob/manual execution, Make and image publishing support.
 - [x] Add independent CI, Swagger, REST Client and a didactic local/Kubernetes study guide.
-- [ ] Run formatting, complete tests, inspect coverage/mutation results and review the diff before opening the PR.
+- [x] Run formatting, complete tests, inspect coverage/mutation results and review the diff before opening the PR.
 
 ## Decisions and evidence
 
@@ -36,3 +36,9 @@
 - The Docker Hadoop client needs an OS username for UID 1001; create the Spark user explicitly. Use writable `/tmp` with executable mapping for native compression libraries; Helm supplies an `emptyDir` there.
 - Local Docker smoke: real HDFS raw JSON → Parquet `_SUCCESS` → PostgreSQL snapshot → authenticated HTTP result. An invalid event in a subsequent batch failed while HTTP kept the previous result.
 - Helm templates and Compose configuration validated. No deployment was applied to the user's active Kubernetes cluster.
+
+## Review changes (2026-11-24)
+
+- Reuse the existing PostgreSQL server with a separate `recommendations` database and Flyway history, both in Compose and Helm. An idempotent initializer also handles existing volumes.
+- Remove HTTP Basic, its Spring Security dependency, configuration and credentials. Anonymous snapshot/Swagger/health reads are the study contract; main API authentication is unchanged.
+- `make dev` prepares the database and starts the service. Following the maintainer clarification, Spark remains manual via `make recommendations-build` after creating rental data.

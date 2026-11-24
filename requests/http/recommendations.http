@@ -1,19 +1,10 @@
 @baseUrl = http://localhost:8085
-@username = rent-cars
-@password = recommendations-dev
 
-### 1. Before a successful batch: empty items and null timestamps.
-### After make recommendations-build: the latest completed ranking.
-GET {{baseUrl}}/recommendations/cars?limit=30
-Authorization: Basic {{username}}:{{password}}
-Accept: application/json
+### Read the latest popularity snapshot (public study endpoint)
+GET {{baseUrl}}/recommendations/cars?limit=10
 
-### 2. Limit is bounded: expect 400.
+### Reject an invalid limit
 GET {{baseUrl}}/recommendations/cars?limit=101
-Authorization: Basic {{username}}:{{password}}
 
-### 3. Missing credentials: expect 401, not the ranking.
-GET {{baseUrl}}/recommendations/cars
-
-### 4. Health is public for Kubernetes probes.
+### Health
 GET {{baseUrl}}/actuator/health

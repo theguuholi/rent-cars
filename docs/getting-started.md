@@ -699,4 +699,4 @@ Follow [Hadoop from zero: local first, then Kubernetes](hadoop-first-steps.md) f
 
 ## Optional Spark recommendations lab
 
-Follow [the Spark walkthrough](recommendations-spark.md) after HDFS archival works. It covers the separate recommendations database, authenticated API, batch Docker image, manual Kubernetes Job, suspended CronJob and failure verification. No main API or React integration is required yet.
+Follow [the Spark walkthrough](recommendations-spark.md) after HDFS archival works. It covers the separate recommendations database, public API, batch Docker image, manual Kubernetes Job, suspended CronJob and failure verification. No main API or React integration is required yet.

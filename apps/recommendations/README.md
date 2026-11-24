@@ -125,12 +125,12 @@ Follow [Hadoop from zero: local first, then Kubernetes](../../docs/hadoop-first-
 
 ## Internal ranking API
 
-This service now owns a separate PostgreSQL database and applies Flyway migrations on startup. It still consumes and archives Kafka events independently of the optional [Spark batch](../recommendations-job/README.md).
+This service owns a separate logical database in the shared PostgreSQL instance and applies Flyway migrations on startup. It still consumes and archives Kafka events independently of the optional [Spark batch](../recommendations-job/README.md).
 
-- Local: `make dev HDFS_ENABLED=true` starts the database on 5433 and this service on 8085.
-- Swagger: http://localhost:8085/swagger-ui/index.html (HTTP Basic).
-- Development credentials: `rent-cars` / `recommendations-dev`.
-- Production: set `SPRING_PROFILES_ACTIVE=prod`, `RECOMMENDATIONS_DATABASE_URL`, `RECOMMENDATIONS_DATABASE_USER`, `RECOMMENDATIONS_DATABASE_PASSWORD` and `RECOMMENDATIONS_API_PASSWORD`. There is no production password fallback. Use TLS or a trusted TLS service mesh for HTTP Basic.
+- Local: `make dev HDFS_ENABLED=true` creates the `recommendations` database in the existing PostgreSQL instance on 5432 and starts this service on 8085.
+- Swagger: http://localhost:8085/swagger-ui/index.html (no authentication).
+- The study read API is public; no login or API password is required. Local database credentials are `postgres` / `postgres`.
+- Production: set `SPRING_PROFILES_ACTIVE=prod`, `RECOMMENDATIONS_DATABASE_URL`, `RECOMMENDATIONS_DATABASE_USER`, `RECOMMENDATIONS_DATABASE_PASSWORD`. There is no production password fallback. The Kubernetes Service remains internal (ClusterIP).
 - `GET /recommendations/cars?limit=30`: latest immutable snapshot, at most 100 results. No completed batch returns empty items and null timestamps. History is not current availability.
 - [Executable requests](../../requests/http/recommendations.http) and [local/Kubernetes walkthrough](../../docs/recommendations-spark.md).
 

@@ -55,13 +55,13 @@ spec:
                 - name: SPARK_LOCAL_IP
                   value: 127.0.0.1
                 - name: RECOMMENDATIONS_DATABASE_URL
-                  value: jdbc:postgresql://{{ .Release.Name }}-recommendations-db:5432/recommendations
+                  value: jdbc:postgresql://{{ .Release.Name }}-postgres:5432/recommendations
                 - name: RECOMMENDATIONS_DATABASE_USER
-                  value: recommendations
+                  value: rent_cars
                 - name: RECOMMENDATIONS_DATABASE_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: {{ .Values.recommendations.existingSecret }}
+                      name: {{ .Values.existingSecret }}
                       key: postgres-password
               volumeMounts:
                 - name: tmp

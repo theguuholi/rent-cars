@@ -3,11 +3,12 @@
 .PHONY: infra-up infra-stop db-up db-stop db-create db-drop db-reset check-local-environment
 
 infra-up: check-local-environment
-	docker compose up -d --wait postgres recommendations-db s3 mailpit observability kafka
+	docker compose up -d --wait postgres s3 mailpit observability kafka
+	docker compose run --rm recommendations-db-init
 	docker compose run --rm kafka-init
 
 infra-stop:
-	docker compose --profile hdfs stop postgres recommendations-db s3 mailpit observability kafka kafka-ui hdfs-httpfs hdfs-datanode hdfs-namenode
+	docker compose --profile hdfs stop postgres s3 mailpit observability kafka kafka-ui hdfs-httpfs hdfs-datanode hdfs-namenode
 
 db-up: check-local-environment
 	docker compose up -d --wait postgres

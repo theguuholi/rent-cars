@@ -3,7 +3,7 @@
 .PHONY: recommendations-dev check-recommendations
 
 recommendations-dev: kafka-up
-	docker compose up -d --wait recommendations-db
+	docker compose run --rm recommendations-db-init
 	cd apps/recommendations && HDFS_ARCHIVE_ENABLED=$(HDFS_ENABLED) ./mvnw spring-boot:run
 
 check-recommendations:

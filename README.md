@@ -203,7 +203,7 @@ Follow [Hadoop from zero: local first, then Kubernetes](docs/hadoop-first-steps.
 
 ## Study batch recommendations
 
-After completing the HDFS lab, follow [Spark: from rental events to a ranking](docs/recommendations-spark.md). The optional Java 21 batch reads archived events, writes Parquet and publishes an immutable result in the recommendations database. The Java 25 recommendations service exposes an authenticated read API on port 8085. Main API/React integration is intentionally the next feature.
+After completing the HDFS lab, follow [Spark: from rental events to a ranking](docs/recommendations-spark.md). The optional Java 21 batch reads archived events, writes Parquet and publishes an immutable result in the recommendations database. The Java 25 recommendations service exposes an public read API on port 8085. Main API/React integration is intentionally the next feature.
 
 `make dev` starts the recommendations database and service; `make recommendations-build` runs one deliberate Spark batch after ingestion. Spark is not required to rent a car.
 

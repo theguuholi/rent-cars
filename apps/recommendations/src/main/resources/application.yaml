@@ -4,17 +4,13 @@ spring:
   profiles:
     default: dev
   datasource:
-    url: ${RECOMMENDATIONS_DATABASE_URL:jdbc:postgresql://localhost:5433/recommendations}
-    username: ${RECOMMENDATIONS_DATABASE_USER:recommendations}
+    url: ${RECOMMENDATIONS_DATABASE_URL:jdbc:postgresql://localhost:5432/recommendations}
+    username: ${RECOMMENDATIONS_DATABASE_USER:postgres}
     password: ${RECOMMENDATIONS_DATABASE_PASSWORD}
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
-  security:
-    user:
-      name: ${RECOMMENDATIONS_API_USER:rent-cars}
-      password: ${RECOMMENDATIONS_API_PASSWORD}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:

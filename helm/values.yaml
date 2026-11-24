@@ -107,7 +107,6 @@ messaging:
 # Event ingestion and internal snapshot read API.
 recommendations:
   enabled: true
-  existingSecret: recommendations-credentials
   job:
     enabled: false
     # Suspended by default: run a deliberate manual batch before scheduling.

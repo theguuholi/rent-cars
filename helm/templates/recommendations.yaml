@@ -23,8 +23,31 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 8 }}
-      {{- if .Values.hdfs.enabled }}
       initContainers:
+        - name: create-recommendations-database
+          image: {{ .Values.postgres.image | quote }}
+          command: [sh, /study/create-database.sh]
+          securityContext:
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          env:
+            - name: PGHOST
+              value: {{ .Release.Name }}-postgres
+            - name: PGUSER
+              value: rent_cars
+            - name: PGDATABASE
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: postgres-password
+          volumeMounts:
+            - name: database-init
+              mountPath: /study
+      {{- if .Values.hdfs.enabled }}
         - name: wait-for-hdfs
           image: {{ .Values.hdfs.image | quote }}
           command: [bash, -ec]
@@ -66,19 +89,14 @@ spec:
             - name: SPRING_PROFILES_ACTIVE
               value: prod
             - name: RECOMMENDATIONS_DATABASE_URL
-              value: jdbc:postgresql://{{ .Release.Name }}-recommendations-db:5432/recommendations
+              value: jdbc:postgresql://{{ .Release.Name }}-postgres:5432/recommendations
             - name: RECOMMENDATIONS_DATABASE_USER
-              value: recommendations
+              value: rent_cars
             - name: RECOMMENDATIONS_DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.recommendations.existingSecret }}
+                  name: {{ .Values.existingSecret }}
                   key: postgres-password
-            - name: RECOMMENDATIONS_API_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.recommendations.existingSecret }}
-                  key: api-password
             - name: HDFS_ARCHIVE_ENABLED
               value: {{ .Values.hdfs.enabled | quote }}
             - name: HDFS_HTTPFS_URL
@@ -95,6 +113,9 @@ spec:
             - name: tmp
               mountPath: /tmp
       volumes:
+        - name: database-init
+          configMap:
+            name: {{ .Release.Name }}-recommendations-db-init
         - name: tmp
           emptyDir: {}
 {{- end }}
