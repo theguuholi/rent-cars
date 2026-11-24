@@ -14,8 +14,7 @@ class RecommendationSecurityTest {
   @Nested
   class RecommendationSecurityFilterChain {
     @Test
-    void givenConfiguredSecurityWhenCreatingBeanThenRegistersTheBuiltFilterChain()
-        throws Exception {
+    void givenConfiguredSecurityWhenCreatingBeanThenRegistersTheBuiltFilterChain() {
       var http = mock(HttpSecurity.class, RETURNS_SELF);
       var chain = mock(DefaultSecurityFilterChain.class);
       when(http.build()).thenReturn(chain);
