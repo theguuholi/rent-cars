@@ -3,6 +3,7 @@ package com.github.theguuholi.rentcars.cars;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -45,7 +46,7 @@ class CarRecommendationsTest {
 
     @Test
     @DisplayName(
-        "Given more than six available ranked cars, when listing recommendations, then only the first six are returned")
+        "Given an unavailable leader and more than six available ranked cars, when listing recommendations, then the first six available cars are returned")
     void bounded() {
       var ranked =
           IntStream.range(0, 8)
@@ -55,7 +56,9 @@ class CarRecommendationsTest {
                 return car;
               })
               .toList();
-      var ids = ranked.stream().map(Car::id).toList();
+      var ids = new ArrayList<UUID>();
+      ids.add(UUID.randomUUID());
+      ids.addAll(ranked.stream().map(Car::id).toList());
       when(rankings.carIds()).thenReturn(ids);
       when(cars.findAllByIdInAndAvailableTrue(ids)).thenReturn(ranked);
       assertThat(recommendations.listAvailable()).containsExactlyElementsOf(ranked.subList(0, 6));
