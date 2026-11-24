@@ -14,23 +14,35 @@ test('Given the public catalog, when a guest filters and changes pages, then the
     await page.getByRole('textbox', { name: 'Brand' }).fill('Fiat')
     await page.getByRole('combobox', { name: 'Cars per page' }).selectOption('1')
     await expect(page).toHaveURL(/brand=Fiat/)
-    await expect(page.getByRole('link', { name: 'Argo' })).toBeVisible()
+    await expect(
+      page.getByRole('region', { name: 'Cars', exact: true }).getByRole('link', { name: 'Argo' }),
+    ).toBeVisible()
     await page.getByRole('button', { name: 'Next page' }).click()
   })
 
   await test.step('Then the next matching car is shown and browser history restores the first page', async () => {
-    await expect(page.getByRole('link', { name: 'Cronos' })).toBeVisible()
+    await expect(
+      page.getByRole('region', { name: 'Cars', exact: true }).getByRole('link', { name: 'Cronos' }),
+    ).toBeVisible()
     await page.goBack()
-    await expect(page.getByRole('link', { name: 'Argo' })).toBeVisible()
+    await expect(
+      page.getByRole('region', { name: 'Cars', exact: true }).getByRole('link', { name: 'Argo' }),
+    ).toBeVisible()
   })
 
   await test.step('When category and name narrow the fleet, then the result and empty state follow the filters', async () => {
     await page.getByRole('textbox', { name: 'Category' }).fill('SEDAN')
-    await expect(page.getByRole('link', { name: 'Cronos' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Argo' })).toHaveCount(0)
+    await expect(
+      page.getByRole('region', { name: 'Cars', exact: true }).getByRole('link', { name: 'Cronos' }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('region', { name: 'Cars', exact: true }).getByRole('link', { name: 'Argo' }),
+    ).toHaveCount(0)
     await page.getByRole('textbox', { name: 'Name' }).fill('No such model')
     await expect(page.getByText('No matching cars.')).toBeVisible()
     await page.getByRole('textbox', { name: 'Name' }).fill('Cronos')
-    await expect(page.getByRole('link', { name: 'Cronos' })).toBeVisible()
+    await expect(
+      page.getByRole('region', { name: 'Cars', exact: true }).getByRole('link', { name: 'Cronos' }),
+    ).toBeVisible()
   })
 })

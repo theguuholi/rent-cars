@@ -42,7 +42,7 @@ Reports: `target/site/jacoco/index.html` and `target/pit-reports/index.html`. Bo
 - The complete bounded ranking is one JSONB snapshot. Readers cannot see a partial batch. Ordering by cutoff prevents late older jobs replacing newer results; repeated cutoffs keep the first committed result. To include late events, use a later cutoff.
 - Parquet and PostgreSQL are not a distributed transaction. A database failure can leave an unreferenced Parquet directory, never a partially published result. Keep it for diagnosis; retention/cleanup is future operational work.
 - A missing/unavailable archive fails the job. An existing empty directory produces an empty snapshot. Invalid events fail visibly rather than silently biasing the ranking.
-- Availability filtering, main API orchestration and React display belong to the next PR.
+- Availability filtering and orchestration belong to the main API, while React displays the result. See [the catalog walkthrough](../../docs/popular-cars.md). The batch remains independent of live availability.
 
 Use the Make target or explicitly set `RECOMMENDATIONS_AS_OF` when invoking Compose directly; an omitted cutoff fails rather than silently computing an obsolete window. Local Docker/Helm set HDFS replication to one for the single-DataNode lab. Adjust replication with a production HDFS topology.
 

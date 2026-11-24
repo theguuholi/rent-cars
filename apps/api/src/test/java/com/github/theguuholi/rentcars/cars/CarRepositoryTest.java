@@ -41,6 +41,26 @@ class CarRepositoryTest {
   @Autowired EntityManagerFactory entityManagerFactory;
 
   @Nested
+  class FindAllByIdInAndAvailableTrue {
+    @Test
+    @Transactional
+    @DisplayName(
+        "Given available, rented, absent and unrequested cars, when looking up ranked IDs, then only requested available cars remain")
+    void availableRankedCars() {
+      var available = sedan("RANKED1");
+      var unavailable = sedan("RANKED2");
+      sedan("UNRANKED");
+      jdbc.update("update cars set available=false where id=?", unavailable);
+      assertThat(
+              cars.findAllByIdInAndAvailableTrue(
+                  List.of(available, unavailable, UUID.randomUUID())))
+          .extracting(Car::id)
+          .containsExactly(available);
+      assertThat(cars.findAllByIdInAndAvailableTrue(List.of())).isEmpty();
+    }
+  }
+
+  @Nested
   class Search {
     @Test
     @Transactional

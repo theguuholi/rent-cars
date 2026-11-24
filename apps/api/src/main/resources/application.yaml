@@ -40,6 +40,10 @@ spring:
         logServerErrorDetail: false
 
 rent:
+  recommendations:
+    url: ${RENT_RECOMMENDATIONS_URL:http://localhost:8085}
+    connect-timeout: ${RENT_RECOMMENDATIONS_CONNECT_TIMEOUT:500ms}
+    read-timeout: ${RENT_RECOMMENDATIONS_READ_TIMEOUT:1s}
   messaging:
     enabled: ${RENT_MESSAGING_ENABLED:false}
     topic: ${RENT_MESSAGING_TOPIC:rentals.events}

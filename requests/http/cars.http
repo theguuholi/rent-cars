@@ -151,3 +151,20 @@ Content-Type: application/json
     state.carVersion = response.parsedBody.version;
   }
 }}
+
+### Browse the most rented currently available cars (public)
+# @name cars_recommendations
+# @tag smoke
+GET {{baseUrl}}/cars/recommendations
+
+{{
+  const assert = require("node:assert/strict");
+  test("Recommendations are bounded, unique and currently available", () => {
+    assert.equal(response.statusCode, 200);
+    const cars = response.parsedBody;
+    assert.ok(Array.isArray(cars));
+    assert.ok(cars.length <= 6);
+    assert.ok(cars.every(car => car.available === true));
+    assert.equal(new Set(cars.map(car => car.id)).size, cars.length);
+  });
+}}

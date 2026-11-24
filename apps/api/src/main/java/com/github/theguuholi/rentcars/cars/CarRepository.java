@@ -1,6 +1,8 @@
 package com.github.theguuholi.rentcars.cars;
 
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -8,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 
 interface CarRepository extends JpaRepository<Car, UUID> {
+  List<Car> findAllByIdInAndAvailableTrue(Collection<UUID> ids);
+
   @Query(
       """
       select c from Car c join c.category category

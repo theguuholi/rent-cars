@@ -226,3 +226,7 @@ Work through the [pool and capacity experiment](../../docs/studies/pool-capacity
 ## Rental events and Kafka
 
 Follow the [Kafka producer walkthrough](../../docs/kafka.md) for Compose, the read/write browser UI on port 8084, Kubernetes via Strimzi, REST Client rental events, broker outage recovery and the event contract.
+
+### Public car recommendations
+
+`GET /cars/recommendations` returns up to six currently available car summaries in precomputed popularity order. It is public, like browsing cars. The API uses Spring `RestClient` to query recommendations; ranking outages return an empty array without blocking the fleet. Configure `RENT_RECOMMENDATIONS_URL`, `RENT_RECOMMENDATIONS_CONNECT_TIMEOUT` and `RENT_RECOMMENDATIONS_READ_TIMEOUT` as needed. See [the local and Kubernetes walkthrough](../../docs/popular-cars.md) and the `cars_recommendations` HTTP Yac request.
