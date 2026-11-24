@@ -131,7 +131,8 @@ The fleet displays current available cars from the latest popularity snapshot. R
 The interface uses the RentX-inspired palette through Tailwind v4 `@theme` tokens
 in `src/styles.css`: `brand`, `canvas`, `surface`, `ink`, `muted`, `line` and
 `header`. Archivo headings and Inter body fonts are bundled locally through
-Fontsource; the browser does not contact a font CDN.
+Fontsource; the browser does not contact a font CDN. Their OFL licenses ship
+with the production assets under `public/licenses/`.
 
 Reuse `Button`, `TextField`, `FormSection`, `CatalogTable`, `AccountPanel` and
 `PageSection` for shared presentation. `CarCard` belongs to the cars feature and
