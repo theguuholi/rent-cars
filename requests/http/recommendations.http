@@ -1,0 +1,10 @@
+@baseUrl = http://localhost:8085
+
+### Read the latest popularity snapshot (public study endpoint)
+GET {{baseUrl}}/recommendations/cars?limit=10
+
+### Reject an invalid limit
+GET {{baseUrl}}/recommendations/cars?limit=101
+
+### Health
+GET {{baseUrl}}/actuator/health

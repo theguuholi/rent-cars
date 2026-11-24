@@ -4,6 +4,7 @@
 
 infra-up: check-local-environment
 	docker compose up -d --wait postgres s3 mailpit observability kafka
+	docker compose run --rm recommendations-db-init
 	docker compose run --rm kafka-init
 
 infra-stop:

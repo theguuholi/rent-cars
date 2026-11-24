@@ -1,8 +1,16 @@
 spring:
   application:
     name: rent-cars-recommendations
-  main:
-    web-application-type: none
+  profiles:
+    default: dev
+  datasource:
+    url: ${RECOMMENDATIONS_DATABASE_URL:jdbc:postgresql://localhost:5432/recommendations}
+    username: ${RECOMMENDATIONS_DATABASE_USER:postgres}
+    password: ${RECOMMENDATIONS_DATABASE_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -37,3 +45,6 @@ rent:
     url: ${HDFS_HTTPFS_URL:http://localhost:14000}
     user: ${HDFS_USER:hadoop}
     root: ${HDFS_ARCHIVE_ROOT:/rent-cars/raw/rentals}
+
+server:
+  port: ${RECOMMENDATIONS_PORT:8085}

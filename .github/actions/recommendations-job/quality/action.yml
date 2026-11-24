@@ -1,0 +1,47 @@
+name: Spark job quality
+description: Verify the independent Java 21 Spark application.
+inputs:
+  sonar-project-key:
+    description: Independent Sonar project key for the Spark job.
+    required: false
+  sonar-organization:
+    description: Sonar organization.
+    required: false
+  sonar-token:
+    description: Token supplied only on trusted runs.
+    required: false
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+      with:
+        distribution: temurin
+        java-version: '21'
+        cache: maven
+        cache-dependency-path: apps/recommendations-job/pom.xml
+    - shell: bash
+      working-directory: apps/recommendations-job
+      run: ./mvnw -B verify
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: recommendations-job-quality
+        path: apps/recommendations-job/target/site/jacoco/
+        if-no-files-found: error
+    - name: Analyze the independent Spark Sonar project
+      if: inputs.sonar-project-key != '' && inputs.sonar-token != ''
+      shell: bash
+      working-directory: apps/recommendations-job
+      env:
+        SONAR_TOKEN: ${{ inputs.sonar-token }}
+        SONAR_PROJECT_KEY: ${{ inputs.sonar-project-key }}
+        SONAR_ORGANIZATION: ${{ inputs.sonar-organization }}
+      run: |
+        ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.projectKey="$SONAR_PROJECT_KEY" -Dsonar.organization="$SONAR_ORGANIZATION" \
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+          -Dsonar.qualitygate.wait=true
+    - name: Report missing Sonar configuration
+      if: inputs.sonar-project-key == ''
+      shell: bash
+      run: echo 'Spark Sonar analysis is not configured. Set SONAR_RECOMMENDATIONS_JOB_PROJECT_KEY for an independent project; never reuse the service key.' >> "$GITHUB_STEP_SUMMARY"

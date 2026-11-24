@@ -696,3 +696,7 @@ See the [HDFS system design and step-by-step lab](recommendations-hdfs.md) for `
 ## New to Hadoop?
 
 Follow [Hadoop from zero: local first, then Kubernetes](hadoop-first-steps.md) for a guided code tour, hands-on exercises, expected results and troubleshooting.
+
+## Optional Spark recommendations lab
+
+Follow [the Spark walkthrough](recommendations-spark.md) after HDFS archival works. It covers the separate recommendations database, public API, batch Docker image, manual Kubernetes Job, suspended CronJob and failure verification. No main API or React integration is required yet.

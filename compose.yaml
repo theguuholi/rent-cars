@@ -1,4 +1,36 @@
 services:
+  recommendations-db-init:
+    image: postgres:17
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    entrypoint: [sh, /study/create-database.sh]
+    volumes:
+      - ./helm/postgres/create-recommendations-db.sh:/study/create-database.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+  recommendations-job:
+    profiles: [spark]
+    build: ./apps/recommendations-job
+    image: rent-cars-recommendations-job:latest
+    environment:
+      RECOMMENDATIONS_DATABASE_URL: jdbc:postgresql://postgres:5432/recommendations
+      RECOMMENDATIONS_DATABASE_USER: postgres
+      RECOMMENDATIONS_DATABASE_PASSWORD: ${RECOMMENDATIONS_DATABASE_PASSWORD:-postgres}
+      HADOOP_USER_NAME: hadoop
+      SPARK_LOCAL_IP: 127.0.0.1
+    command:
+      - hdfs://hdfs-namenode:9000/rent-cars/raw/rentals
+      - hdfs://hdfs-namenode:9000/rent-cars/curated/popular-cars
+      - ${RECOMMENDATIONS_AS_OF:-}
+    depends_on:
+      recommendations-db-init:
+        condition: service_completed_successfully
+      hdfs-datanode:
+        condition: service_healthy
   hdfs-namenode:
     image: apache/hadoop:3.5.0
     platform: linux/amd64

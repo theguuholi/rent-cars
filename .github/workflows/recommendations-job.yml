@@ -1,0 +1,29 @@
+name: Recommendations Spark job
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quality:
+    name: Spark verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/recommendations-job/quality
+        with:
+          sonar-project-key: ${{ vars.SONAR_RECOMMENDATIONS_JOB_PROJECT_KEY }}
+          sonar-organization: ${{ vars.SONAR_ORGANIZATION }}
+          sonar-token: ${{ github.event_name != 'pull_request' && secrets.SONAR_TOKEN || github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && secrets.SONAR_TOKEN || '' }}
+  mutation:
+    name: Spark mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./.github/actions/recommendations-job/mutation

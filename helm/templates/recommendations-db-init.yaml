@@ -1,0 +1,9 @@
+{{- if and .Values.messaging.enabled .Values.recommendations.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-recommendations-db-init
+data:
+  create-database.sh: |
+{{ .Files.Get "postgres/create-recommendations-db.sh" | indent 4 }}
+{{- end }}

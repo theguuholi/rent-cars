@@ -1,0 +1,3 @@
+spring:
+  datasource:
+    password: ${RECOMMENDATIONS_DATABASE_PASSWORD:postgres}

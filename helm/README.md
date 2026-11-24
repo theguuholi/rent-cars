@@ -204,7 +204,7 @@ kubectl --context docker-desktop -n rent-cars logs -f deployment/fleet-recommend
 Rent or return a car at http://localhost:5173. Expect `Rental event received`
 with its event ID, type, rental ID, partition and offset. The consumer uses the
 same topic and bootstrap address as the API and its own consumer group. It has
-no public port or Kubernetes Service; it runs as non-root with a read-only
+an internal ClusterIP Service on port 8085 for public ranking reads; it runs as non-root with a read-only
 filesystem and a writable temporary volume, like the API.
 
 A running/Ready pod only confirms process startup here, not successful event
@@ -257,3 +257,7 @@ Follow the [complete E2E checklist](../docs/local-stack-validation.md) to verify
 ## Optional HDFS archival
 
 See the [HDFS system design and step-by-step lab](../docs/recommendations-hdfs.md) for `make dev HDFS_ENABLED=true`, Kubernetes, replay safety, retries/DLT and storage inspection. Use a new consumer group when backfilling retained events; enabling storage does not replay already committed offsets.
+
+## Optional Spark recommendations lab
+
+Follow [the Spark walkthrough](../docs/recommendations-spark.md) after HDFS archival works. It covers the separate recommendations database, public API, batch Docker image, manual Kubernetes Job, suspended CronJob and failure verification. No main API or React integration is required yet.

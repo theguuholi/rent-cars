@@ -1,6 +1,6 @@
-# Recommendations consumer
+# Recommendations service
 
-An independent Spring Boot application that consumes rental events from Kafka. It validates the event envelope and logs a receipt; an optional HDFS lab archives the original JSON before the offset can advance. It does not calculate recommendations, write business data or expose an HTTP server.
+An independent Spring Boot application that consumes rental events from Kafka. It validates the event envelope and logs a receipt; an optional HDFS lab archives the original JSON before the offset can advance. It also exposes the latest completed Spark ranking from its own PostgreSQL database; computation belongs to the independent batch job.
 
 ## Run locally
 
@@ -17,7 +17,7 @@ For the complete stack, run only `make dev`: it already starts this consumer, th
 Rental event received: eventId=... eventType=RentalOpened rentalId=... partition=... offset=...
 ```
 
-Open [Kafka UI](http://localhost:8084), select `rentals.events`, and inspect its messages and consumer group `rent-cars-recommendations-v1`. `make kafka-ui` starts the UI separately. This consumer has no browser port of its own.
+Open [Kafka UI](http://localhost:8084), select `rentals.events`, and inspect its messages and consumer group `rent-cars-recommendations-v1`. `make kafka-ui` starts the UI separately. The internal read API and Swagger use port 8085.
 
 Stop the consumer with Ctrl+C. Restart it with the same group to resume from committed offsets. To study replay, use a new group (the broker must already be running):
 
@@ -47,7 +47,7 @@ The Dockerfile remains available for Kubernetes deployment. Its multi-stage
 image contains the application and a distroless Java runtime; Maven and the JDK
 remain in the build stage.
 
-For local Kubernetes, the root Helm chart includes this supporting consumer by default. Publish all images with `./scripts/push-images.sh`, then run `make k8s-up`; it prepares Kafka before deploying the application. Follow the [Helm guide](../../helm/README.md#verify-the-supporting-consumer) to inspect receipt logs and configure image/group settings. There is no public consumer endpoint or Service.
+For local Kubernetes, the root Helm chart includes this supporting consumer by default. Publish all images with `./scripts/push-images.sh`, then run `make k8s-up`; it prepares Kafka before deploying the application. Follow the [Helm guide](../../helm/README.md#verify-the-supporting-consumer) to inspect receipt logs and configure image/group settings. The ranking API has an internal ClusterIP Service; Kafka receipt processing remains asynchronous.
 
 ## Delivery and failures
 
@@ -63,9 +63,8 @@ Recovery is at-least-once and can duplicate a DLT record after a crash.
 
 Follow the [DLT design and local/Kubernetes exercises](../../docs/recommendations-dlt.md)
 for explicit PostgreSQL/Outbox boundaries, retention, production durability,
-observability, configuration and safe manual replay. No new table or migration
-is introduced. Micrometer recovery counters are exported via JMX; this consumer
-still has no HTTP server.
+observability, configuration and safe manual replay. DLT recovery itself requires no relational table; the separate ranking feature owns its snapshot migration. Micrometer recovery counters are exported via JMX; this consumer
+exposes a separate read-only ranking API.
 
 ## Code navigation
 
@@ -123,3 +122,16 @@ Run `make dev HDFS_ENABLED=true` from the repository root to include the archive
 ## New to Hadoop?
 
 Follow [Hadoop from zero: local first, then Kubernetes](../../docs/hadoop-first-steps.md) for a guided code tour, hands-on exercises, expected results and troubleshooting.
+
+## Internal ranking API
+
+This service owns a separate logical database in the shared PostgreSQL instance and applies Flyway migrations on startup. It still consumes and archives Kafka events independently of the optional [Spark batch](../recommendations-job/README.md).
+
+- Local: `make dev HDFS_ENABLED=true` creates the `recommendations` database in the existing PostgreSQL instance on 5432 and starts this service on 8085.
+- Swagger: http://localhost:8085/swagger-ui/index.html (no authentication).
+- The study read API is public; no login or API password is required. Local database credentials are `postgres` / `postgres`.
+- Production: set `SPRING_PROFILES_ACTIVE=prod`, `RECOMMENDATIONS_DATABASE_URL`, `RECOMMENDATIONS_DATABASE_USER`, `RECOMMENDATIONS_DATABASE_PASSWORD`. There is no production password fallback. The Kubernetes Service remains internal (ClusterIP).
+- `GET /recommendations/cars?limit=30`: latest immutable snapshot, at most 100 results. No completed batch returns empty items and null timestamps. History is not current availability.
+- [Executable requests](../../requests/http/recommendations.http) and [local/Kubernetes walkthrough](../../docs/recommendations-spark.md).
+
+The ranking response is a read model assembled from a persisted snapshot, not a CRUD entity. The job owns calculation; this API never starts Spark or reads raw HDFS during an HTTP request.

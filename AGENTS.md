@@ -1,6 +1,6 @@
 # Rent Cars
 
-This monorepo contains the Spring Boot API in `apps/api/`, the React application in `apps/web/`, the Kafka consumer in `apps/recommendations/`, and executable HTTP examples in `requests/`. The Go implementation lives in a separate repository. Work within the requested scope.
+This monorepo contains the Spring Boot API in `apps/api/`, the React application in `apps/web/`, the recommendations service in `apps/recommendations/`, the independent Java 21 Spark batch in `apps/recommendations-job/`, and executable HTTP examples in `requests/`. The Go implementation lives in a separate repository. Work within the requested scope.
 
 ## Before editing
 
@@ -41,7 +41,8 @@ Run the relevant check from the repository root and inspect the changed files in
 | API (Docker running) | `make check-api` | `apps/api/target/site/jacoco/index.html` |
 | React (run `make setup` on a fresh checkout) | `make check-web` | `apps/web/coverage/index.html` |
 | Recommendations (Docker running) | `make check-recommendations` | `apps/recommendations/target/site/jacoco/index.html` |
-| All Java | `make check-java` | Both Java reports |
+| Spark job (JDK 21, Docker) | `make check-recommendations-job` | `apps/recommendations-job/target/site/jacoco/index.html` |
+| All Java | `make check-java` | All three Java reports |
 | Full repository | `make check` | Java and web reports above |
 
 Add tests for missed executable lines and branches. Document any path that cannot be tested reliably using the exception process below. Existing aggregate CI thresholds are a separate merge safeguard. Preserve the configured checks and coverage scope.
@@ -55,3 +56,5 @@ Add tests for missed executable lines and branches. Document any path that canno
 ## Handoff
 
 Report the behavior changed, the commands actually run and their results. Distinguish local verification from remote checks. Flag unverified paths and pending decisions for the reviewer.
+
+For full Java checks, use JDK 25 as `JAVA_HOME` and set `JAVA21_HOME` to JDK 21 for the Spark job. Read its scoped guide; do not apply Spring dependency management to Spark.
