@@ -14,7 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @SecurityScheme(name = "serviceCredentials", type = SecuritySchemeType.HTTP, scheme = "basic")
 class RecommendationSecurity {
   @Bean
-  SecurityFilterChain recommendationSecurityFilterChain(HttpSecurity http) throws Exception {
+  SecurityFilterChain recommendationSecurityFilterChain(HttpSecurity http) {
     // This read-only service has no form login or state-changing HTTP operations.
     return http.sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
