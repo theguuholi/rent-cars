@@ -1,6 +1,6 @@
 # Rental events: local Kafka and Kubernetes walkthrough
 
-This application publishes `RentalOpened` and `RentalReturned`. It does not send rental emails or run Spark yet. PostgreSQL remains authoritative: rental changes and their Outbox record commit together. The relay retries publication independently. Read the [design and limitations](decisions/0008-rental-event-publication.md) before treating the lab as a production design.
+This application publishes `RentalOpened` and `RentalReturned`. Publishing rental events does not run Spark or send rental emails. The [separate Spark batch](recommendations-spark.md) runs explicitly after HDFS ingestion. PostgreSQL remains authoritative: rental changes and their Outbox record commit together. The relay retries publication independently. Read the [design and limitations](decisions/0008-rental-event-publication.md) before treating the lab as a production design.
 
 ## 1. Run on the host with Docker infrastructure
 

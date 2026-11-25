@@ -2,8 +2,8 @@
 
 Run commands from the repository root. Use one environment at a time.
 This is the acceptance checklist for a contributor: product behavior first,
-then the asynchronous event behind it. Recommendations logs events; it does not
-calculate recommendations yet.
+then the asynchronous event behind it. Recommendations consumes events and optionally archives them in HDFS. The separate
+Spark batch computes rankings which recommendations serves; see [the Spark lab](recommendations-spark.md).
 
 ## 1. Choose and start one environment
 

@@ -9,7 +9,7 @@ Admin access is explicitly enabled for this localhost-only development service.
 1. Run `make setup` once, then `make dev` from the repository root.
 2. Open <http://localhost:5173>, browse the catalog, sign in and open/return a
    rental. Failed API calls are useful too; their HTTP status appears on the
-   request span. Use the [HTTP Yac walkthrough](getting-started.md#step-4-open-the-requests-in-vs-code)
+   request span. Use the [HTTP Yac walkthrough](api-and-environment-walkthrough.md#step-4-open-the-requests-in-vs-code)
    to exercise the same API paths without the browser.
 3. Open <http://localhost:3000>. The current local LGTM image allows anonymous
    access, so no sign-in is needed. It includes **RED Metrics** and **JVM Metrics**

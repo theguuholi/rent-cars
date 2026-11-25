@@ -6,7 +6,7 @@ setup:
 	npm --prefix apps/web ci
 
 web-dev: check-local-environment
-	npm --prefix apps/web run dev -- --strictPort
+	bash scripts/development/app.sh web
 
 check-web:
 	npm --prefix apps/web run format:check
