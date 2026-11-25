@@ -28,3 +28,9 @@ instance before starting API, React and recommendations together. It does not
 run Spark. After creating rentals and confirming HDFS archival, use
 `make recommendations-build` to calculate a snapshot. Use
 `make dev HDFS_ENABLED=true` when studying this complete flow.
+
+Development coordination lives in `scripts/development/`: `app.sh` supplies the
+shared local environment, `start.sh` runs the foreground stack, `tmux.sh` manages
+an optional named terminal session, and `doctor.sh` diagnoses prerequisites.
+Use `make check-development` for isolated command-level regression tests.
+See [terminal lifecycle](../docs/development-terminals.md) before using tmux.

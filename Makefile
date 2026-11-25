@@ -15,6 +15,8 @@ include make/k8s.mk
 
 help:
 	@printf '%s\n' \
+	  'make doctor       Diagnose local prerequisites without changing services' \
+	  'make dev-tmux     Start or reattach an optional tmux session' \
 	  'make setup        Install frontend dependencies (first run)' \
 	  'make dev          Start API, React, recommendations and all local infrastructure' \
 	  'make dev HDFS_ENABLED=true  Also archive rental events in HDFS' \

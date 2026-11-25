@@ -12,6 +12,7 @@ Install **JDK 25**, **Node 24.16.0 with npm**, **Make** and **Docker with Compos
 git clone https://github.com/theguuholi/rent-cars.git
 cd rent-cars
 make setup
+make doctor
 make dev
 ```
 
@@ -46,9 +47,9 @@ Browser → React → Spring Boot API → PostgreSQL
 | Mailpit | Captures development email | Test password recovery without sending real email |
 | Grafana LGTM | API logs, metrics and traces | Investigate requests and failures |
 | Kafka + Kafbat | Retains rental events and lets you inspect them | Study publication, partitions, offsets and replay |
-| [Recommendations consumer](apps/recommendations/README.md) | Validates and logs rental event receipts | Study a separate consumer after completing the rental flow |
+| [Recommendations consumer](apps/recommendations/README.md) | Consumes rental events, optionally archives them in HDFS, and serves stored rankings | Study a separate consumer after completing the rental flow |
 
-**Recommendations is a supporting learning service, not part of the synchronous rental request.** It currently consumes `RentalOpened` and `RentalReturned`; it does not calculate suggestions or use Spark/Hadoop yet. Stopping it does not prevent the API from completing a rental. Events can be consumed later, within Kafka's retention period.
+**Recommendations is a supporting learning service, not part of the synchronous rental request.** It consumes `RentalOpened` and `RentalReturned`, optionally archives events in HDFS, and serves ranking snapshots calculated by the separate Spark batch. Stopping it does not prevent the API from completing a rental. Events can be consumed later, within Kafka's retention period.
 
 ## 3. Open the development tools
 
@@ -93,7 +94,7 @@ Choose one path first. Each environment has its own database, photo storage and 
 | Daily development | `make dev` | http://localhost:5173 | Included in `make dev` |
 | Local Kubernetes | Publish images, then `make k8s-up` | http://localhost:5173 | Included by default, with Kafka prepared first |
 
-For the optional local consumer, follow [onboarding step 12](docs/getting-started.md#step-12-run-the-supporting-consumer-locally). For Kubernetes, follow [step 13](docs/getting-started.md#step-13-alternative-docker-desktop-kubernetes) and the [Helm guide](helm/README.md). Kubernetes is a local deployment exercise, not a production-ready environment.
+For the optional local consumer, follow [onboarding step 12](docs/api-and-environment-walkthrough.md#step-12-run-the-supporting-consumer-locally). For Kubernetes, follow [step 13](docs/api-and-environment-walkthrough.md#step-13-alternative-docker-desktop-kubernetes) and the [Helm guide](helm/README.md). Kubernetes is a local deployment exercise, not a production-ready environment.
 
 ### Publish all application images
 
@@ -102,9 +103,9 @@ docker login -u guuhworship
 ./scripts/push-images.sh
 ```
 
-The script builds API, web and recommendations from your working tree **before publishing any image**, then pushes their `latest` tags under `docker.io/guuhworship`. Set `IMAGE_NAMESPACE` to use your own registry/namespace. If a build fails, nothing is pushed; if a push fails, earlier pushes are not rolled back. Images use your build machine's platform.
+The script builds API, web, recommendations and recommendations-job from your working tree **before publishing any image**, then pushes their `latest` tags under `docker.io/guuhworship`. Set `IMAGE_NAMESPACE` to use your own registry/namespace. If a build fails, nothing is pushed; if a push fails, earlier pushes are not rolled back. Images use your build machine's platform.
 
-`make k8s-up` pulls these published images; it does not build your source. Set all three image repositories in `helm/values.yaml` when using another namespace. See the [deployment guide](helm/README.md) for checking the consumer and disabling the event stack when needed.
+`make k8s-up` pulls these published images; it does not build your source. Set all four image repositories in `helm/values.yaml` when using another namespace. See the [deployment guide](helm/README.md) for checking the consumer and disabling the event stack when needed.
 
 ## 6. Navigate and verify the code
 
@@ -210,3 +211,5 @@ After completing the HDFS lab, follow [Spark: from rental events to a ranking](d
 For all Java checks, use JDK 25 and run `JAVA21_HOME=/path/to/jdk-21 make check-java`. The optional Spark job has its own build and Java version.
 
 The [popular cars walkthrough](docs/popular-cars.md) connects that snapshot to the main API and React catalog, with local and Kubernetes validation steps.
+
+For separate logs and independent restarts, see [optional tmux development](docs/development-terminals.md).

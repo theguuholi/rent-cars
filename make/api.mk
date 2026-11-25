@@ -3,7 +3,7 @@
 .PHONY: api-dev check-api
 
 api-dev: infra-up
-	cd apps/api && RENT_MESSAGING_ENABLED=true AWS_ACCESS_KEY_ID=rent-cars-dev AWS_SECRET_ACCESS_KEY=rent-cars-dev-secret ./mvnw spring-boot:run
+	HDFS_ENABLED=$(HDFS_ENABLED) bash scripts/development/app.sh api
 
 check-api:
 	cd apps/api && ./mvnw -B verify

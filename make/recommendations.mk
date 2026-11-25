@@ -4,7 +4,7 @@
 
 recommendations-dev: kafka-up
 	docker compose run --rm recommendations-db-init
-	cd apps/recommendations && HDFS_ARCHIVE_ENABLED=$(HDFS_ENABLED) ./mvnw spring-boot:run
+	HDFS_ENABLED=$(HDFS_ENABLED) bash scripts/development/app.sh recommendations
 
 check-recommendations:
 	cd apps/recommendations && ./mvnw -B verify
