@@ -29,7 +29,7 @@ export function MyRentalsPage() {
             <article
               key={rental.id}
               aria-label={`${rental.car.name} rental`}
-              className="rounded-3xl bg-white shadow-sm p-6 sm:p-8"
+              className="surface-hover rounded-3xl bg-white p-6 sm:p-8"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-xl font-semibold">

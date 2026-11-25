@@ -103,6 +103,6 @@ scenario.each([
   async (query, expected) => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: [`/cars?q=${query}`] }))
     await router.load()
-    expect(router.state.matches.at(-1)?.search.q).toBe(expected)
+    expect(router.state.matches.at(-1)?.search).toMatchObject({ q: expected })
   },
 )

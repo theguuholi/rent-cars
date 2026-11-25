@@ -4,6 +4,7 @@ These are browser captures of the React implementation, using illustrative API
 fixtures rather than production user data. They are not generated mockups.
 
 - [Desktop catalog](catalog-desktop.png)
+- [Unified controls with focus](catalog-controls.png)
 - [Mobile car editor](car-form-mobile.png)
 - [Desktop sign-in](sign-in-desktop.png)
 

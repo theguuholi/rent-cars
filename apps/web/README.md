@@ -177,3 +177,13 @@ assembled from one page or protected administrator catalogs.
 The softer design uses 24px surfaces, 12px controls, pill filters and light
 shadows. Form sections rely on spacing instead of nested borders. The main fleet
 comes before the independent recommendation section. The home remains navigation-only.
+
+### Field and rental-panel feedback
+
+The shared `control` utility gives inputs and selects a 48px minimum height and
+one soft focus ring. Selects keep native semantics with a consistent chevron;
+forced-colors mode restores the system arrow and a visible outline. Use
+`surface-hover` for the rental receipt cards and the car's rental-details panel:
+hover and focus within adjust the shadow/border without moving the content.
+This feedback does not make a panel clickable; its existing links and buttons
+remain the actions.

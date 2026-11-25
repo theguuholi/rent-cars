@@ -47,7 +47,7 @@ export function CarsPage() {
           <label>
             Search cars
             <input
-              className="control mt-2 rounded-full bg-white px-5"
+              className="control mt-2 rounded-2xl bg-white px-5"
               placeholder="Search by model, brand or category"
               value={search.q || search.name}
               onChange={(event) => update({ q: event.target.value, name: '' })}
@@ -67,7 +67,7 @@ export function CarsPage() {
             <label className="min-w-0 flex-1 basis-36">
               Brand
               <input
-                className="control mt-2 rounded-full bg-white"
+                className="control mt-2 bg-white"
                 placeholder="Any brand"
                 value={search.brand}
                 onChange={(event) => update({ brand: event.target.value })}
@@ -76,7 +76,7 @@ export function CarsPage() {
             <label className="min-w-0 flex-1 basis-36">
               Category
               <input
-                className="control mt-2 rounded-full bg-white"
+                className="control mt-2 bg-white"
                 placeholder="Any category"
                 value={search.category}
                 onChange={(event) => update({ category: event.target.value })}
@@ -85,7 +85,7 @@ export function CarsPage() {
             <label className="min-w-0 flex-1 basis-36 sm:ml-auto sm:max-w-56">
               Sort by
               <select
-                className="control mt-2 rounded-full bg-white"
+                className="control mt-2 bg-white"
                 value={search.sort}
                 onChange={(event) => update({ sort: event.target.value })}
               >

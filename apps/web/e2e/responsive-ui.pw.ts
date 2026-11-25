@@ -86,3 +86,33 @@ test('Given an administrator on mobile, when opening a user, then all account ac
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   })
 })
+
+test('Given catalog filters, when focusing an input and choosing a sort, then controls share a smooth focus and consistent geometry', async ({
+  page,
+}) => {
+  await test.step('Given the desktop catalog', async () => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(`${webBaseUrl}/cars`)
+  })
+  const category = page.getByRole('textbox', { name: 'Category', exact: true })
+  const sort = page.getByRole('combobox', { name: 'Sort by' })
+  await test.step('When focusing Category, then a soft ring replaces the detached red outline', async () => {
+    await category.focus()
+    await expect(category).toBeFocused()
+    await expect(category).toHaveCSS('outline-style', 'none')
+    await expect(category).not.toHaveCSS('box-shadow', 'none')
+  })
+  await test.step('Then the sort matches the input height and remains focusable and selectable', async () => {
+    await expect(sort).toHaveCSS('appearance', 'none')
+    const inputBox = await category.boundingBox()
+    const selectBox = await sort.boundingBox()
+    expect(inputBox).not.toBeNull()
+    expect(selectBox).not.toBeNull()
+    expect(selectBox!.height).toBe(inputBox!.height)
+    expect(selectBox!.y).toBe(inputBox!.y)
+    await sort.focus()
+    await expect(sort).toBeFocused()
+    await sort.selectOption('name,desc')
+    await expect(sort).toHaveValue('name,desc')
+  })
+})
