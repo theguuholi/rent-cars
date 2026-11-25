@@ -1,80 +1,85 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/archivo';
 @import 'tailwindcss';
 
 @theme {
-  --color-brand: #006b48;
+  --font-sans: 'Inter Variable', sans-serif;
+  --font-heading: 'Archivo Variable', sans-serif;
+  --color-brand: #dc1637;
+  --color-brand-hover: #b5122d;
+  --color-brand-soft: #fff1f3;
+  --color-canvas: #fafafa;
+  --color-surface: #f3f4f6;
+  --color-ink: #29292e;
+  --color-muted: #62626b;
+  --color-line: #e1e1e8;
+  --color-header: #1b1b1f;
 }
 
 @layer base {
   body {
-    @apply bg-white font-sans text-slate-900 antialiased;
+    @apply bg-canvas font-sans text-ink antialiased;
   }
   button {
     @apply cursor-pointer font-semibold;
   }
   button:disabled {
-    @apply cursor-default opacity-50;
+    @apply cursor-not-allowed opacity-50;
   }
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-brand;
+    @apply outline-2 outline-offset-4 outline-brand;
   }
   label {
-    @apply mb-1 block font-semibold;
+    @apply mb-2 block text-sm font-medium;
+  }
+  input[type='checkbox'] {
+    @apply size-4 accent-brand;
   }
   [role='alert'] {
     @apply my-2 text-sm text-red-700;
   }
+  h2,
+  h3 {
+    @apply font-heading;
+  }
+  dt {
+    @apply text-sm text-muted;
+  }
+  dd {
+    @apply mt-1 font-medium wrap-anywhere;
+  }
 }
 
-@layer components {
-  .catalog-nav a {
-    @apply border-b-2 border-transparent py-4 font-semibold;
+/* Native controls and router links share these utilities with React components. */
+@utility control {
+  @apply block min-h-12 w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-base font-normal text-ink placeholder:text-muted motion-safe:transition-[border-color,box-shadow,background-color] enabled:hover:border-muted/40 focus:border-brand/70 focus:outline-none focus:ring-4 focus:ring-brand/10 aria-invalid:border-red-700 disabled:bg-surface disabled:text-muted read-only:bg-surface;
+
+  &:where(select) {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2362626b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem;
+    padding-right: 2.75rem;
   }
-  .catalog-nav a[aria-current='page'] {
-    @apply border-brand text-brand;
-  }
-  .btn-primary,
-  .btn-secondary,
-  .btn-danger {
-    @apply rounded-md border px-4 py-2;
-  }
-  .btn-primary {
-    @apply border-brand bg-brand text-white hover:bg-emerald-900;
-  }
-  .btn-secondary {
-    @apply border-slate-300 bg-white hover:bg-slate-50;
-  }
-  .btn-danger {
-    @apply border-red-700 bg-red-700 text-white hover:bg-red-800;
-  }
-  .control {
-    @apply w-full rounded-md border border-slate-400 px-3 py-2 focus:border-brand aria-invalid:border-red-700;
-  }
-  .catalog-table {
-    @apply w-full text-left;
-  }
-  .catalog-table thead {
-    @apply bg-slate-100 text-sm;
-  }
-  .catalog-table th,
-  .catalog-table td {
-    @apply px-4 py-3 wrap-anywhere;
-  }
-  .catalog-table tbody tr {
-    @apply border-b border-slate-200;
-  }
-  .catalog-table tbody tr[data-selected='true'] {
-    @apply bg-emerald-50 shadow-[inset_3px_0_0_var(--color-brand)];
-  }
-  @media (width < 40rem) {
-    .catalog-table thead {
-      @apply sr-only;
+
+  @media (forced-colors: active) {
+    &:focus {
+      outline: 2px solid Highlight;
+      outline-offset: 2px;
     }
-    .catalog-table tbody tr {
-      @apply grid gap-1 px-2 py-3;
-    }
-    .catalog-table tbody th,
-    .catalog-table tbody td {
-      @apply px-2 py-1;
+    &:where(select) {
+      appearance: auto;
+      background-image: none;
     }
   }
+}
+
+@utility action {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-brand px-5 py-2.5 text-sm font-semibold text-white motion-safe:transition-colors hover:bg-brand-hover disabled:pointer-events-none aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[variant=secondary]:border-line data-[variant=secondary]:bg-white data-[variant=secondary]:text-ink data-[variant=secondary]:hover:bg-surface data-[variant=danger]:bg-red-700 data-[variant=danger]:hover:bg-red-800;
+}
+
+/* Hover is visual feedback; the panel itself does not become a navigation action. */
+@utility surface-hover {
+  @apply border border-transparent shadow-sm motion-safe:transition-[border-color,box-shadow] hover:border-brand/20 hover:shadow-md focus-within:border-brand/30 focus-within:shadow-md;
 }

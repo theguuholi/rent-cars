@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/Button/Button'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { PageSection } from '../../../../components/PageSection/PageSection'
@@ -29,7 +30,7 @@ export function UserRecordPage({ id, mode }: { id: string; mode: 'detail' | 'edi
     return (
       <PageSection eyebrow="Administration" title="User details">
         <p role="alert">{query.error.message}</p>
-        <button onClick={() => void query.refetch()}>Try again</button>
+        <Button onClick={() => void query.refetch()}>Try again</Button>
       </PageSection>
     )
   const user = query.data
@@ -42,9 +43,9 @@ export function UserRecordPage({ id, mode }: { id: string; mode: 'detail' | 'edi
         description="Accounts with rental history cannot be deleted."
       >
         {remove.isError && <p role="alert">{remove.error.message}</p>}
-        <button className="btn-danger" disabled={remove.isPending} onClick={() => remove.mutate()}>
+        <Button variant="danger" disabled={remove.isPending} onClick={() => remove.mutate()}>
           Confirm deletion
-        </button>{' '}
+        </Button>{' '}
         <Link to="/users/$id" params={{ id }}>
           Cancel
         </Link>
@@ -55,7 +56,7 @@ export function UserRecordPage({ id, mode }: { id: string; mode: 'detail' | 'edi
       eyebrow="Administration"
       title={user.firstName ? `${user.firstName} ${user.lastName}` : user.email}
     >
-      <dl>
+      <dl className="max-w-xl space-y-2 rounded-3xl bg-white shadow-sm p-6">
         <dt>Email</dt>
         <dd>{user.email}</dd>
         <dt>Role</dt>
@@ -70,13 +71,15 @@ export function UserRecordPage({ id, mode }: { id: string; mode: 'detail' | 'edi
         )}
       </dl>
       <div className="mt-4 flex gap-4">
-        <Link to="/users/$id/edit" params={{ id }}>
+        <Link className="action" to="/users/$id/edit" params={{ id }}>
           Edit user
         </Link>
-        <Link to="/users/$id/delete" params={{ id }}>
+        <Link className="action" data-variant="secondary" to="/users/$id/delete" params={{ id }}>
           Delete user
         </Link>
-        <Link to="/users">Back to users</Link>
+        <Link className="action" data-variant="secondary" to="/users">
+          Back to users
+        </Link>
       </div>
     </PageSection>
   )

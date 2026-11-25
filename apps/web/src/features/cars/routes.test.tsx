@@ -88,3 +88,21 @@ scenario.each(['name,asc', 'name,desc', 'brand,asc', 'brand,desc'])(
     expect(router.state.matches.at(-1)?.search).toMatchObject({ sort })
   },
 )
+
+scenario.each([
+  ['208', '208'],
+  ['0', '0'],
+  ['Fiat', 'Fiat'],
+  ['A', 'A'],
+  ['', undefined],
+  ['true', undefined],
+  ['null', undefined],
+  ['%5B%22Fiat%22%5D', undefined],
+])(
+  'Given query %s in a shared URL, when validating search, then accept text or numbers and discard invalid values',
+  async (query, expected) => {
+    const router = createAppRouter(createMemoryHistory({ initialEntries: [`/cars?q=${query}`] }))
+    await router.load()
+    expect(router.state.matches.at(-1)?.search).toMatchObject({ q: expected })
+  },
+)

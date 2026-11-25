@@ -22,7 +22,7 @@ describe('MostRentedCars', () => {
       openCatalogRoute('/cars', undefined, null)
       await screen.findByRole('region', { name: 'Most rented cars' })
       expect(recommendations().getByRole('status')).toHaveTextContent('Loading recommendations…')
-      expect(screen.getByRole('textbox', { name: 'Name' })).toBeEnabled()
+      expect(screen.getByRole('textbox', { name: 'Search cars' })).toBeEnabled()
       expect(listRecommendedCars).toHaveBeenCalledWith(expect.any(AbortSignal))
     },
   )
@@ -56,8 +56,12 @@ describe('MostRentedCars', () => {
       await screen.findByRole('link', { name: 'Zebra' })
       const rows = recommendations().getAllByRole('listitem')
       expect(rows).toHaveLength(2)
-      expect(rows[0]).toHaveTextContent('ZebraHondaR$ 123,45 per day')
-      expect(rows[1]).toHaveTextContent('AlphaToyotaR$ 50,00 per day')
+      expect(rows[0]).toHaveTextContent('Honda')
+      expect(rows[0]).toHaveTextContent('Zebra')
+      expect(rows[0]).toHaveTextContent('R$ 123,45 per day')
+      expect(rows[1]).toHaveTextContent('Toyota')
+      expect(rows[1]).toHaveTextContent('Alpha')
+      expect(rows[1]).toHaveTextContent('R$ 50,00 per day')
       expect(within(rows[0]).getByRole('link')).toHaveAttribute('href', '/cars/first')
       expect(within(rows[1]).getByRole('link')).toHaveAttribute('href', '/cars/second')
     },

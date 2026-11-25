@@ -42,15 +42,16 @@ public class CarController {
   @Operation(
       summary = "Search available cars",
       description =
-          "Name, brand and category filters match case-insensitive text fragments. Page numbering starts at zero; page size is limited to 100. Sort supports name, brand and id.")
+          "The optional q parameter matches name, brand OR category. Individual filters are combined with AND and match case-insensitive text fragments. Page numbering starts at zero; page size is limited to 100. Sort supports name, brand and id.")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
   @ApiResponse(responseCode = "400", description = "Invalid page size or sort")
   public CarPage list(
+      @RequestParam(required = false) String q,
       @RequestParam(required = false) String name,
       @RequestParam(required = false) String brand,
       @RequestParam(required = false) String category,
       @PageableDefault(size = 12, sort = "name") Pageable pageable) {
-    return cars.list(true, name, brand, category, pageable);
+    return cars.list(true, q, name, brand, category, pageable);
   }
 
   @SecurityRequirement(name = "bearerAuth")
@@ -58,14 +59,16 @@ public class CarController {
   @GetMapping("/manage")
   @Operation(
       summary = "Search all cars for fleet administration",
-      description = "Includes available and unavailable cars. Requires an administrator token.")
+      description =
+          "Includes available and unavailable cars. The optional q searches name, brand OR category; individual filters narrow the results. Requires an administrator token.")
   @ApiResponse(responseCode = "200", useReturnTypeSchema = true)
   public CarPage manage(
+      @RequestParam(required = false) String q,
       @RequestParam(required = false) String name,
       @RequestParam(required = false) String brand,
       @RequestParam(required = false) String category,
       @PageableDefault(size = 12, sort = "name") Pageable pageable) {
-    return cars.list(false, name, brand, category, pageable);
+    return cars.list(false, q, name, brand, category, pageable);
   }
 
   @JsonView(JsonViews.Detail.class)

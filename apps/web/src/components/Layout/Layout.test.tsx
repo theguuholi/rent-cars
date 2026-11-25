@@ -14,6 +14,21 @@ describe('Application layout', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   scenario(
+    'Given keyboard navigation, when the layout renders, then the skip link targets main content without inserting a positive tab stop',
+    async () => {
+      openCatalogRoute('/categories')
+      await screen.findByText('No vehicle categories available.')
+      const main = screen.getByRole('main')
+      expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute(
+        'href',
+        '#main-content',
+      )
+      expect(main).toHaveAttribute('id', 'main-content')
+      expect(main).toHaveAttribute('tabindex', '-1')
+    },
+  )
+
+  scenario(
     'Given a catalog with a nested editor, when its URL opens, then the tab title identifies the editor instead of its parent catalog',
     async () => {
       const root = createRootRoute({ component: Layout })

@@ -7,7 +7,7 @@ export function ForbiddenPage() {
       title="Access denied"
       description="This page requires an administrator account."
     >
-      <Link to="/cars" className="btn-secondary">
+      <Link to="/cars" className="action" data-variant="secondary">
         Browse cars
       </Link>
     </PageSection>

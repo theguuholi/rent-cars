@@ -1,3 +1,4 @@
+import { AccountPanel } from '../../../../components/AccountPanel/AccountPanel'
 import { SubmitButton } from '../../../../components/SubmitButton/SubmitButton'
 import { TextField } from '../../../../components/TextField/TextField'
 import { useCurrentAction } from '../../../../routes/use-current-action'
@@ -30,43 +31,45 @@ export function LoginPage() {
     },
   })
   return (
-    <PageSection eyebrow="Account" title="Sign in" description="Use your Rent Cars account.">
-      <form
-        className="grid max-w-md gap-4"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <TextField
-          form={form}
-          name="email"
-          type="email"
-          autoComplete="username"
-          required
-          maxLength={null}
-        />
-        <TextField
-          form={form}
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          maxLength={null}
-        />
-        {error && <p role="alert">{error}</p>}
-        <SubmitButton form={form}>Sign in</SubmitButton>
-      </form>
-      <p className="mt-4">
-        <Link className="underline" to="/register">
-          Create an account
-        </Link>
-      </p>
-      <p className="mt-2">
-        <Link className="underline" to="/forgot-password">
-          Forgot password?
-        </Link>
-      </p>
-    </PageSection>
+    <AccountPanel>
+      <PageSection eyebrow="Account" title="Sign in" description="Use your Rent Cars account.">
+        <form
+          className="grid gap-5"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void form.handleSubmit()
+          }}
+        >
+          <TextField
+            form={form}
+            name="email"
+            type="email"
+            autoComplete="username"
+            required
+            maxLength={null}
+          />
+          <TextField
+            form={form}
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            maxLength={null}
+          />
+          {error && <p role="alert">{error}</p>}
+          <SubmitButton form={form}>Sign in</SubmitButton>
+        </form>
+        <p className="mt-4">
+          <Link className="underline" to="/register">
+            Create an account
+          </Link>
+        </p>
+        <p className="mt-2">
+          <Link className="underline" to="/forgot-password">
+            Forgot password?
+          </Link>
+        </p>
+      </PageSection>
+    </AccountPanel>
   )
 }

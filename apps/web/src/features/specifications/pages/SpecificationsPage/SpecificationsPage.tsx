@@ -1,3 +1,5 @@
+import { CatalogTable } from '../../../../components/CatalogTable/CatalogTable'
+import { Button } from '../../../../components/Button/Button'
 import { StaleEdit } from '../../../../edit-conflict'
 import { useCurrentAction } from '../../../../routes/use-current-action'
 import { AccessError } from '../../../auth/protected-fetch'
@@ -81,7 +83,7 @@ export function SpecificationsPage() {
       description="Manage the features and equipment available on rental vehicles."
       action={
         !panelOpen && (
-          <Link className="btn-primary" to="/specifications/new">
+          <Link className="action" data-variant="primary" to="/specifications/new">
             New specification
           </Link>
         )
@@ -121,14 +123,14 @@ export function SpecificationsPage() {
                   ? catalog.error.message
                   : 'Could not load specifications.'}
               </p>
-              <button className="btn-secondary" onClick={() => void catalog.refetch()}>
+              <Button variant="secondary" onClick={() => void catalog.refetch()}>
                 Try again
-              </button>
+              </Button>
             </div>
           ) : catalog.data.length === 0 ? (
             <p>No specifications yet.</p>
           ) : (
-            <table className="catalog-table" aria-label="Specifications">
+            <CatalogTable aria-label="Specifications">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -166,7 +168,7 @@ export function SpecificationsPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </CatalogTable>
           )}
         </div>
       </div>

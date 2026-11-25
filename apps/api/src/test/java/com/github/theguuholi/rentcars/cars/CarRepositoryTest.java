@@ -62,6 +62,46 @@ class CarRepositoryTest {
 
   @Nested
   class Search {
+
+    @Test
+    @Transactional
+    @DisplayName(
+        "Given matches in different fields, when searching globally, then OR matches are narrowed by availability and AND filters before pagination")
+    void unifiedSearch() {
+      var nameMatch = sedan("GLOBAL01");
+      var brandMatch = sedan("GLOBAL02");
+      var categoryMatch = sedan("GLOBAL03");
+      var unrelated = sedan("GLOBAL04");
+      var category =
+          jdbc.queryForObject(
+              "insert into categories(name,description) values ('UNIFIED', 'Search test') returning id",
+              UUID.class);
+      jdbc.update("update cars set name='Unified model', brand='One' where id=?", nameMatch);
+      jdbc.update(
+          "update cars set name='Brand match', brand='Unified', available=false where id=?",
+          brandMatch);
+      jdbc.update(
+          "update cars set name='Category match', brand='Two', category_id=? where id=?",
+          category,
+          categoryMatch);
+      jdbc.update("update cars set name='Other', brand='Other' where id=?", unrelated);
+      var page = PageRequest.of(0, 1, Sort.by("name", "id"));
+      var admin = cars.search(false, "%unified%", "%", "%", "%", page);
+      assertThat(admin.getTotalElements()).isEqualTo(3);
+      assertThat(admin.getTotalPages()).isEqualTo(3);
+      assertThat(admin.getContent()).extracting(Car::id).containsExactly(brandMatch);
+      var publicCars = cars.search(true, "%unified%", "%", "%", "%", page);
+      assertThat(publicCars.getTotalElements()).isEqualTo(2);
+      assertThat(publicCars.getContent()).extracting(Car::id).containsExactly(categoryMatch);
+      assertThat(cars.search(true, "%unified%", "%", "%one%", "%sedan%", page).getContent())
+          .extracting(Car::id)
+          .containsExactly(nameMatch);
+      assertThat(cars.search(false, "%unified%", "%other%", "%", "%", page).getTotalElements())
+          .isZero();
+      assertThat(cars.search(false, "%unmatched%", "%", "%", "%", page).getTotalElements())
+          .isZero();
+    }
+
     @Test
     @Transactional
     @DisplayName(
@@ -73,16 +113,18 @@ class CarRepositoryTest {
       jdbc.update(
           "update cars set name='Bravo', brand='SearchBrand', available=false where id=?", second);
       var pageable = PageRequest.of(0, 1, Sort.by("name", "id"));
-      var publicPage = cars.search(true, "%a%", "%searchbrand%", "%sedan%", pageable);
+      var publicPage = cars.search(true, "%", "%a%", "%searchbrand%", "%sedan%", pageable);
       assertThat(publicPage.getTotalElements()).isEqualTo(1);
       assertThat(publicPage.getContent()).extracting(Car::id).containsExactly(first);
-      var adminPage = cars.search(false, "%", "%searchbrand%", "%sedan%", pageable);
+      var adminPage = cars.search(false, "%", "%", "%searchbrand%", "%sedan%", pageable);
       assertThat(adminPage.getTotalElements()).isEqualTo(2);
       assertThat(adminPage.getTotalPages()).isEqualTo(2);
       assertThat(adminPage.getContent()).extracting(Car::id).containsExactly(first);
-      assertThat(cars.search(false, "%", "%searchbrand%", "%suv%", pageable).getTotalElements())
+      assertThat(
+              cars.search(false, "%", "%", "%searchbrand%", "%suv%", pageable).getTotalElements())
           .isZero();
-      assertThat(cars.search(false, "%", "%searchbrand%", "%eda%", pageable).getTotalElements())
+      assertThat(
+              cars.search(false, "%", "%", "%searchbrand%", "%eda%", pageable).getTotalElements())
           .isEqualTo(2);
     }
   }

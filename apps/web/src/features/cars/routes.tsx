@@ -8,6 +8,12 @@ import { z } from 'zod'
 import type { CarSearch } from './cars-api'
 
 const carSearchSchema: z.ZodType<Partial<CarSearch>> = z.object({
+  q: z
+    .union([z.string(), z.number()])
+    .transform(String)
+    .pipe(z.string().min(1))
+    .optional()
+    .catch(undefined),
   name: z.string().min(1).optional().catch(undefined),
   brand: z.string().min(1).optional().catch(undefined),
   category: z.string().min(1).optional().catch(undefined),

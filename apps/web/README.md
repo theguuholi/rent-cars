@@ -125,3 +125,65 @@ rental history remain for inspection, since cars with rental history cannot be d
 ### Most rented cars
 
 The fleet displays current available cars from the latest popularity snapshot. React calls the main API at `/api/cars/recommendations`; it never contacts Spark or the recommendations service directly. Loading, empty and error states are independent of catalog filtering. See [the end-to-end walkthrough](../../docs/popular-cars.md) to generate a ranking locally or on Kubernetes.
+
+## Visual system
+
+The interface uses the RentX-inspired palette through Tailwind v4 `@theme` tokens
+in `src/styles.css`: `brand`, `canvas`, `surface`, `ink`, `muted` and `line`, with white navigation. Archivo headings and Inter body fonts are bundled locally through
+Fontsource; the browser does not contact a font CDN. Their OFL licenses ship
+with the production assets under `public/licenses/`.
+
+Reuse `Button`, `TextField`, `FormSection`, `CatalogTable`, `AccountPanel` and
+`PageSection` for shared presentation. `CarCard` belongs to the cars feature and
+is reused by the fleet and popularity ranking. The entire card is one router link;
+`group-hover` and `group-focus-visible` synchronize its title, illustration and arrow.
+Do not put buttons or other links inside it. Keep query/form state in the
+feature. A new visual variation should solve an existing screen requirement,
+not introduce a generic component framework.
+
+Use Tailwind utilities beside JSX for layout, responsive breakpoints and states.
+The small `action` utility also styles TanStack links as actions without changing
+anchor semantics. Set `data-variant="secondary"` or `"danger"` when appropriate.
+Native inputs, selects and textareas share `control`; buttons default to
+`type="button"`, so form submissions must explicitly use `type="submit"`.
+Keep labels, field errors, keyboard focus, disabled states and role permissions.
+Transitions use `motion-safe`; selected rows and availability use data variants.
+
+The catalog API intentionally does not include image metadata. Cards therefore
+show a neutral, decorative vehicle illustration instead of fetching every car's
+details or pretending that a stock photo represents the vehicle. Uploaded photos
+remain available on the detail screen. The home remains navigation-only.
+
+To review the UI, run `make dev`, then visit `/cars`, a car detail, `/login` and
+`/register`. Sign in as the development administrator for `/cars/new`,
+`/categories`, `/specifications` and `/users`. Use a driver account for `/rentals`.
+Review at 390px and 1440px, navigate with Tab, submit an empty form, and verify
+that errors and retry actions remain visible. Run `make check-web`,
+`npm --prefix apps/web run mutation`, and `npm --prefix apps/web run test:e2e`.
+
+### Catalog search and navigation
+
+Use **Search cars** for a model, brand or category fragment. The API applies `q`
+to all three fields with OR before pagination. Brand and Category are optional
+AND refinements; Sort by stays above the results and Cars per page sits below.
+Filters and pagination are URL state, so refresh and browser Back restore them.
+Changing a filter or page size resets to page one. Legacy `name` links continue
+to filter by name and display a removable Model name chip; editing the unified
+search replaces that legacy constraint. Numeric model links such as `?q=208`
+are supported.
+Brand/category refinements remain text inputs rather than incomplete dropdowns
+assembled from one page or protected administrator catalogs.
+
+The softer design uses 24px surfaces, 12px controls, pill filters and light
+shadows. Form sections rely on spacing instead of nested borders. The main fleet
+comes before the independent recommendation section. The home remains navigation-only.
+
+### Field and rental-panel feedback
+
+The shared `control` utility gives inputs and selects a 48px minimum height and
+one soft focus ring. Selects keep native semantics with a consistent chevron;
+forced-colors mode restores the system arrow and a visible outline. Use
+`surface-hover` for the rental receipt cards and the car's rental-details panel:
+hover and focus within adjust the shadow/border without moving the content.
+This feedback does not make a panel clickable; its existing links and buttons
+remain the actions.

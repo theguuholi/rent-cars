@@ -27,8 +27,8 @@ class CarControllerTest {
     void emptyFleet() {
       var pageable = PageRequest.of(0, 12);
       var empty = new CarPage(java.util.List.of(), 0, 12, 0, 0);
-      when(service.list(true, "Argo", "Fiat", "HATCHBACK", pageable)).thenReturn(empty);
-      assertThat(controller.list("Argo", "Fiat", "HATCHBACK", pageable)).isSameAs(empty);
+      when(service.list(true, "query", "Argo", "Fiat", "HATCHBACK", pageable)).thenReturn(empty);
+      assertThat(controller.list("query", "Argo", "Fiat", "HATCHBACK", pageable)).isSameAs(empty);
     }
 
     @Test
@@ -36,8 +36,8 @@ class CarControllerTest {
     void manageFleet() {
       var pageable = PageRequest.of(0, 12);
       var page = new CarPage(java.util.List.of(new Car()), 0, 12, 1, 1);
-      when(service.list(false, null, null, null, pageable)).thenReturn(page);
-      assertThat(controller.manage(null, null, null, pageable)).isSameAs(page);
+      when(service.list(false, "admin query", null, null, null, pageable)).thenReturn(page);
+      assertThat(controller.manage("admin query", null, null, null, pageable)).isSameAs(page);
     }
   }
 

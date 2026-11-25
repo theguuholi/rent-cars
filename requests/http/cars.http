@@ -23,6 +23,20 @@ GET {{baseUrl}}/cars?page=0&size=12&sort=name,asc
   });
 }}
 
+### Search across model, brand OR category with one query
+# @name cars_global_search
+# @tag manual
+GET {{baseUrl}}/cars?q=Fiat&page=0&size=6&sort=name,asc
+
+{{
+  const assert = require("node:assert/strict");
+  assert.equal(response.statusCode, 200);
+  test("Global search finds the development Fiat fleet", () => {
+    assert.ok(response.parsedBody.content.length > 0);
+    assert.ok(response.parsedBody.content.every(car => car.available && car.brand === "Fiat"));
+  });
+}}
+
 ### Search public fleet by name, brand and category
 # @name cars_search
 # @tag manual

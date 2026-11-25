@@ -1,3 +1,4 @@
+import { Button } from '../../../../components/Button/Button'
 import { useCurrentAction } from '../../../../routes/use-current-action'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -23,9 +24,9 @@ export function CarRecord({ id, mode }: { id: string; mode: 'detail' | 'edit' | 
   const error = record.isError && (
     <div role="alert">
       {record.error.message}{' '}
-      <button className="btn-secondary" onClick={() => void record.refetch()}>
+      <Button variant="secondary" onClick={() => void record.refetch()}>
         Try again
-      </button>
+      </Button>
     </div>
   )
   if (mode === 'edit' && record.data)
@@ -47,14 +48,16 @@ export function CarRecord({ id, mode }: { id: string; mode: 'detail' | 'edit' | 
       >
         {remove.isError && <p role="alert">{remove.error.message}</p>}
         <div className="flex flex-wrap gap-3">
-          <button
-            className="btn-danger"
-            disabled={remove.isPending}
-            onClick={() => remove.mutate(id)}
-          >
+          <Button variant="danger" disabled={remove.isPending} onClick={() => remove.mutate(id)}>
             Confirm deletion
-          </button>
-          <Link autoFocus className="btn-secondary" disabled={remove.isPending} to="..">
+          </Button>
+          <Link
+            autoFocus
+            className="action"
+            data-variant="secondary"
+            disabled={remove.isPending}
+            to=".."
+          >
             Cancel
           </Link>
         </div>

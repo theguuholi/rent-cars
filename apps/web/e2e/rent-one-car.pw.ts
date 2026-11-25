@@ -40,13 +40,26 @@ test('Given a new driver and an available car, when the car is rented and return
   })
 
   await test.step('And selects one available car from the catalog', async () => {
-    await page.getByRole('textbox', { name: 'Name', exact: true }).fill(carName)
+    await page.getByRole('textbox', { name: 'Search cars', exact: true }).fill(carName)
     const catalog = page.getByRole('region', { name: 'Cars', exact: true })
     const carLink = catalog.getByRole('link', { name: carName, exact: true })
     await expect(carLink).toBeVisible()
     await carLink.click()
     await expect(page.getByRole('heading', { name: carName, exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Rent car' })).toBeVisible()
+  })
+
+  await test.step('When hovering the rental panel, then its elevation changes without moving the form', async () => {
+    await page.getByRole('heading', { name: carName, exact: true }).hover()
+    const panel = page.getByRole('region', { name: 'Rental', exact: true }).locator('..')
+    const before = await panel.evaluate((element) => getComputedStyle(element).boxShadow)
+    const bounds = await panel.boundingBox()
+    await panel.hover({ position: { x: 10, y: 10 } })
+    await expect
+      .poll(() => panel.evaluate((element) => getComputedStyle(element).boxShadow))
+      .not.toBe(before)
+    expect(await panel.boundingBox()).toEqual(bounds)
+    await expect(panel).not.toHaveCSS('cursor', 'pointer')
   })
 
   await test.step('When the driver chooses a return time three days ahead and rents the car', async () => {
@@ -72,7 +85,7 @@ test('Given a new driver and an available car, when the car is rented and return
     await expect(page.getByRole('button', { name: 'Rent car' })).toBeVisible()
     await expect(page.getByText('Available', { exact: true })).toBeVisible()
     await page.getByRole('link', { name: 'Back to cars' }).click()
-    await page.getByRole('textbox', { name: 'Name', exact: true }).fill(carName)
+    await page.getByRole('textbox', { name: 'Search cars', exact: true }).fill(carName)
     const car = page
       .getByRole('listitem')
       .filter({ has: page.getByRole('link', { name: carName }) })
@@ -83,6 +96,15 @@ test('Given a new driver and an available car, when the car is rented and return
     await expect(page.getByRole('heading', { name: 'My rentals' })).toBeVisible()
     const receipt = page.getByRole('article', { name: new RegExp(carName) })
     await expect(receipt.getByText('Returned', { exact: true })).toBeVisible()
+    await page.getByRole('heading', { name: 'My rentals' }).hover()
+    const before = await receipt.evaluate((element) => getComputedStyle(element).boxShadow)
+    await receipt.hover({ position: { x: 10, y: 10 } })
+    await expect
+      .poll(() => receipt.evaluate((element) => getComputedStyle(element).boxShadow))
+      .not.toBe(before)
+    await expect(receipt).not.toHaveCSS('cursor', 'pointer')
+    await receipt.getByRole('link', { name: carName }).focus()
+    await expect(receipt.getByRole('link', { name: carName })).toBeFocused()
     await expect(receipt.getByText(/Total charge: R\$\s*\d/)).toBeVisible()
   })
 

@@ -1,3 +1,4 @@
+import { Button } from './components/Button/Button'
 import { restore, onDeviceChange } from './features/auth/renewal'
 import { retryQuery } from './features/auth/protected-fetch'
 import './styles.css'
@@ -25,7 +26,7 @@ async function mount() {
     await restore()
   } catch {
     root.render(
-      <button onClick={() => void mount()}>Could not restore your session. Try again</button>,
+      <Button onClick={() => void mount()}>Could not restore your session. Try again</Button>,
     )
     return
   }

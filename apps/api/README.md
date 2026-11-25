@@ -230,3 +230,14 @@ Follow the [Kafka producer walkthrough](../../docs/kafka.md) for Compose, the re
 ### Public car recommendations
 
 `GET /cars/recommendations` returns up to six currently available car summaries in precomputed popularity order. It is public, like browsing cars. The API uses Spring `RestClient` to query recommendations; ranking outages return an empty array without blocking the fleet. Configure `RENT_RECOMMENDATIONS_URL`, `RENT_RECOMMENDATIONS_CONNECT_TIMEOUT` and `RENT_RECOMMENDATIONS_READ_TIMEOUT` as needed. See [the local and Kubernetes walkthrough](../../docs/popular-cars.md) and the `cars_recommendations` HTTP Yac request.
+
+## Unified fleet search
+
+`GET /cars?q=Fiat` searches case-insensitive fragments of name, brand **or**
+category. `GET /cars/manage` accepts the same query for administrators and also
+includes unavailable cars. Individual `name`, `brand` and `category` parameters
+remain AND refinements, e.g. `/cars?q=Fiat&category=SEDAN&size=6&page=0`.
+Filtering happens in PostgreSQL before pagination and totals are calculated for
+the same predicate. Whitespace is trimmed; `%`, `_` and `!` are literal input,
+not wildcard syntax. Blank or absent `q` preserves the previous behavior.
+Try `cars_global_search` in `requests/http/cars.http`.

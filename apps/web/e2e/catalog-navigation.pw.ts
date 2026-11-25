@@ -13,7 +13,7 @@ test('Given a populated catalog, when a guest opens a car and goes back, then th
     await expect(catalog.getByRole('heading', { name: 'Cars' })).toBeVisible()
     const carLink = catalog.getByRole('link').first()
     await expect(carLink).toBeVisible()
-    carName = await carLink.innerText()
+    carName = (await carLink.getAttribute('aria-label'))!
     expect(carName).not.toBe('')
   })
 

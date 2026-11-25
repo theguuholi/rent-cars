@@ -18,7 +18,9 @@ export function CarFacts({ car }: { car: Car }) {
       </div>
       <div>
         <dt>Daily rate</dt>
-        <dd>{formatBrl(car.dailyRateCents)}</dd>
+        <dd className="font-heading text-2xl font-semibold text-brand">
+          {formatBrl(car.dailyRateCents)}
+        </dd>
       </div>
       <div>
         <dt>Fine amount</dt>

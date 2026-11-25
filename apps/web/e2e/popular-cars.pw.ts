@@ -13,7 +13,7 @@ test('Given an unavailable ranking, when a visitor browses cars, then the catalo
     await expect(
       page.getByRole('region', { name: 'Most rented cars' }).getByRole('alert'),
     ).toBeVisible()
-    await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toBeEnabled()
+    await expect(page.getByRole('textbox', { name: 'Search cars', exact: true })).toBeEnabled()
   })
   await test.step('When recommendations recover and the visitor retries, then the empty ranking is explained', async () => {
     await page.route('**/api/cars/recommendations', (route) => route.fulfill({ json: [] }))
@@ -43,7 +43,7 @@ test('Given ranked available cars, when a visitor follows a recommendation on mo
   await test.step('When the visitor opens the catalog, then ranking order and detail links are visible', async () => {
     await page.goto(`${webBaseUrl}/cars`)
     const ranking = page.getByRole('region', { name: 'Most rented cars' })
-    await expect(ranking.getByRole('link').first()).toHaveText(selected.name)
+    await expect(ranking.getByRole('link').first()).toHaveAccessibleName(selected.name)
     await ranking.getByRole('link').first().focus()
     await page.keyboard.press('Enter')
   })

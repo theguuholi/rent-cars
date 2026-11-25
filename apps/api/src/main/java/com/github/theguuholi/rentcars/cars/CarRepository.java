@@ -16,12 +16,16 @@ interface CarRepository extends JpaRepository<Car, UUID> {
       """
       select c from Car c join c.category category
       where (:availableOnly = false or c.available = true)
+        and (lower(c.name) like :queryPattern escape '!'
+          or lower(c.brand) like :queryPattern escape '!'
+          or lower(category.name) like :queryPattern escape '!')
         and lower(c.name) like :namePattern escape '!'
         and lower(c.brand) like :brandPattern escape '!'
         and lower(category.name) like :categoryPattern escape '!'
       """)
   Page<Car> search(
       boolean availableOnly,
+      String queryPattern,
       String namePattern,
       String brandPattern,
       String categoryPattern,

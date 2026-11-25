@@ -15,25 +15,29 @@ export function CarDetails({ car }: { car: CarWithCatalog }) {
       title={car.name}
       description={car.description}
       action={
-        <Link className="btn-secondary" to="/cars">
+        <Link className="action" data-variant="secondary" to="/cars">
           Back to cars
         </Link>
       }
     >
-      <CarImages key={car.id} car={car} canUpload={isAdmin} />
-      <CarFacts car={car} />
-      <CarCatalogDetails car={car} />
-      <RentalActions carId={car.id} available={car.available} />
-      {isAdmin && (
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link className="btn-primary" from="/cars/$id" to="./edit">
-            Edit car
-          </Link>
-          <Link className="btn-secondary" from="/cars/$id" to="./delete">
-            Delete car
-          </Link>
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        <CarImages key={car.id} car={car} canUpload={isAdmin} />
+        <div className="surface-hover rounded-3xl bg-white p-6 sm:p-8">
+          <CarFacts car={car} />
+          <CarCatalogDetails car={car} />
+          <RentalActions carId={car.id} available={car.available} />
+          {isAdmin && (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link className="action" data-variant="primary" from="/cars/$id" to="./edit">
+                Edit car
+              </Link>
+              <Link className="action" data-variant="secondary" from="/cars/$id" to="./delete">
+                Delete car
+              </Link>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </PageSection>
   )
 }
